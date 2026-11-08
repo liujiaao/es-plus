@@ -285,6 +285,37 @@ export function lastUpdatedFor(key) {
 }
 
 /**
+ * 「本页正文换了一批标题，目录该重算了」的通知。
+ *
+ * 为什么需要：目录是**扫描渲染后的 DOM** 得到的（collectHeadings），布局层只在
+ * 换路由时重建。而分组页（es-pc 的 /es-form、/es-table）切标签时路由不变、
+ * 只换正文里的 section —— 不通知的话目录会一直停在上一组的标题上，点进去还
+ * 指向已经不存在的 id。页内切换用事件而不是「布局层轮询 / 共享 store」：
+ * 正文知道自己什么时候换了内容，布局只需要照着重建，两边不必互相知道对方是谁。
+ *
+ * 事件名是站内契约，改名等于三站的目录重建一起失效。
+ */
+export const TOC_CHANGED_EVENT = 'es-doc:toc-changed'
+
+/** 正文侧调用（分组切换后）。无 window（SSR / 单测）时是空操作。 */
+export function notifyTocChanged() {
+  if (typeof window === 'undefined') return
+  window.dispatchEvent(new Event(TOC_CHANGED_EVENT))
+}
+
+/**
+ * 布局侧订阅。返回解绑函数（页面卸载时必须调，否则监听器越来越多）。
+ * @param {() => void} handler
+ * @returns {() => void}
+ */
+export function onTocChanged(handler) {
+  if (typeof window === 'undefined' || typeof handler !== 'function') return () => {}
+  const wrapped = () => handler()
+  window.addEventListener(TOC_CHANGED_EVENT, wrapped)
+  return () => window.removeEventListener(TOC_CHANGED_EVENT, wrapped)
+}
+
+/**
  * 「跳到主内容」的行为（路线图 1.7）。
  *
  * 为什么不能只写 `<a href="#es-main">`：三站都是 **hash 路由**，地址栏里的 `#`

@@ -248,7 +248,7 @@ import DocMeta from '@/components/doc/DocMeta.vue'
 import DocFooter from '@/components/doc/DocFooter.vue'
 import DocSearch from '@/components/doc/DocSearch.vue'
 // 目录行为（标题发号 + 滚动高亮）与另两站共用同一份实现
-import { bindSkipLink, collectHeadings, createScrollSpy, scrollToHeading as scrollToHeadingImpl, lastUpdatedFor } from '@/utils/doc-chrome.js'
+import { bindSkipLink, collectHeadings, createScrollSpy, scrollToHeading as scrollToHeadingImpl, lastUpdatedFor, onTocChanged } from '@/utils/doc-chrome.js'
 import { docEntryForRouteName, docNeighbors } from '@/utils/doc-nav'
 // 深色开关（审计 P1-4）；规则与 index.html 首屏脚本一致，见 stores/theme.js
 import { isDark, toggleTheme } from '@/stores/theme'
@@ -353,7 +353,13 @@ const refreshToc = () => {
 // 只认 path，不认 fullPath：点目录项只会改 hash，正文没换，重建 spy 会把
 // 「钉住被点小节」的状态一起丢掉 —— 表现就是平滑滚动途中高亮又一路跳过去。
 watch(() => route.path, refreshToc, { immediate: true })
+
+// 分组页（/es-form、/es-table）切标签时路由不变、正文换了一批 section：
+// 正文侧发事件，这里重建目录。不订阅的话目录会一直停在上一组的标题上，
+// 点进去指向已经不在 DOM 里的 id（事件契约见 docs/theme/doc-chrome.js）。
+const stopTocWatch = onTocChanged(refreshToc)
 onBeforeUnmount(() => {
+  stopTocWatch()
   scrollSpy?.stop()
   scrollSpy = null
 })

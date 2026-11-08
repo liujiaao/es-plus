@@ -65,7 +65,10 @@ const emit = defineEmits<{ select: [name: string] }>()
 .examples-group.is-active {
   color: var(--es-brand-strong);
   border-color: var(--primary-color);
-  background-color: var(--primary-color-light);
+  /* 底色用 --es-brand-tint 而不是 --primary-color-light：品牌字压品牌浅底这条配对
+     实测 4.75:1（浅色）/ 6.18:1（暗色）；换回主色浅底那档更蓝的 tint 只有 4.24:1，
+     13px 的字就该算不合格了（es-pc 的 SectionTabs 同一处同样改）。 */
+  background-color: var(--es-brand-tint);
 }
 
 .examples-group:focus-visible {

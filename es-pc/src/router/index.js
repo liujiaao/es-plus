@@ -88,15 +88,16 @@ const routes = [
       },
       { path: 'guide', name: 'Guide', meta: { title: '快速上手' }, component: Guide },
       {
+        // anchorTop：见 scrollBehavior 的注释（sticky 标签条的高度）
         path: 'es-form',
         name: 'EsForm',
-        meta: { title: 'EsForm 动态表单' },
+        meta: { title: 'EsForm 动态表单', anchorTop: 120 },
         component: () => import('@/views/EsForm.vue'),
       },
       {
         path: 'es-table',
         name: 'EsTable',
-        meta: { title: 'EsTable 动态表格' },
+        meta: { title: 'EsTable 动态表格', anchorTop: 120 },
         component: () => import('@/views/EsTable.vue'),
       },
       {
@@ -159,9 +160,13 @@ const router = createRouter({
   // 案例卡会带 `#anchor` 落到页内某一节（如 /es-table#selection）。
   // 以前没有 scrollBehavior，锚点只能靠浏览器默认行为，异步路由组件还没渲染完
   // 就已经跳过了 —— 表现是「链接指对了页面，但停在页首」。
+  //
+  // `meta.anchorTop`：分组页（/es-form、/es-table）的标签条是 sticky 的，
+  // 落点要在顶栏 64px 之外再让出标签条的高度，否则标题正好压在标签条底下。
+  // 数值与页面里的 ANCHOR_TOP 必须一致 —— 差一截会在平滑滚动结束后来一次小跳。
   scrollBehavior(to, from, savedPosition) {
     if (savedPosition) return savedPosition
-    if (to.hash) return { el: to.hash, top: 88, behavior: 'smooth' }
+    if (to.hash) return { el: to.hash, top: to.meta.anchorTop || 88, behavior: 'smooth' }
     return { top: 0 }
   },
 })

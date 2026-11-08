@@ -8,8 +8,13 @@
 
     <a-divider />
 
+    <!-- 分组标签条：19 个示例原本一条长列表（17,910px）。分组后同一时刻只挂当前组，
+         深链（如案例卡里的 /es-table#selection）会自动切到所在分组 ——
+         逻辑在 composables/useSectionGroups.js -->
+    <SectionTabs :groups="groups" :active="activeGroup" @select="selectTab" />
+
     <!-- 基础表格 -->
-    <section id="basic">
+    <section v-if="isActive('basics')" id="basic">
       <h2>基础用法</h2>
       <p>通过 <code>columns</code> 配置列，<code>data-source</code> 绑定数据。</p>
             <CodeDemo :source="rawSFCs['./es-table/Basic.vue']">
@@ -17,10 +22,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('basics')" />
 
     <!-- 分页请求 -->
-    <section id="pagination">
+    <section v-if="isActive('basics')" id="pagination">
       <h2>httpRequest + configTableOut 分页</h2>
       <p>配置 <code>apiParams</code> 和 <code>httpRequest</code> 实现服务端分页，通过 <code>configTableOut</code> 映射响应字段。</p>
             <CodeDemo :source="rawSFCs['./es-table/Pagination.vue']">
@@ -28,10 +33,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('columns')" />
 
     <!-- 自定义列渲染 -->
-    <section id="custom">
+    <section v-if="isActive('columns')" id="custom">
       <h2>自定义列渲染</h2>
       <p>通过 <code>render</code> 函数或 <code>formatter</code> 自定义列内容展示。</p>
             <CodeDemo :source="rawSFCs['./es-table/Custom.vue']">
@@ -39,10 +44,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('columns')" />
 
     <!-- 多选 -->
-    <section id="selection">
+    <section v-if="isActive('columns')" id="selection">
       <h2>多选与跨页记忆</h2>
       <p><code>type: 'selection'</code> 与 <code>options.multiSelect</code> 等价地开启多选列；翻页后已选项自动回勾（需配 <code>rowkey</code>）。<code>selection-change</code> 只带当前页，跨页全集用 <code>getSelectionRows()</code>；<code>cachePageSelection: false</code> 时翻页即丢弃上一页勾选。组件不提供单选列（<code>type: 'selection'</code> 恒为复选框），单选请用 <code>highlightCurrentRow</code> + 行事件。</p>
             <CodeDemo :source="rawSFCs['./es-table/Selection.vue']">
@@ -50,10 +55,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('columns')" />
 
     <!-- 操作列 -->
-    <section id="actions">
+    <section v-if="isActive('columns')" id="actions">
       <h2>操作列</h2>
       <p>在列配置中添加 <code>btns</code> 数组定义操作按钮；<code>hidden</code> 同时按行状态与角色求值。工具栏的新增、批量审核（按勾选行）、导出都真实落到数据源。</p>
             <CodeDemo :source="rawSFCs['./es-table/RowActions.vue']">
@@ -61,10 +66,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('columns')" />
 
     <!-- 工具栏按钮 -->
-    <section id="toolbar">
+    <section v-if="isActive('columns')" id="toolbar">
       <h2>工具栏按钮左右分栏</h2>
       <p><code>configBtn</code> 的 <code>code: 1 / 2</code> 把按钮分到左右两端；插槽按钮在左侧，导出 / 打印 / 刷新都在浏览器里真跑，批量删除按勾选真删。</p>
             <CodeDemo :source="rawSFCs['./es-table/Toolbar.vue']">
@@ -72,10 +77,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('editing')" />
 
     <!-- 行内编辑 -->
-    <section id="edit">
+    <section v-if="isActive('editing')" id="edit">
       <h2>点击单元格即编辑</h2>
       <p>表格即编辑器，点击单元格进入编辑模式，支持批量保存/取消。</p>
             <CodeDemo :source="rawSFCs['./es-table/Edit.vue']">
@@ -83,10 +88,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('editing')" />
 
     <!-- 排序 -->
-    <section id="sort">
+    <section v-if="isActive('editing')" id="sort">
       <h2>排序：事件驱动 + 后端重排</h2>
       <p>antdv 侧 <code>sortable</code> 统一映射为 <code>sorter: true</code>，只发排序事件、不本地排；示例在 <code>change-table-sort</code> 里重排，真实项目带 order 重新请求。第三次点击清除排序并还原原始顺序。</p>
             <CodeDemo :source="rawSFCs['./es-table/Sort.vue']">
@@ -94,10 +99,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('layout')" />
 
     <!-- 固定列 -->
-    <section id="fixed">
+    <section v-if="isActive('layout')" id="fixed">
       <h2>固定列与高度</h2>
       <p><code>fixed</code> 固定列 + 自适应高度，适合宽表展示。</p>
             <CodeDemo :source="rawSFCs['./es-table/Fixed.vue']">
@@ -105,10 +110,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('layout')" />
 
     <!-- 远程数据 -->
-    <section id="remote">
+    <section v-if="isActive('layout')" id="remote">
       <h2>远程数据</h2>
       <p><code>actionUrl</code> + <code>httpRequest</code> + <code>configTableOut</code> 完整远程数据请求与分页。</p>
             <CodeDemo :source="rawSFCs['./es-table/RemoteData.vue']">
@@ -116,10 +121,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('layout')" />
 
     <!-- 自适应高度 -->
-    <section id="height">
+    <section v-if="isActive('layout')" id="height">
       <h2>继承父容器高度</h2>
       <p><code>heightType: height</code> 继承父容器高度 + ResizeObserver 自动计算。</p>
             <CodeDemo :source="rawSFCs['./es-table/TableHeight.vue']">
@@ -127,10 +132,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('render')" />
 
     <!-- 分组表头 -->
-    <section id="group">
+    <section v-if="isActive('render')" id="group">
       <h2>分组表头</h2>
       <p><code>groups</code> 嵌套列配置实现多级分组表头。</p>
             <CodeDemo :source="rawSFCs['./es-table/Group.vue']">
@@ -138,10 +143,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('render')" />
 
     <!-- 展开行 -->
-    <section id="expand">
+    <section v-if="isActive('render')" id="expand">
       <h2>展开行与树形</h2>
       <p><code>type:expand</code> 展开行 + <code>children</code> 树形数据两种层级展示模式。</p>
             <CodeDemo :source="rawSFCs['./es-table/Expand.vue']">
@@ -149,10 +154,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('render')" />
 
     <!-- 单元格合并 -->
-    <section id="cell-merge">
+    <section v-if="isActive('render')" id="cell-merge">
       <h2>单元格合并与行样式</h2>
       <p><code>mergeConfig</code> 声明式合并单元格（相邻行取值相等的列自动合并）+ <code>rowClassName</code> 条件行样式。a-table 没有 <code>span-method</code> prop，函数式 <code>spanMethod</code> 只在 el-table / vxe 引擎可用。</p>
             <CodeDemo :source="rawSFCs['./es-table/CellMerge.vue']">
@@ -160,10 +165,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('editing')" />
 
     <!-- 当前行 -->
-    <section id="current-row">
+    <section v-if="isActive('editing')" id="current-row">
       <h2>当前行与主从联动</h2>
       <p><code>highlightCurrentRow</code> 自动高亮当前行 + <code>@row-click</code> 事件驱动从表（antdv 无 el-table 的 <code>current-change</code>，行事件统一走 <code>@row-click</code>）。</p>
             <CodeDemo :source="rawSFCs['./es-table/CurrentRow.vue']">
@@ -171,10 +176,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('render')" />
 
     <!-- 动态列 -->
-    <section id="dynamic-columns">
+    <section v-if="isActive('render')" id="dynamic-columns">
       <h2>动态列显隐</h2>
       <p><code>hidCol</code> 按列身份显隐（不重建数组，列顺序 / 宽度 / 固定位保持不变）。</p>
             <CodeDemo :source="rawSFCs['./es-table/DynamicColumns.vue']">
@@ -182,10 +187,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('config')" />
 
     <!-- 查询表格 -->
-    <section id="query-table">
+    <section v-if="isActive('config')" id="query-table">
       <h2>配置化查询：零 handleSearch</h2>
       <p><code>apiParams.model</code> 自动合并搜索参数 + <code>httpRequestInstance</code> 手动刷新，零手动联动代码。</p>
             <CodeDemo :source="rawSFCs['./es-table/QueryTable.vue']">
@@ -193,10 +198,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('config')" />
 
     <!-- 回调管线 -->
-    <section id="callback-pipeline">
+    <section v-if="isActive('config')" id="callback-pipeline">
       <h2>请求回调管线</h2>
       <p><code>listenToCallBack</code> 请求响应拦截 + <code>configTableOut</code> 字段映射 + <code>entryQuery</code> 默认参数。</p>
             <CodeDemo :source="rawSFCs['./es-table/CallbackPipeline.vue']">
@@ -204,10 +209,10 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('config')" />
 
     <!-- 码值列声明式标签 -->
-    <section id="code-label">
+    <section v-if="isActive('config')" id="code-label">
       <h2>码值列：零 render 出标签</h2>
       <p>状态是 <code>0/1/2</code> 这样的码值，列上写一份 <code>dataOptions</code> 就得到中文标签与语义色：命中显示 label、<code>tagType</code> 渲染成 a-tag 的状态色，未命中显示原值、空值走 <code>emptyPlaceholder</code>。没有一个 render 函数，同一份 JSON 在 vue3（ElTag）/ vue2（el-tag）上同样成立。</p>
             <CodeDemo :source="rawSFCs['./es-table/CodeLabel.vue']">
@@ -274,7 +279,12 @@
 </template>
 
 <script setup>
+import { nextTick, onBeforeUnmount, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import CodeDemo from '@/components/CodeDemo.vue'
+import SectionTabs from '@/components/doc/SectionTabs.vue'
+import { useSectionGroups } from '@/composables/useSectionGroups'
+import { realignToHash } from '@/utils/doc-anchor'
 import EsTableBasic from './es-table/Basic.vue'
 import EsTablePagination from './es-table/Pagination.vue'
 import EsTableCustom from './es-table/Custom.vue'
@@ -296,6 +306,69 @@ import EsTableCallbackPipeline from './es-table/CallbackPipeline.vue'
 import EsTableCodeLabel from './es-table/CodeLabel.vue'
 
 const rawSFCs = import.meta.glob('./es-table/*.vue', { query: '?raw', import: 'default', eager: true })
+
+/**
+ * 分组声明：19 个 section 原本一条长列表（17,910px），按主题切成 6 组，
+ * 同一时刻只挂当前组。`ids` 必须与模板 `<section id>` 一一对应 ——
+ * 漏写、写错 key、id 撞车由 `scripts/check-section-groups.mjs` 静态拦下
+ * （模板里每个 section 的 `v-if="isActive('<key>')"` 也要同 key）。
+ *
+ * API 表（TableColumn / TableOptions / 事件 / 方法，约 5,600px）**不分组**：
+ * 它们是参考手册而不是示例，目录（右栏）与外部深链都直接指向这些标题，
+ * 藏进标签页会把这两条通路一起弄断。分组只解决「19 个示例同屏」。
+ */
+const SECTION_GROUPS = [
+  { key: 'basics', name: '基础与分页', ids: ['basic', 'pagination'] },
+  { key: 'columns', name: '列与操作', ids: ['custom', 'selection', 'actions', 'toolbar'] },
+  { key: 'editing', name: '编辑、排序与选中', ids: ['edit', 'sort', 'current-row'] },
+  { key: 'layout', name: '尺寸与数据源', ids: ['fixed', 'remote', 'height'] },
+  { key: 'render', name: '结构与渲染', ids: ['group', 'expand', 'cell-merge', 'dynamic-columns'] },
+  { key: 'config', name: '配置化查询与码值', ids: ['query-table', 'callback-pipeline', 'code-label'] },
+]
+
+const route = useRoute()
+const { groups, activeGroup, isActive, activateFromHash, selectGroup } = useSectionGroups(
+  SECTION_GROUPS,
+  () => String(route.hash || ''),
+)
+
+/**
+ * 落点偏移：标签条是 sticky 的（顶栏 64px + 标签条 ~50px），要在顶栏之外再让出它的高度。
+ * 单一来源是路由的 `meta.anchorTop`（router 的 scrollBehavior 用同一个值）——
+ * 两边各写一个数，迟早会在平滑滚动结束后来一次小跳。
+ */
+const ANCHOR_TOP = Number(route.meta.anchorTop) || 88
+
+let stopRealign = () => {}
+const realign = (hash) => {
+  stopRealign()
+  stopRealign = realignToHash(hash, { offset: ANCHOR_TOP })
+}
+
+const selectTab = async (key) => {
+  if (activeGroup.value === key) return
+  selectGroup(key)
+  // 正文整组换掉：把新组的第一节带回标签条下方。不按「滚回页首」处理 ——
+  // 用户可能已经滚到组的中段，回页首等于白扔一屏滚动距离。
+  await nextTick()
+  const first = SECTION_GROUPS.find((g) => g.key === key)
+  realign(first && first.ids[0] ? `#${first.ids[0]}` : '')
+}
+
+// 深链 / 目录点击：先切到锚点所在的分组（DOM 才会出现），再二次对准。
+// 顺序反过来就是滚一个还不存在的元素，落空且不会自己重试。
+watch(
+  () => route.hash,
+  async (hash) => {
+    activateFromHash(String(hash || ''))
+    await nextTick()
+    realign(String(hash || ''))
+  },
+)
+// 首屏带 #selection 这类深链（案例卡就是这么链过来的）：setup 里 useSectionGroups
+// 已同步切好组，这里只负责落点
+onMounted(() => realign(String(route.hash || '')))
+onBeforeUnmount(() => stopRealign())
 
 const propColumns = [
   { title: '属性', dataIndex: 'prop', key: 'prop', width: 140 },
@@ -452,7 +525,8 @@ const tableOptions = [
 h1 { font-size: var(--es-text-3xl); font-weight: 700; color: var(--es-doc-heading); margin-bottom: 8px; }
 .subtitle { color: var(--es-text-secondary); font-size: 15px; line-height: 1.8; }
 h2 { font-size: var(--es-text-2xl); font-weight: 600; margin: 0 0 16px; color: var(--es-doc-heading); }
-section { scroll-margin-top: 100px; }
+/* 120 而不是 100：标签条 sticky 在顶栏下方，落点要让出它的高度（见脚本里的 ANCHOR_TOP） */
+section { scroll-margin-top: 120px; }
 section p { color: var(--es-text-regular); line-height: 1.8; margin-bottom: 16px; }
 code { background: var(--es-fill); padding: 2px 6px; border-radius: 4px; font-family: 'Fira Code', monospace; font-size: 13px; color: var(--es-doc-inline-code-text); }
 </style>

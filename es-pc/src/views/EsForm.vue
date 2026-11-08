@@ -7,8 +7,12 @@
 
     <a-divider />
 
+    <!-- 分组标签条：19 个示例原本一条长列表（12,961px）。分组后同一时刻只挂当前组，
+         深链（#dialog 这种）会自动切到所在分组 —— 逻辑在 composables/useSectionGroups.js -->
+    <SectionTabs :groups="groups" :active="activeGroup" @select="selectTab" />
+
     <!-- 基础用法 -->
-    <section id="basic">
+    <section v-if="isActive('basics')" id="basic">
       <h2>基础用法</h2>
       <p>通过 <code>form-item-list</code> 配置表单字段。</p>
             <CodeDemo :source="rawSFCs['./es-form/Basic.vue']">
@@ -16,9 +20,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('basics')" />
 
-    <section id="layout">
+    <section v-if="isActive('basics')" id="layout">
       <h2>布局与折叠</h2>
       <p>24 栅格布局 + 自动折叠展开，支持响应式自适应。</p>
             <CodeDemo :source="rawSFCs['./es-form/Layout.vue']">
@@ -26,9 +30,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('basics')" />
 
-    <section id="conditional">
+    <section v-if="isActive('basics')" id="conditional">
       <h2>条件显隐 + 字段联动</h2>
       <p>模型驱动字段显隐，<code>isHidden</code> + <code>on.change</code> 实现字段间联动；声明式解法（0 个回调）见下方「报销单」。</p>
             <CodeDemo :source="rawSFCs['./es-form/Conditional.vue']">
@@ -36,9 +40,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('linkage')" />
 
-    <section id="declarative-linkage">
+    <section v-if="isActive('linkage')" id="declarative-linkage">
       <h2>报销单：零回调联动</h2>
       <p>
         省 → 市 → 门店三级下拉、可选城市才要求发票号、大区自动带出并锁定、金额 &gt; 5000 才要求说明、
@@ -50,9 +54,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('linkage')" />
 
-    <section id="async">
+    <section v-if="isActive('linkage')" id="async">
       <h2>异步选项：apiParams + 级联</h2>
       <p><code>apiParams</code> 自动加载下拉选项 + 级联联动。</p>
             <CodeDemo :source="rawSFCs['./es-form/AsyncOptions.vue']">
@@ -60,9 +64,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('controls')" />
 
-    <section id="validation">
+    <section v-if="isActive('controls')" id="validation">
       <h2>校验：rules + 自定义 validator</h2>
       <p>集成 Ant Design Vue 验证体系，支持 rules、pattern、自定义 validator。</p>
             <CodeDemo :source="rawSFCs['./es-form/Validation.vue']">
@@ -70,9 +74,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('controls')" />
 
-    <section id="custom">
+    <section v-if="isActive('controls')" id="custom">
       <h2>render 接管任意控件</h2>
       <p><code>render(h, model)</code> 直接接管控件：头像上传、评分、滑块、穿梭框都不需要额外封装。</p>
             <CodeDemo :source="rawSFCs['./es-form/CustomRender.vue']">
@@ -80,9 +84,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('scenes')" />
 
-    <section id="detail">
+    <section v-if="isActive('scenes')" id="detail">
       <h2>详情 / 编辑双模式</h2>
       <p>同一份 <code>formItems</code>，详情模式整表禁用并隐藏按钮区，切回编辑即可改。</p>
             <CodeDemo :source="rawSFCs['./es-form/Detail.vue']">
@@ -90,9 +94,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('scenes')" />
 
-    <section id="upload">
+    <section v-if="isActive('scenes')" id="upload">
       <h2>图片上传</h2>
       <p>支持 picture-card 多图上传、自定义 httpRequest、预览删除等完整上传功能。</p>
             <CodeDemo :source="rawSFCs['./es-form/Upload.vue']">
@@ -100,9 +104,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('controls')" />
 
-    <section id="preferences">
+    <section v-if="isActive('controls')" id="preferences">
       <h2>偏好设置</h2>
       <p>Radio、Checkbox、Switch、Slider、ColorPicker、Rate 六种组件配置化示例。</p>
             <CodeDemo :source="rawSFCs['./es-form/Preferences.vue']">
@@ -110,9 +114,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('scenes')" />
 
-    <section id="search">
+    <section v-if="isActive('scenes')" id="search">
       <h2>组合搜索</h2>
       <p><code>isHidden</code> + <code>apiParams</code> + 更多/收起，完整搜索表单模式。</p>
             <CodeDemo :source="rawSFCs['./es-form/SearchForm.vue']">
@@ -120,9 +124,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('tools')" />
 
-    <section id="advanced-buttons">
+    <section v-if="isActive('tools')" id="advanced-buttons">
       <h2>按钮左右分栏</h2>
       <p><code>btnColSpanRow</code> + <code>direction</code> 实现左右分栏按钮区；查询真的过滤下方结果集，导出是真的 CSV 文件。</p>
             <CodeDemo :source="rawSFCs['./es-form/AdvancedButtons.vue']">
@@ -130,9 +134,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('tools')" />
 
-    <section id="cascader">
+    <section v-if="isActive('tools')" id="cascader">
       <h2>级联选择器</h2>
       <p>使用 Cascader 组件实现多级联动选择。</p>
             <CodeDemo :source="rawSFCs['./es-form/Cascader.vue']">
@@ -140,9 +144,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('tools')" />
 
-    <section id="datetime-range">
+    <section v-if="isActive('tools')" id="datetime-range">
       <h2>日期时间范围</h2>
       <p>完整覆盖日期、时间、日期时间范围选择场景。</p>
             <CodeDemo :source="rawSFCs['./es-form/DateTimeRange.vue']">
@@ -150,9 +154,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('tools')" />
 
-    <section id="dynamic">
+    <section v-if="isActive('tools')" id="dynamic">
       <h2>运行期增删表单项</h2>
       <p>运行时动态增删表单项，支持数组类型表单与动态验证。</p>
             <CodeDemo :source="rawSFCs['./es-form/Dynamic.vue']">
@@ -160,9 +164,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('linkage')" />
 
-    <section id="computed-fields">
+    <section v-if="isActive('linkage')" id="computed-fields">
       <h2>联动计算：选商品自动算总价</h2>
       <p>字段级 <code>on.change</code> 监听下拉选择，其余联动用 <code>watch</code> 跟随 model（antdv 各控件事件名不统一：a-input 用 input、a-slider 只有 update:value / change），实现商品选择 → 自动填充单价 → 数量折扣 → 实时计算总价。</p>
             <CodeDemo :source="rawSFCs['./es-form/ComputedFields.vue']">
@@ -170,9 +174,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('tools')" />
 
-    <section id="custom-button">
+    <section v-if="isActive('tools')" id="custom-button">
       <h2>自定义按钮区</h2>
       <p><code>renderBtn</code> 完全自定义按钮区域，支持异步提交、保存草稿、确认弹窗等交互。</p>
             <CodeDemo :source="rawSFCs['./es-form/CustomButton.vue']">
@@ -180,9 +184,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('scenes')" />
 
-    <section id="dialog">
+    <section v-if="isActive('scenes')" id="dialog">
       <h2>弹窗内嵌表单</h2>
       <p>弹窗里直接放 EsForm：确定前先校验，通过后回写结果再 close，弹窗与表单共用一份 model。</p>
             <CodeDemo :source="rawSFCs['./es-form/Dialog.vue']">
@@ -190,9 +194,9 @@
       </CodeDemo>
     </section>
 
-    <a-divider />
+    <a-divider v-if="isActive('scenes')" />
 
-    <section id="file-upload">
+    <section v-if="isActive('scenes')" id="file-upload">
       <h2>文件上传</h2>
       <p>图片 / PDF 新窗口预览、TXT 内联预览，Office 文档提示走下载；自定义文件列表项（图标 / 大小 / 预览 / 下载 / 删除）。</p>
             <CodeDemo :source="rawSFCs['./es-form/FileUpload.vue']">
@@ -264,7 +268,12 @@
 </template>
 
 <script setup>
+import { nextTick, onBeforeUnmount, onMounted, watch } from 'vue'
+import { useRoute } from 'vue-router'
 import CodeDemo from '@/components/CodeDemo.vue'
+import SectionTabs from '@/components/doc/SectionTabs.vue'
+import { useSectionGroups } from '@/composables/useSectionGroups'
+import { realignToHash } from '@/utils/doc-anchor'
 import EsFormBasic from './es-form/Basic.vue'
 import EsFormLayout from './es-form/Layout.vue'
 import EsFormConditional from './es-form/Conditional.vue'
@@ -286,6 +295,67 @@ import EsFormDialog from './es-form/Dialog.vue'
 import EsFormFileUpload from './es-form/FileUpload.vue'
 
 const rawSFCs = import.meta.glob('./es-form/*.vue', { query: '?raw', import: 'default', eager: true })
+
+/**
+ * 分组声明：19 个 section 原本一条长列表（12,961px），按主题切成 5 组，
+ * 同一时刻只挂当前组。`ids` 必须与模板 `<section id>` 一一对应 ——
+ * 漏写、写错 key、id 撞车由 `scripts/check-section-groups.mjs` 静态拦下
+ * （模板里每个 section 的 `v-if="isActive('<key>')"` 也要同 key）。
+ */
+const SECTION_GROUPS = [
+  { key: 'basics', name: '基础与布局', ids: ['basic', 'layout', 'conditional'] },
+  { key: 'linkage', name: '联动与计算', ids: ['declarative-linkage', 'async', 'computed-fields'] },
+  { key: 'controls', name: '校验与自定义控件', ids: ['validation', 'custom', 'preferences'] },
+  {
+    key: 'tools',
+    name: '选择、运行期与按钮',
+    ids: ['advanced-buttons', 'cascader', 'datetime-range', 'dynamic', 'custom-button'],
+  },
+  { key: 'scenes', name: '业务场景', ids: ['detail', 'upload', 'search', 'dialog', 'file-upload'] },
+]
+
+const route = useRoute()
+const { groups, activeGroup, isActive, activateFromHash, selectGroup } = useSectionGroups(
+  SECTION_GROUPS,
+  () => String(route.hash || ''),
+)
+
+/**
+ * 落点偏移：标签条是 sticky 的（顶栏 64px + 标签条 ~50px），要在顶栏之外再让出它的高度。
+ * 单一来源是路由的 `meta.anchorTop`（router 的 scrollBehavior 用同一个值）——
+ * 两边各写一个数，迟早会在平滑滚动结束后来一次小跳。
+ */
+const ANCHOR_TOP = Number(route.meta.anchorTop) || 88
+
+let stopRealign = () => {}
+const realign = (hash) => {
+  stopRealign()
+  stopRealign = realignToHash(hash, { offset: ANCHOR_TOP })
+}
+
+const selectTab = async (key) => {
+  if (activeGroup.value === key) return
+  selectGroup(key)
+  // 正文整组换掉：把新组的第一节带回标签条下方。不按「滚回页首」处理 ——
+  // 用户可能已经滚到组的中段，回页首等于白扔一屏滚动距离。
+  await nextTick()
+  const first = SECTION_GROUPS.find((g) => g.key === key)
+  realign(first && first.ids[0] ? `#${first.ids[0]}` : '')
+}
+
+// 深链 / 目录点击：先切到锚点所在的分组（DOM 才会出现），再二次对准。
+// 顺序反过来就是滚一个还不存在的元素，落空且不会自己重试。
+watch(
+  () => route.hash,
+  async (hash) => {
+    activateFromHash(String(hash || ''))
+    await nextTick()
+    realign(String(hash || ''))
+  },
+)
+// 首屏带 #dialog 这类深链：setup 里 useSectionGroups 已同步切好组，这里只负责落点
+onMounted(() => realign(String(route.hash || '')))
+onBeforeUnmount(() => stopRealign())
 
 const propColumns = [
   { title: '属性', dataIndex: 'prop', key: 'prop', width: 140 },
@@ -386,7 +456,8 @@ const formBtns = [
 h1 { font-size: var(--es-text-3xl); font-weight: 700; color: var(--es-doc-heading); margin-bottom: 8px; }
 .subtitle { color: var(--es-text-secondary); font-size: 15px; line-height: 1.8; }
 h2 { font-size: var(--es-text-2xl); font-weight: 600; margin: 0 0 16px; color: var(--es-doc-heading); }
-section { scroll-margin-top: 100px; }
+/* 120 而不是 100：标签条 sticky 在顶栏下方，落点要让出它的高度（见脚本里的 ANCHOR_TOP） */
+section { scroll-margin-top: 120px; }
 section p { color: var(--es-text-regular); line-height: 1.8; margin-bottom: 16px; }
 code { background: var(--es-fill); padding: 2px 6px; border-radius: 4px; font-family: 'Fira Code', monospace; font-size: 13px; color: var(--es-doc-inline-code-text); }
 </style>
