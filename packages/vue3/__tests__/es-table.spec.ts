@@ -1129,3 +1129,21 @@ describe('EsTable — vxe 引擎的 cell-edit 转给宿主', () => {
     expect(onCellEdit.mock.calls[0][0]).toEqual(payload)
   })
 })
+
+describe('EsTable — 默认引擎 exportData（CSV 兜底）', () => {
+  it('默认 el-table 引擎下 exportData() 不再返回 undefined，而是走 core CSV 兜底', () => {
+    const wrapper = mountTable({ dataSource: sampleData })
+    const ret = (wrapper.vm as unknown as { exportData: () => unknown }).exportData()
+    expect(typeof ret).toBe('boolean')
+  })
+
+  it("非 vxe 引擎 + exportConfig.type='xlsx' → 明确抛错，不静默产出错格式", () => {
+    const wrapper = mountTable({
+      dataSource: sampleData,
+      options: { exportConfig: { type: 'xlsx' } } as unknown as TableOptions,
+    })
+    expect(() => (wrapper.vm as unknown as { exportData: () => unknown }).exportData()).toThrow(
+      /vxe engine/,
+    )
+  })
+})

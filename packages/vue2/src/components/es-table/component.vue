@@ -225,11 +225,13 @@ import {
   sameSortState,
   buildSortParams,
   checkPermissionValue,
+  exportTableCsv,
   type TableColumn,
   type TableSortState,
   type PaginationConfig,
   type TableOptions,
   type FieldOutputProvider,
+  type CsvColumnLike,
 } from '@es-plus/core'
 import ColumnItem from './column-item.vue'
 import TableBtns from './table-btns.vue'
@@ -1602,9 +1604,20 @@ export default defineComponent({
       clearValidate: () => (isVxeEngine.value ? vxeEngineRef.value?.clearValidate?.() : undefined),
       validate: (rows?: Record<string, unknown>[]) =>
         isVxeEngine.value ? vxeEngineRef.value?.validate?.(rows) : undefined,
-      // ─── vxe 导出 / 打印转发（对齐 vue3 / antdv）──
-      exportData: (opts?: Record<string, unknown>) =>
-        isVxeEngine.value ? vxeEngineRef.value?.exportData?.(opts) : undefined,
+      // ─── 导出 / 打印转发（对齐 vue3 / antdv）──
+      exportData: (opts?: Record<string, unknown>) => {
+        if (isVxeEngine.value && typeof vxeEngineRef.value?.exportData === 'function') {
+          return vxeEngineRef.value.exportData(opts)
+        }
+        const cfg = tableOptions.value.exportConfig
+        const merged = { ...(cfg && cfg !== true ? cfg : {}), ...(opts || {}) } as Record<string, unknown>
+        return exportTableCsv({
+          rows: effectiveDataSource.value as Record<string, unknown>[],
+          columns: filteredColumns.value as unknown as CsvColumnLike[],
+          filename: merged.filename as string | undefined,
+          type: merged.type as string | undefined,
+        })
+      },
       print: (opts?: Record<string, unknown>) =>
         isVxeEngine.value ? vxeEngineRef.value?.print?.(opts) : undefined,
       getPrintHtml: (opts?: Record<string, unknown>) =>

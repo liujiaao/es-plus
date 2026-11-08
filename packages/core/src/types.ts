@@ -1245,10 +1245,12 @@ export interface EsTableInstance {
   /** 仅重排列宽/布局，不重新取数（纯布局逃生舱） */
   doLayout: () => void
   /**
-   * 导出：VXE 引擎走 vxe-table exportData，Element 引擎走内置导出。
+   * 导出：引擎有原生 exportData 时用它（vxe-table）；默认引擎（el-table / a-table）
+   * 走 core 的 CSV 兜底，`exportConfig.type` 仅支持 `csv`（其它格式只能配 vxe 引擎）。
+   * 默认引擎下返回 `boolean`（是否真正触发下载，SSR 为 false）。
    * vxe4 的 <vxe-grid> 不代理该方法，组件内部已下沉到 <vxe-table>。
    */
-  exportData: (opts?: Record<string, unknown>) => Promise<unknown> | void
+  exportData: (opts?: Record<string, unknown>) => Promise<unknown> | boolean | void
   /** 打印：内部已下沉到 <vxe-table>（vxe4 grid 不代理 print） */
   print: (opts?: Record<string, unknown>) => Promise<unknown> | void
   /** 取打印用 HTML（保留完整多级表头，配合 patchHtmlRowSpans 修正合并单元格） */

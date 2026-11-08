@@ -580,3 +580,15 @@ describe('EsTable(vue2) - 服务端排序（tableOptions.sortParam）', () => {
     expect(fnParams).not.toHaveProperty('sortOrder')
   })
 })
+
+describe('EsTable(vue2) — 默认引擎 exportData（CSV 兜底）', () => {
+  it('默认 el-table 引擎下 exportData() 不再是 undefined，而是走 core CSV 兜底', () => {
+    const table = tableOf(mountTable({ dataSource: [{ id: 1, name: '张三' }] }))
+    expect(typeof table.exportData()).toBe('boolean')
+  })
+
+  it("非 vxe 引擎 + exportConfig.type='xlsx' → 明确抛错，不静默产出错格式", () => {
+    const table = tableOf(mountTable({ options: { exportConfig: { type: 'xlsx' } } }))
+    expect(() => table.exportData()).toThrow(/vxe engine/)
+  })
+})

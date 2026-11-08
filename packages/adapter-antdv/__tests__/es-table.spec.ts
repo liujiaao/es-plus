@@ -1131,3 +1131,24 @@ describe('EsTable(ADV) — vxe 引擎的 cell-edit 转给宿主', () => {
     expect(wrapper.emitted('cell-edit')![0][0]).toEqual(payload)
   })
 })
+
+describe('EsTable(antdv) — 默认引擎 exportData（CSV 兜底）', () => {
+  const props = {
+    dataSource: [{ id: '1', name: '张三' }],
+    columns: [{ prop: 'name', label: '姓名' }],
+    options: {} as any,
+    pagination: { total: 1 },
+  }
+
+  it('默认 a-table 引擎下 exportData() 不再返回 undefined，而是走 core CSV 兜底', () => {
+    const wrapper = mount(EsTable, { props })
+    const vm = wrapper.vm as any
+    expect(typeof vm.exportData()).toBe('boolean')
+  })
+
+  it("非 vxe 引擎 + exportConfig.type='xlsx' → 明确抛错，不静默产出错格式", () => {
+    const wrapper = mount(EsTable, { props: { ...props, options: { exportConfig: { type: 'xlsx' } } as any } })
+    const vm = wrapper.vm as any
+    expect(() => vm.exportData()).toThrow(/vxe engine/)
+  })
+})

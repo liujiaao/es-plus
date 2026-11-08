@@ -359,7 +359,7 @@ export const docsData: Record<string, any> = {
         { name: 'clearActived', params: '-', desc: 'vxe 行内编辑：清除当前激活（编辑中）单元格' },
         { name: 'clearValidate', params: '-', desc: 'vxe 行内编辑：清除校验状态' },
         { name: 'validate', params: '(rows?)', desc: 'vxe 行内编辑：校验表格（可指定行），返回 Promise' },
-        { name: 'exportData', params: '(opts?)', desc: 'vxe 导出：导出当前数据（xlsx/csv/xml/html，opts 即 vxe exportData 配置）' },
+        { name: 'exportData', params: '(opts?)', desc: '导出当前数据：engine: "vxe" 走 vxe 原生导出（xlsx/csv/xml/html）；默认引擎走内置 CSV 兜底，非 csv 的 type 会明确抛错' },
         { name: 'print', params: '(opts?)', desc: 'vxe 打印：调用 vxe 打印；可传 { html } 打印 getPrintHtml 修正过的 HTML' },
         { name: 'getPrintHtml', params: '(opts?)', desc: 'vxe 打印：取表格 HTML 字符串（vxe 打印不执行 spanMethod，合并区需配合 patchHtmlRowSpans 修正）' },
         { name: 'vxeInstance', params: '-', desc: 'vxe 原始实例，访问 vxe-table 全部方法/事件（engine: "vxe" 时有效）' }

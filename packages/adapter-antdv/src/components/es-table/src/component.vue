@@ -217,10 +217,11 @@ import {
   toCssSize,
   synthesizeLeadingColumns,
   checkPermissionValue,
+  exportTableCsv,
 } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
-import type { CellEditPayload, TableSortState, FieldOutputProvider } from '@es-plus/core'
+import type { CellEditPayload, TableSortState, FieldOutputProvider, CsvColumnLike } from '@es-plus/core'
 import RenderDomTb from './render-dom-tb'
 import VxeEngine from './engines/vxe-engine.vue'
 
@@ -1501,8 +1502,20 @@ defineExpose({
   clearActived: () => vxeEngineRef.value?.clearActived?.(),
   clearValidate: () => vxeEngineRef.value?.clearValidate?.(),
   validate: (rows?: Record<string, unknown>[]) => vxeEngineRef.value?.validate?.(rows),
-  // vxe 导出/打印（engine:'vxe' 时有效）
-  exportData: (opts?: Record<string, unknown>) => vxeEngineRef.value?.exportData?.(opts),
+  // 导出：vxe 引擎优先用原生 exportData；默认引擎走 core 的 CSV 兜底
+  exportData: (opts?: Record<string, unknown>) => {
+    if (isVxeEngine.value && typeof vxeEngineRef.value?.exportData === 'function') {
+      return vxeEngineRef.value.exportData(opts)
+    }
+    const cfg = (tableOptions.value.exportConfig || {}) as Record<string, unknown>
+    const merged = { ...cfg, ...(opts || {}) }
+    return exportTableCsv({
+      rows: displayDataSource.value as Record<string, unknown>[],
+      columns: filteredColumns.value as unknown as CsvColumnLike[],
+      filename: merged.filename as string | undefined,
+      type: merged.type as string | undefined,
+    })
+  },
   print: (opts?: Record<string, unknown>) => vxeEngineRef.value?.print?.(opts),
   getPrintHtml: (opts?: Record<string, unknown>) => vxeEngineRef.value?.getPrintHtml?.(opts),
   // vxe 原始实例（100% vxe 方法/事件访问入口）

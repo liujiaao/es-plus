@@ -191,6 +191,16 @@ export type { LeadingColumnSpec, LeadingColumnType } from './table-columns.js'
 export { findTableDataOption, resolveTableCellDisplay } from './table-cell.js'
 export type { TableCellDisplay } from './table-cell.js'
 
+// ─── 默认引擎 CSV 导出兜底（`exportData()` 在 el-table / a-table 上没有实现）──
+export {
+  buildCsv,
+  downloadCsv,
+  ensureCsvExtension,
+  exportTableCsv,
+  isCsvExportableColumn,
+} from './csv.js'
+export type { BuildCsvOptions, CsvColumnLike, TableCsvExportParams } from './csv.js'
+
 // ─── 服务端排序契约（`tableOptions.sortParam`，三端窄子集）──────────────
 // 排序状态机与参数拼装全在本模块，三端只做「存状态 → 请求时调 buildSortParams →
 // 表头变化时重取」，故三端等价由构造保证。

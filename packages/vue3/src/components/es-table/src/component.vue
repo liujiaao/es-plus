@@ -175,8 +175,9 @@ import {
   sameSortState,
   buildSortParams,
   checkPermissionValue,
+  exportTableCsv,
 } from '@es-plus/core'
-import type { TableSortState, FieldOutputProvider } from '@es-plus/core'
+import type { TableSortState, FieldOutputProvider, CsvColumnLike } from '@es-plus/core'
 import type { TableColumn, PaginationConfig, VxeExportConfig } from '../../../types'
 
 const props = withDefaults(
@@ -1332,8 +1333,21 @@ defineExpose({
   clearActived: () => activeEngineRef.value?.clearActived?.(),
   clearValidate: () => activeEngineRef.value?.clearValidate?.(),
   validate: (rows?: Record<string, unknown>[]) => activeEngineRef.value?.validate?.(rows),
-  // vxe 导出/打印（engine:'vxe' 时有效）
-  exportData: (opts?: VxeExportConfig) => activeEngineRef.value?.exportData?.(opts),
+  // 导出：vxe 引擎优先用原生 exportData；默认引擎走 core 的 CSV 兜底
+  exportData: (opts?: VxeExportConfig) => {
+    const engine = activeEngineRef.value
+    if (typeof engine?.exportData === 'function') {
+      return engine.exportData(opts)
+    }
+    const cfg = tableOptions.value.exportConfig
+    const merged = { ...(cfg && cfg !== true ? cfg : {}), ...(opts || {}) } as VxeExportConfig
+    return exportTableCsv({
+      rows: displayDataSource.value as Record<string, unknown>[],
+      columns: filteredColumns.value as unknown as CsvColumnLike[],
+      filename: merged.filename,
+      type: merged.type,
+    })
+  },
   print: (opts?: Record<string, unknown>) => activeEngineRef.value?.print?.(opts),
   getPrintHtml: (opts?: Record<string, unknown>) => activeEngineRef.value?.getPrintHtml?.(opts),
   // vxe 原始实例（100% vxe 方法/事件访问入口）
