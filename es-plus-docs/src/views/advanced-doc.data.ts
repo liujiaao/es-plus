@@ -78,7 +78,8 @@ export const docsData: Record<string, any> = {
     ],
     api: {
       'DialogOptions': [
-        { name: 'title', type: 'string', desc: '弹窗标题' },
+        { name: 'type', type: "'dialog' | 'drawer'", desc: "底座形态，默认 'dialog'；传 'drawer' 换成侧边抽屉（el-drawer），render / configBtn / beforeClose / cacheKey 等能力全部复用" },
+        { name: 'direction', type: "'rtl' | 'ltr' | 'ttb' | 'btt'", desc: "抽屉弹出方向，默认 'rtl'（右侧），仅 type 为 'drawer' 时生效；横向时 width 是宽度，纵向时是高度" },        { name: 'title', type: 'string', desc: '弹窗标题' },
         { name: 'width', type: 'string | number', desc: '弹窗宽度，默认 "50%"' },
         { name: 'visible', type: 'boolean', desc: '显示状态。useDialog 未显式传入时补 true；缓存实例的开关也靠翻转它' },
         { name: 'loading', type: 'boolean', desc: '内容加载态：true 时在弹窗主体显示 loading 遮罩，默认 false' },

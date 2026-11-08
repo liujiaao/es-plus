@@ -1158,6 +1158,23 @@ export interface PaginationConfig {
  * useDialog 配置项
  */
 export interface DialogOptions {
+  /**
+   * 底座形态：`'dialog'`（默认，居中弹窗）或 `'drawer'`（侧边抽屉）。
+   *
+   * drawer 复用弹窗的全部能力（render / renderHeader / renderFooter / configBtn /
+   * beforeClose / cacheKey 缓存 / 权限过滤），只把底座换成各渲染端的抽屉组件，
+   * 因此 `useDialog({ type: 'drawer' })` 与 `<es-dialog type="drawer">` 都是同一套 API。
+   * 抽屉不适用的两个键会被忽略：`isDraggable`（抽屉无拖拽手柄）与 `fullscreen`
+   * （抽屉本身就是整条边，缩放由 `direction` + `width` 决定）。
+   */
+  type?: 'dialog' | 'drawer'
+  /**
+   * 抽屉的弹出方向，默认 `'rtl'`（从右向左滑出）。
+   *
+   * 仅 `type: 'drawer'` 时生效，dialog 忽略。`'rtl' | 'ltr'` 时 `width` 作用于宽度，
+   * `'ttb' | 'btt'` 时作用于高度（对齐 Element Plus / Element UI 的 `size` 语义）。
+   */
+  direction?: 'rtl' | 'ltr' | 'ttb' | 'btt'
   /** 标题 */
   title?: string
   /** 宽度 */

@@ -415,6 +415,10 @@ export interface PaginationConfig {
 // Dialog / Modal (ADV: a-modal, v-model:open 替代 v-model)
 // ============================================================================
 export interface DialogOptions {
+  /** 底座形态：'dialog'（默认，a-modal）或 'drawer'（侧边抽屉，a-drawer） */
+  type?: 'dialog' | 'drawer'
+  /** 抽屉弹出方向，默认 'rtl'；type 为 'dialog' 时忽略 */
+  direction?: 'rtl' | 'ltr' | 'ttb' | 'btt'
   title?: string
   width?: string | number
   /**

@@ -669,6 +669,8 @@ const options = {
 
 | 属性 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
+| type | `'dialog' \| 'drawer'` | `'dialog'` | 底座形态：传 `'drawer'` 换成侧边抽屉（el-drawer），render / configBtn / beforeClose / cacheKey 等能力全部复用 |
+| direction | `'rtl' \| 'ltr' \| 'ttb' \| 'btt'` | `'rtl'` | 抽屉弹出方向（仅 `type: 'drawer'` 生效）；横向时 `width` 是宽度，纵向时是高度 |
 | title | `string` | — | 弹窗标题 |
 | visible | `boolean` | `false` | 显示状态（支持 v-model） |
 | width | `string \| number` | `'50%'` | 弹窗宽度 |
@@ -722,6 +724,8 @@ dialog({
 
 | 参数 | 类型 | 默认值 | 说明 |
 |------|------|--------|------|
+| type | `'dialog' \| 'drawer'` | `'dialog'` | 底座形态：`'drawer'` 换成抽屉（el-drawer / el-drawer / a-drawer），render、configBtn、beforeClose、cacheKey 等能力全部复用 |
+| direction | `'rtl' \| 'ltr' \| 'ttb' \| 'btt'` | `'rtl'` | 抽屉弹出方向（仅 `type: 'drawer'` 生效）；横向时 `width` 是宽度，纵向时是高度 |
 | title | `string` | — | 弹窗标题 |
 | width | `string \| number` | `'50%'` | 弹窗宽度 |
 | visible | `boolean` | — | 显示状态（编程式调用通常由 hook 控制） |

@@ -12,21 +12,24 @@
   - 拖拽 transform + 边界 clamp；全屏切换重置偏移
 -->
 <template>
-  <a-modal
-    :wrapClassName="modalWrapClass"
-    :wrapStyle="wrapStyle"
-    v-bind="filteredAttrs"
+  <!--
+    底座可切换：dialog（默认，a-modal）/ drawer（W3-4，a-drawer）。
+    两者共用 open / closable / maskClosable / keyboard / destroyOnClose / mask /
+    getContainer / title / footer 插槽，故头/身/脚只写一份；差异收敛到 hostBindings：
+      - a-modal 用 width + centered + wrapClassName/wrapStyle，关闭事件是 cancel；
+      - a-drawer 用 placement + width|height，关闭事件是 close（没有 cancel）。
+  -->
+  <component
+    :is="hostComponent"
+    v-bind="hostBindings"
     :open="dialogVisible"
-    :width="isFullscreen ? '100vw' : props.width"
     :closable="showNativeClose"
     :maskClosable="props.closeOnClickModal !== false"
     :keyboard="props.closeOnPressEscape !== false"
     :destroyOnClose="props.destroyOnClose"
-    :centered="props.alignCenter !== false && !props.top"
     :mask="props.modal !== false"
     :footer="props.isHiddenFooter ? null : undefined"
     :getContainer="props.appendTo"
-    @cancel="handleClose"
     @update:open="onUpdateOpen"
   >
     <!-- 头部 -->
@@ -50,7 +53,7 @@
         <span class="es-dialog-header-actions">
           <!-- 图标按钮：a-button 本身键盘可达，但可见内容只有图标，读屏拿不到名字 -->
           <a-button
-            v-if="!props.hiddenFullBtn"
+            v-if="!props.hiddenFullBtn && !isDrawer"
             type="text"
             size="small"
             :aria-label="isFullscreen ? builtinExitFullscreen : builtinFullscreen"
@@ -119,7 +122,7 @@
         <slot v-else name="footer" />
       </div>
     </template>
-  </a-modal>
+  </component>
 </template>
 
 <script lang="ts">
@@ -142,7 +145,7 @@ import RenderJsx from './render-jsx.vue'
 // 本地导入并按模板标签命名（AModal↔<a-modal> 等），使模板解析为直接组件引用而非全局 resolveComponent。
 // 对齐 @es-plus/vue3（其 EsDialog 直接 import ElDialog/ElButton/ElIcon），确保在 useDialog 命令式
 // 渲染的脱离子树（appContext 为 null，全局注册不可见）中仍能解析弹窗骨架组件。
-import { Modal as AModal, Button as AButton, Space as ASpace, Spin as ASpin } from 'ant-design-vue'
+import { Modal as AModal, Drawer as ADrawer, Button as AButton, Space as ASpace, Spin as ASpin } from 'ant-design-vue'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
 
 // 图标按钮的可访问名（locale 单源；弹窗头部只有图标，没有可见文字）。
@@ -155,6 +158,16 @@ const builtinClose = computed(() => resolveBuiltinText('close'))
 // ─── Props（onClosed 不声明为 prop，让其作为事件监听器流入）──
 const props = withDefaults(
   defineProps<{
+    /**
+     * 底座形态：'dialog'（默认，a-modal）或 'drawer'（a-drawer）。
+     *
+     * drawer 复用弹窗的全部能力（render/renderHeader/renderFooter/configBtn/beforeClose/
+     * cacheKey 缓存/权限过滤），只把底座换成 a-drawer；`useDialog({ type: 'drawer' })`
+     * 与 `<es-dialog type="drawer">` 都走这条路径。
+     */
+    type?: 'dialog' | 'drawer'
+    /** 抽屉弹出方向，默认 'rtl'（右侧）；dialog 忽略。ttb/btt 时 width 作用于高度 */
+    direction?: 'rtl' | 'ltr' | 'ttb' | 'btt'
     title?: string
     width?: string | number
     visible?: boolean
@@ -182,6 +195,8 @@ const props = withDefaults(
   {
     title: '弹窗',
     width: '600px',
+    type: 'dialog',
+    direction: 'rtl',
     showClose: true,
     loading: false,
     fullscreen: false,
@@ -250,10 +265,13 @@ onMounted(() => {
 const showNativeClose = computed(() => props.showClose && !!props.renderHeader)
 
 function onUpdateOpen(val: boolean) {
-  // a-modal mask/ESC 触发 update:open(false) 时走 handleClose 网关，
-  // 由 doClose 决定是否真正关闭（支持 beforeClose 拦截）
-  if (val === false) handleClose()
-  else dialogVisible.value = val
+  // 只处理「打开」。关闭不能在这里走 handleClose：antd 的 Modal / Drawer 在关闭时
+  // **先** emit update:open(false)、**再** emit cancel / close
+  // （Modal.js 的 handleCancel、Drawer.js 的 close 两行相邻），
+  // 若两处都调 handleClose，beforeClose 会在一次关闭里跑两次（用户写「确认丢弃改动」
+  // 会被弹两遍）。关闭统一由 hostBindings 下发的 onCancel（modal）/ onClose（drawer）负责。
+  // 这样 beforeClose 拦下时 dialogVisible 仍是 true，弹窗不会被内部状态提前收起。
+  if (val === true) dialogVisible.value = true
 }
 
 // ─── 全屏 ───────────────────────────────────────────
@@ -284,6 +302,9 @@ const modalWrapClass = computed(() => {
 })
 
 function toggleFullscreen() {
+  // 抽屉没有全屏态：它本身就贴着一条边、由 placement + width/height 决定尺寸。
+  // 图标在 drawer 下已隐藏；这里再兜一层，防止外部 defineExpose 的 toggleFullscreen 改写状态。
+  if (isDrawer.value) return
   isFullscreen.value = !isFullscreen.value
 }
 
@@ -385,7 +406,9 @@ const getMaxContentHeight = () => {
 
 const initDialogHeight = computed((): Record<string, string> => {
   const viewH = getMaxContentHeight()
-  if (!isFullscreen.value) {
+  // drawer 没有全屏态（见 toggleFullscreen）：即便复用实例上残留 isFullscreen=true，
+  // 也不能把正文撑成整视口高度 —— 抽屉高度由 placement + height 决定。
+  if (isDrawer.value || !isFullscreen.value) {
     if (props.maxHeight) {
       return { maxHeight: typeof props.maxHeight === 'number' ? `${props.maxHeight}px` : props.maxHeight, overflowY: 'auto' }
     }
@@ -399,6 +422,50 @@ const wrapStyle = computed(() => {
   const style: Record<string, unknown> = { ...dragStyle.value }
   if (props.top) style.top = props.top
   return style
+})
+
+// ─── 底座选择（dialog / drawer）──────────────────────
+const isDrawer = computed(() => props.type === 'drawer')
+const hostComponent = computed(() => (isDrawer.value ? ADrawer : AModal))
+
+/** direction（Element 词形）→ placement（antd 词形）：rtl 从右、ttb 从上，语义词相同 */
+const DRAWER_PLACEMENT: Record<string, 'left' | 'right' | 'top' | 'bottom'> = {
+  rtl: 'right',
+  ltr: 'left',
+  ttb: 'top',
+  btt: 'bottom',
+}
+
+/**
+ * 两个底座专有键 + 关闭事件的分流；与 filteredAttrs（透传属性）合并成一个对象
+ * （同一元素上不允许两个 v-bind）。
+ *
+ * a-modal 的关闭事件是 cancel，a-drawer 是 close（它没有 cancel），所以监听器也在这里
+ * 按底座下发 —— 这也是下面 onUpdateOpen 只处理「打开」的原因（见其注释）。
+ */
+const hostBindings = computed<Record<string, unknown>>(() => {
+  const merged = { ...(filteredAttrs.value as Record<string, unknown>) }
+  if (isDrawer.value) {
+    const horizontal = props.direction === 'rtl' || props.direction === 'ltr'
+    return {
+      ...merged,
+      placement: DRAWER_PLACEMENT[props.direction] ?? 'right',
+      // a-drawer teleport 到 body，scoped 样式穿不透；用 rootClassName 挂一个全局钩子，
+      // 在下方 <style>（非 scoped）里给抽屉补上与弹窗一致的头部/正文/底部内边距。
+      rootClassName: 'es-dialog-drawer',
+      // a-drawer 横向用 width、纵向用 height；两者都取同一个尺寸旋钮（对齐 Element 的 size 语义）
+      ...(horizontal ? { width: props.width } : { height: props.width }),
+      onClose: handleClose,
+    }
+  }
+  return {
+    ...merged,
+    wrapClassName: modalWrapClass.value,
+    wrapStyle: wrapStyle.value,
+    width: isFullscreen.value ? '100vw' : props.width,
+    centered: props.alignCenter !== false && !props.top,
+    onCancel: handleClose,
+  }
 })
 
 // ─── instance 结构（对齐 vue3 getCurrentInstanceModel）──
@@ -473,6 +540,8 @@ const filteredAttrs = computed(() => {
     'loading',
     'destroyOnClose', 'modal', 'closeOnClickModal', 'closeOnPressEscape',
     'beforeClose', 'alignCenter', 'top', 'modalClass', 'visible',
+    // 底座选择键：由 hostBindings 消费，不能当 DOM 属性落到 a-modal / a-drawer 根节点
+    'type', 'direction',
   ])
   const attrs: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(props)) {
@@ -540,6 +609,25 @@ defineExpose({ close: handleClose, closed: handleClose, toggleFullscreen, doClos
   .ant-modal-body {
     flex: 1;
     overflow: auto;
+  }
+}
+
+/* 抽屉：与弹窗同一套视觉（头部下边线、正文/底部内边距），否则 render/configBtn
+   在两种底座下会长得不一样。a-drawer 同样 teleport 到 body，故用全局样式 +
+   rootClassName（hostBindings 里下发）做钩子。 */
+.es-dialog-drawer {
+  .ant-drawer-header {
+    border-bottom: 1px solid #eee;
+    padding: 10px;
+  }
+
+  .ant-drawer-body {
+    padding: 10px;
+  }
+
+  .ant-drawer-footer {
+    border-top: 1px solid #eee;
+    padding: 10px;
   }
 }
 </style>

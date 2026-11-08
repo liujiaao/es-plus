@@ -168,7 +168,7 @@ type: 'component'
 ## 可访问性
 
 - 查询区与表单、表格全部由 EsForm / EsTable 组合：字段标签关联、按钮键盘可达、表头 aria-sort 与那两个组件完全一致，不是另写一套（证据：`packages/vue3/src/components/es-crud-page/src/es-crud-page.vue` 含 `EsForm`）
-- 弹窗走 es-dialog（el-dialog 底座）：打开后焦点进入弹窗、Esc 关闭、关闭后焦点回到触发按钮 —— 沿用 Element Plus 的默认行为，本组件没有关掉它（证据：`packages/vue3/src/components/es-dialog/src/component.vue` 含 `<el-dialog`）
+- 弹窗走 es-dialog（默认 el-dialog 底座；type=drawer 时换成 el-drawer）：打开后焦点进入弹窗、Esc 关闭、关闭后焦点回到触发按钮 —— 沿用 Element Plus 的默认行为，本组件没有关掉它（证据：`packages/vue3/src/components/es-dialog/src/component.vue` 含 `ElDialog`）
 - 弹窗头部只有图标的「全屏 / 关闭」不再是无名按钮：补了 role="button"、tabindex 与 aria-label（名字走 locale，可被 messages 覆盖），Enter / Space 也能触发（证据：`packages/vue3/src/components/es-dialog/src/component.vue` 含 `aria-label`）
 
 ## 相关

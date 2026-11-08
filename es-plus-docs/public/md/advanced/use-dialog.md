@@ -38,6 +38,8 @@ type: 'advanced'
 
 | 名称 | 类型 | 说明 |
 | --- | --- | --- |
+| type | 'dialog' \| 'drawer' | 底座形态，默认 'dialog'；传 'drawer' 换成侧边抽屉（el-drawer），render / configBtn / beforeClose / cacheKey 等能力全部复用 |
+| direction | 'rtl' \| 'ltr' \| 'ttb' \| 'btt' | 抽屉弹出方向，默认 'rtl'（右侧），仅 type 为 'drawer' 时生效；横向时 width 是宽度，纵向时是高度 |
 | title | string | 弹窗标题 |
 | width | string \| number | 弹窗宽度，默认 "50%" |
 | visible | boolean | 显示状态。useDialog 未显式传入时补 true；缓存实例的开关也靠翻转它 |

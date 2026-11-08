@@ -1085,6 +1085,8 @@ export default {
             <tbody>
               <tr><td><code>cacheKey</code></td><td>String</td><td>—</td><td>实例缓存键（<code>useDialog</code> 调用参数，不是 EsDialog 的 prop）。传了才缓存：同一 cacheKey 第二次调用复用已创建实例，不传则每次新建</td></tr>
               <tr><td><code>title</code></td><td>String</td><td>''</td><td>弹窗标题</td></tr>
+              <tr><td><code>type</code></td><td>String</td><td>'dialog'</td><td>底座形态：<code>dialog</code> / <code>drawer</code>。drawer 复用弹窗的全部能力（render / configBtn / beforeClose / cacheKey），只换底座</td></tr>
+              <tr><td><code>direction</code></td><td>String</td><td>'rtl'</td><td>抽屉弹出方向（<code>rtl</code> / <code>ltr</code> / <code>ttb</code> / <code>btt</code>），仅 type 为 drawer 时生效；ttb / btt 时 width 作用于高度</td></tr>
               <tr><td><code>width</code></td><td>String / Number</td><td>'50%'</td><td>弹窗宽度</td></tr>
               <tr><td><code>maxHeight</code></td><td>String / Number</td><td>undefined</td><td>内容区最大高度（组件没有 <code>height</code>）</td></tr>
               <tr><td><code>fullscreen</code></td><td>Boolean</td><td>false</td><td>是否全屏显示</td></tr>

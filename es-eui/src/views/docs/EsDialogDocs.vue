@@ -74,6 +74,20 @@
             <td>—</td>
           </tr>
           <tr>
+            <td>type</td>
+            <td>底座形态：dialog（默认）/ drawer（侧边抽屉）。drawer 复用弹窗的全部能力，只换底座</td>
+            <td>String</td>
+            <td>dialog / drawer</td>
+            <td>'dialog'</td>
+          </tr>
+          <tr>
+            <td>direction</td>
+            <td>抽屉弹出方向（仅 type 为 drawer 时生效）；ttb / btt 时 width 作用于高度</td>
+            <td>String</td>
+            <td>rtl / ltr / ttb / btt</td>
+            <td>'rtl'</td>
+          </tr>
+          <tr>
             <td>title</td>
             <td>弹窗标题</td>
             <td>String</td>

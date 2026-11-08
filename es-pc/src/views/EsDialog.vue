@@ -226,7 +226,9 @@ const methodColumns = [
 ]
 
 const dialogProps = [
-  { key: '1', prop: 'title', type: 'string', default: "'弹窗'", desc: '弹窗标题（只接字符串，传函数会被当成非法值；按行生成标题请用 EsCrudPage 的 dialogs，或走 renderHeader）' },
+  { key: '24', prop: 'type', type: "'dialog' | 'drawer'", default: "'dialog'", desc: '底座形态：drawer 换成 a-drawer 侧边抽屉，render / configBtn / beforeClose / cacheKey 等能力全部复用' },
+  { key: '25', prop: 'direction', type: "'rtl' | 'ltr' | 'ttb' | 'btt'", default: "'rtl'", desc: '抽屉弹出方向（仅 type 为 drawer 时生效）；ttb / btt 时 width 作用于高度' },
+  { key: '3', prop: 'title', type: 'string', default: "'弹窗'", desc: '弹窗标题（只接字符串，传函数会被当成非法值；按行生成标题请用 EsCrudPage 的 dialogs，或走 renderHeader）' },
   { key: '2', prop: 'width', type: 'string | number', default: "'600px'", desc: '弹窗宽度' },
   { key: '3', prop: 'visible', type: 'boolean', default: 'false', desc: '是否显示（配合 v-model:visible）' },
   { key: '4', prop: 'render', type: 'function', default: '-', desc: '自定义渲染内容 (h, instance, components) => VNode' },

@@ -464,6 +464,10 @@ export interface PaginationConfig {
 }
 
 export interface DialogOptions {
+  /** 底座形态：'dialog'（默认）或 'drawer'（侧边抽屉，复用弹窗全部能力） */
+  type?: 'dialog' | 'drawer'
+  /** 抽屉弹出方向，默认 'rtl'；type 为 'dialog' 时忽略 */
+  direction?: 'rtl' | 'ltr' | 'ttb' | 'btt'
   title?: string
   width?: string | number
   /**

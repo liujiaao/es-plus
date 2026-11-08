@@ -9,17 +9,22 @@
       （appendTo === 'body' 时 teleport 的启用开关只认 appendToBody）。
       不传 appendTo 时 appendToBody 保持 false —— 渲染位置与修复前逐字节一致。
     -->
-    <el-dialog
+    <!--
+      底座可切换：dialog（默认）/ drawer（W3-4）。
+      两者都是 Element Plus 的「弹层」，共用 v-model、before-close、header/footer 插槽与
+      appendTo/appendToBody，故此处的头/身/脚只写一份；差异收敛到 hostProps：
+        - 抽屉用 size（宽度或高度，随 direction 而定），弹窗用 width；
+        - 抽屉没有 draggable / fullscreen，弹窗专有；
+        - 抽屉的关闭触发（遮罩/ESC）同样经 before-close，关闭链三端一致。
+      type 是声明 prop，不会落进 attrs —— 所以必须显式 v-bind，不能靠透传。
+    -->
+    <component
+      :is="hostComponent"
       :class="['dg-dialog', initDialogCls]"
-      v-bind="filteredAttrs"
+      v-bind="hostBindings"
       v-model="dialogVisible"
-      :draggable="props.isDraggable"
-      :width="props.width"
       :show-close="showNativeClose"
       :before-close="onBeforeClose"
-      :fullscreen="isFullscreen"
-      :append-to="props.appendTo"
-      :append-to-body="props.appendTo !== undefined"
     >
       <template #header>
         <template v-if="props.renderHeader">
@@ -39,7 +44,7 @@
               @click="handleFullscreen"
               @keydown.enter.prevent="handleFullscreen"
               @keydown.space.prevent="handleFullscreen"
-              v-show="!props.hiddenFullBtn"
+              v-show="!props.hiddenFullBtn && !isDrawer"
             >
               <FullScreen v-if="!isFullscreen" />
               <CopyDocument v-else />
@@ -107,7 +112,7 @@
         </span>
         <slot v-else name="footer" />
       </template>
-    </el-dialog>
+    </component>
   </div>
 </template>
 
@@ -117,7 +122,7 @@ export default { name: 'EsDialog' }
 
 <script setup lang="ts">
 import { computed, ref, reactive, getCurrentInstance, provide, inject, useAttrs, onMounted, watch } from 'vue'
-import { ElConfigProvider, ElDialog, ElButton, ElIcon, vLoading } from 'element-plus'
+import { ElConfigProvider, ElDialog, ElDrawer, ElButton, ElIcon, vLoading } from 'element-plus'
 import { FullScreen, Close, CopyDocument } from '@element-plus/icons-vue'
 import RenderJsx from './render-jsx.vue'
 import EsTable from '../../es-table'
@@ -137,6 +142,16 @@ const builtinClose = computed(() => resolveBuiltinText('close'))
 
 const props = withDefaults(
   defineProps<{
+    /**
+     * 底座形态：'dialog'（默认）或 'drawer'。
+     *
+     * drawer 复用弹窗的全部能力（render/renderHeader/renderFooter/configBtn/beforeClose/
+     * cacheKey 缓存/权限过滤），只把底座换成 el-drawer —— `useDialog({ type: 'drawer' })`
+     * 与 `<es-dialog type="drawer">` 走的是同一条路径。
+     */
+    type?: 'dialog' | 'drawer'
+    /** 抽屉弹出方向，默认 'rtl'（右侧）；dialog 忽略。ttb/btt 时 width 作用于高度 */
+    direction?: 'rtl' | 'ltr' | 'ttb' | 'btt'
     title?: string
     visible?: boolean
     // 与 el-dialog 的 appendTo 同型（Element Plus 的 teleport :to 接受选择器或元素）。
@@ -160,8 +175,39 @@ const props = withDefaults(
   }>(),
   // showClose 必须真的默认 true：模板里用 `v-show="props.showClose"` 做闸门，
   // 若声明成 optional 而不给默认值，不传时是 undefined → 自绘的 X 反而被隐藏。
-  { showClose: true }
+  { showClose: true, type: 'dialog', direction: 'rtl' }
 )
+
+// ─── 底座选择（dialog / drawer）──────────────────────────────────────────
+const isDrawer = computed(() => props.type === 'drawer')
+const hostComponent = computed(() => (isDrawer.value ? ElDrawer : ElDialog))
+
+/**
+ * 两个底座共有的键（appendTo/appendToBody）之外，各自专有的键在这里分流：
+ *   - el-drawer 的「尺寸」叫 size，方向叫 direction；它没有 draggable / fullscreen。
+ *   - el-dialog 仍是原来的 draggable/width/fullscreen。
+ * 与透传属性合并成一个对象（同一元素上不允许两个 v-bind）；底座专有键覆盖同名透传键。
+ */
+const hostBindings = computed<Record<string, unknown>>(() => {
+  const merged = { ...(filteredAttrs.value as Record<string, unknown>) }
+  if (isDrawer.value) {
+    return {
+      ...merged,
+      direction: props.direction,
+      size: props.width,
+      appendTo: props.appendTo,
+      appendToBody: props.appendTo !== undefined,
+    }
+  }
+  return {
+    ...merged,
+    draggable: props.isDraggable,
+    width: props.width,
+    fullscreen: isFullscreen.value,
+    appendTo: props.appendTo,
+    appendToBody: props.appendTo !== undefined,
+  }
+})
 
 // 原生关闭按钮只在「用户没有自绘头部」时放出。
 //
@@ -253,6 +299,10 @@ const closeFullscreen = () => {
 }
 
 const handleFullscreen = () => {
+  // 抽屉没有全屏态：它本身就是贴着一条边的整高（或整宽）容器，缩放由 direction + size
+  // 决定。图标在 drawer 下已隐藏，这里再兜一层，防止外部调用 exposed.toggleFullscreen
+  // 把 isFullscreen 翻成 true 后带进下一次 dialog 复用。
+  if (isDrawer.value) return
   // 此处原本有一句 `if (attrs?.fullscreen) return`：fullscreen 是声明 prop，
   // 永远不在 attrs 里，该守卫从未生效（死代码）。vue2 / antdv 的切换都不设闸，
   // 这里保持三端一致 —— prop 只定初值，之后允许自由切换。
@@ -270,12 +320,20 @@ const onBeforeClose = (_done: () => void) => {
   runBeforeClose(doClose)
 }
 
+// drawer 下 dialog 专有的透传属性（top / alignCenter / draggable / fullscreen）若原样
+// 落到 el-drawer，只会变成根节点上的无意义 DOM 属性（Element Plus 的 drawer 用 size /
+// direction，不认这些）；按底座过滤，别让「静默不生效」看起来像支持。
+const DRAWER_IGNORED_ATTRS = new Set(['top', 'alignCenter', 'align-center', 'draggable', 'fullscreen'])
+
 const filteredAttrs = computed(() => {
   const { ...rest } = attrs
-  return rest
+  if (!isDrawer.value) return rest
+  return Object.fromEntries(Object.entries(rest).filter(([k]) => !DRAWER_IGNORED_ATTRS.has(k)))
 })
 
 const initDialogCls = computed(() => {
+  // drawer 不参与弹窗的 margin/fullscreen 类（它们改的是 .el-dialog 的定位与尺寸）
+  if (isDrawer.value) return ''
   if (!isFullscreen.value) {
     if (props.maxHeight) return 'dialogShadow'
     return 'dialogAuto'
@@ -290,7 +348,9 @@ const getMaxContentHeight = () => {
 
 const initDialogHeight = computed(() => {
   const viewH = getMaxContentHeight()
-  if (!isFullscreen.value) {
+  // drawer 没有全屏态（见 handleFullscreen）：即便复用实例上残留 isFullscreen=true，
+  // 也不能把正文撑成整视口高度 —— 抽屉自身的高度由 size/direction 决定。
+  if (isDrawer.value || !isFullscreen.value) {
     if (props.maxHeight) {
       return { maxHeight: typeof props.maxHeight === 'number' ? `${props.maxHeight}px` : props.maxHeight }
     }
@@ -397,6 +457,28 @@ if (instance) {
       align-items: center;
       justify-content: space-between;
       margin: 0;
+    }
+  }
+
+  /* 抽屉：与弹窗同一套视觉（头部下边线、正文/底部内边距），
+     否则 render/configBtn 在两种底座下会长得不一样。 */
+  :deep(.el-drawer) {
+    .el-drawer__header {
+      border-bottom: 1px solid #eee;
+      display: flex;
+      margin: 0;
+      padding: 10px;
+      align-items: center;
+      justify-content: space-between;
+      color: inherit;
+    }
+
+    .el-drawer__body {
+      padding: 10px;
+    }
+
+    .el-drawer__footer {
+      padding: 0 10px 10px;
     }
   }
 }

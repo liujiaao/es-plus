@@ -8,17 +8,23 @@
         - header/footer 槽位写法相同，但不能用 #header (Vue 2.6+ 支持新语法，2.5 及以下需 slot="header")
         - 图标改用 i.el-icon-* class 字符串
     -->
-    <el-dialog
+    <!--
+      底座可切换：dialog（默认）/ drawer（W3-4）。
+      Element UI 的 el-dialog 与 el-drawer 差异比 Element Plus 大：
+        - 尺寸键名不同：dialog 用 width，drawer 用 size（横向管宽、纵向管高）；
+        - drawer **没有 footer 槽**（只有 title + default），底部动作区必须放进默认插槽；
+        - 抽屉没有 fullscreen / draggable；点遮罩关闭叫 wrapperClosable。
+      差异收敛到 hostProps 与 isDrawer 分支，头/身两份底座共用。
+    -->
+    <component
+      :is="isDrawer ? 'el-drawer' : 'el-dialog'"
       ref="dialogRootRef"
       :class="['dg-dialog', initDialogCls]"
-      v-bind="filteredAttrs"
+      v-bind="hostBindings"
       :visible.sync="dialogVisible"
-      :width="typeof width === 'number' ? width + 'px' : width"
       :show-close="showNativeClose"
-      :fullscreen="isFullscreen"
       :append-to-body="resolvedAppendToBody"
       :modal-append-to-body="modalAppendToBody"
-      :close-on-click-modal="closeOnClickModal"
       :close-on-press-escape="closeOnPressEscape"
       :destroy-on-close="destroyOnClose"
       :before-close="beforeCloseHandler"
@@ -38,7 +44,7 @@
               <!-- 图标按钮：可见内容只有一个 <i>，读屏拿不到名字；补 role/aria-label 与
                    Enter / Space 键盘操作（原生 <i> 不进 Tab 序列，键盘用户此前无法全屏/关闭）。 -->
               <i
-                v-show="!hiddenFullBtn"
+                v-show="!hiddenFullBtn && !isDrawer"
                 role="button"
                 tabindex="0"
                 :aria-label="isFullscreen ? builtinExitFullscreen : builtinFullscreen"
@@ -62,20 +68,54 @@
         </template>
       </template>
 
-      <div v-loading="loading" class="dialog_body_layouts" :style="initDialogHeight">
-        <render-jsx
-          v-if="render && typeof render === 'function'"
-          :refs="renderBodyRefsObject"
-          :instance="getCurrentInstanceModel"
-          :render="render"
-          :components="dialogComponents"
-        />
-        <!-- 默认插槽：`<es-dialog><es-form /></es-dialog>` 的主体内容。
-             此前只有 render 分支，插槽被静默丢弃（同 vue3；antdv 版一直有回退）。 -->
-        <slot v-else />
+      <!-- 底座的默认插槽容器。drawer 分支需要 flex 列布局把底部动作区钉在抽屉底部
+           （el-drawer__body 是 flex:1 + overflow:auto，见下方 .es-drawer-layout 样式）。 -->
+      <div :class="isDrawer ? 'es-drawer-layout' : ''">
+        <div v-loading="loading" class="dialog_body_layouts" :style="initDialogHeight">
+          <render-jsx
+            v-if="render && typeof render === 'function'"
+            :refs="renderBodyRefsObject"
+            :instance="getCurrentInstanceModel"
+            :render="render"
+            :components="dialogComponents"
+          />
+          <!-- 默认插槽：`<es-dialog><es-form /></es-dialog>` 的主体内容。
+               此前只有 render 分支，插槽被静默丢弃（同 vue3；antdv 版一直有回退）。 -->
+          <slot v-else />
+        </div>
+
+        <!-- Element UI 的 el-drawer 没有 footer 槽（只有 title + default），底部动作区
+             只能放进默认插槽。内容与下面 dialog 的 #footer 逐项一致：同一套
+             renderFooter / configBtn / footer 插槽语义，三端行为不变。
+             （Element UI 源码：packages/drawer/src/main.vue 的 <section class="el-drawer__body">） -->
+        <div v-if="isDrawer && !isHiddenFooter" class="es-drawer-footer">
+          <span v-if="!$slots.footer" class="dialog-footer">
+            <render-jsx
+              v-if="renderFooter && typeof renderFooter === 'function'"
+              :render="renderFooter"
+              :instance="getCurrentInstanceModel"
+            />
+            <template v-else-if="configBtn && configBtn.length">
+              <template v-for="(it, inx) in configBtn">
+                <el-button
+                  v-if="checkPermission(it.permissionValue)"
+                  :key="it.key || inx"
+                  size="small"
+                  v-bind="filterOptions(it)"
+                  :icon="getCompIcon(it.icon)"
+                  :disabled="getDisabled(it)"
+                  @click="() => handleBtnClick(it)"
+                >
+                  {{ it.name }}
+                </el-button>
+              </template>
+            </template>
+          </span>
+          <slot v-else name="footer" />
+        </div>
       </div>
 
-      <template v-if="!isHiddenFooter" #footer>
+      <template v-if="!isHiddenFooter && !isDrawer" #footer>
         <span v-if="!$slots.footer" class="dialog-footer">
           <render-jsx
             v-if="renderFooter && typeof renderFooter === 'function'"
@@ -100,7 +140,7 @@
         </span>
         <slot v-else name="footer" />
       </template>
-    </el-dialog>
+    </component>
   </div>
 </template>
 
@@ -142,6 +182,16 @@ export default defineComponent({
   components: { RenderJsx },
   inheritAttrs: false,
   props: {
+    /**
+     * 底座形态：'dialog'（默认）或 'drawer'。
+     *
+     * drawer 复用弹窗的全部能力（render/renderHeader/renderFooter/configBtn/beforeClose/
+     * cacheKey 缓存/权限过滤），只把底座换成 el-drawer；`useDialog({ type: 'drawer' })`
+     * 与 `<es-dialog type="drawer">` 都走这条路径。
+     */
+    type: { type: String, default: 'dialog' },
+    /** 抽屉弹出方向，默认 'rtl'（右侧）；dialog 忽略。ttb/btt 时 width 作用于高度 */
+    direction: { type: String, default: 'rtl' },
     title: { type: String, default: '' },
     visible: { type: Boolean, default: false },
     appendTo: { type: [Object, String], default: undefined },
@@ -192,6 +242,11 @@ export default defineComponent({
         isFullscreen.value = !!val
       }
     )
+    // ─── 底座选择（dialog / drawer）────────────────────────────────────────
+    // drawer 只换底座：render/configBtn/关闭链/权限过滤全部复用，故下面所有
+    // 「弹窗专有」的逻辑（拖拽、全屏、margin 类）都以 isDrawer 为闸门。
+    const isDrawer = computed(() => props.type === 'drawer')
+
     /**
      * appendTo：Element UI 2.x 的 el-dialog **只有布尔 `append-to-body`**，没有
      * 「选择器挂载点」能力（Element Plus 的 `appendTo`、antdv 的 `getContainer` 有）。
@@ -241,7 +296,7 @@ export default defineComponent({
       min > max ? min : Math.max(min, Math.min(max, v))
 
     function onDragStart(e: MouseEvent) {
-      if (isFullscreen.value || !props.isDraggable) return
+      if (isFullscreen.value || isDrawer.value || !props.isDraggable) return
       // 从手柄向上找 .el-dialog 元素
       let el = e.currentTarget as HTMLElement
       while (el && !el.classList.contains('el-dialog')) {
@@ -288,7 +343,8 @@ export default defineComponent({
     // Vue 2 + composition-api 下字符串 ref 不会自动回填 setup ref，需经 vm.$refs 手动获取；
     // append-to-body 时 $el 仍指向真实节点，querySelector 依然可用。
     const bindDragHandle = () => {
-      if (!props.isDraggable) return
+      // drawer 没有 .el-dialog__header，也没有拖拽语义（贴着屏幕边滑动）
+      if (!props.isDraggable || isDrawer.value) return
       const vm = (instance as unknown as { proxy?: { $refs?: Record<string, any> } }).proxy
       const dlg = vm?.$refs?.dialogRootRef
       const root = dlg?.$el as HTMLElement | undefined
@@ -381,6 +437,9 @@ export default defineComponent({
     }
 
     const handleFullscreen = () => {
+      // 抽屉没有全屏态：它本身就贴着一条边、由 direction + size 决定尺寸。
+      // 图标在 drawer 下已隐藏；这里再兜一层，防止外部 toggleFullscreen 把状态带进下一次 dialog。
+      if (isDrawer.value) return
       isFullscreen.value = !isFullscreen.value
     }
     // 对齐 antdv/vue3 的命名（exposed 用 toggleFullscreen）
@@ -442,6 +501,34 @@ export default defineComponent({
       ...((props.passThroughAttrs as Record<string, unknown>) || {}),
     }))
 
+    /**
+     * 传给底座的完整属性集：透传属性 + 底座专有键。
+     *
+     * 两底座的键名不同（Element UI 2.x）：
+     *   - el-dialog：width / fullscreen / close-on-click-modal
+     *   - el-drawer：size（横向管宽、纵向管高）/ direction / wrapperClosable（点遮罩关闭）
+     * Vue 2.6 的模板不允许同一元素上写两个 `v-bind`（解析报 duplicate-attribute），
+     * 故在这里合并成一个对象；底座专有键覆盖透传同名键（与 vue3 的绑定顺序一致）。
+     */
+    const hostBindings = computed<Record<string, unknown>>(() => {
+      const merged = { ...(filteredAttrs.value as Record<string, unknown>) }
+      if (isDrawer.value) {
+        return {
+          ...merged,
+          size: typeof props.width === 'number' ? `${props.width}px` : props.width,
+          direction: props.direction,
+          // Element UI 的抽屉把「点遮罩关闭」叫 wrapperClosable；dialog 叫 closeOnClickModal
+          wrapperClosable: props.closeOnClickModal !== false,
+        }
+      }
+      return {
+        ...merged,
+        width: typeof props.width === 'number' ? `${props.width}px` : props.width,
+        fullscreen: isFullscreen.value,
+        closeOnClickModal: props.closeOnClickModal,
+      }
+    })
+
     // 原生关闭按钮只在「调用方没有自绘头部」时放出。
     //
     // 此前这里硬编码 `:show-close="false"`，它只在**内置头部**下成立 —— 内置头部的
@@ -452,6 +539,8 @@ export default defineComponent({
     const showNativeClose = computed(() => props.showClose && !!props.renderHeader)
 
     const initDialogCls = computed(() => {
+      // drawer 不参与弹窗的 margin / fullscreen 类（它们改的是 .el-dialog 的定位与尺寸）
+      if (isDrawer.value) return ''
       if (!isFullscreen.value) {
         if (props.maxHeight) return 'dialogShadow'
         return 'dialogAuto'
@@ -466,7 +555,9 @@ export default defineComponent({
 
     const initDialogHeight = computed(() => {
       const viewH = getMaxContentHeight()
-      if (!isFullscreen.value) {
+      // drawer 没有全屏态（见 handleFullscreen）：即便复用实例上残留 isFullscreen=true，
+      // 也不能把正文撑成整视口高度 —— 抽屉自身高度由 size/direction 决定。
+      if (isDrawer.value || !isFullscreen.value) {
         if (props.maxHeight) {
           return {
             maxHeight:
@@ -538,6 +629,8 @@ export default defineComponent({
       builtinExitFullscreen: resolveBuiltinText('exitFullscreen'),
       builtinClose: resolveBuiltinText('close'),
       // computeds
+      isDrawer,
+      hostBindings,
       filteredAttrs,
       resolvedAppendToBody,
       showNativeClose,
@@ -587,6 +680,45 @@ export default defineComponent({
       justify-content: space-between;
       margin: 0;
     }
+  }
+
+  /* 抽屉：与弹窗同一套视觉（头部下边线、正文/底部内边距），
+     否则 render/configBtn 在两种底座下会长得不一样。
+     Element UI 的 .el-drawer__header 默认 margin-bottom:32px / padding:20px 20px 0。 */
+  ::v-deep(.el-drawer) {
+    .el-drawer__header {
+      border-bottom: 1px solid #eee;
+      margin: 0;
+      padding: 10px;
+      color: inherit;
+    }
+
+    .el-drawer__body {
+      padding: 10px;
+    }
+  }
+
+  /* 抽屉默认插槽里的列布局：正文滚动、底部动作区钉底。
+     .el-drawer__body 是 flex:1 + overflow:auto，所以这里用 height:100% 接住它的高度。 */
+  ::v-deep(.es-drawer-layout) {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    min-height: 0;
+
+    .dialog_body_layouts {
+      flex: 1;
+      min-height: 0;
+    }
+  }
+
+  /* drawer 的底部动作区（Element UI 没有 footer 槽，我们自己放进默认插槽）：
+     对齐 el-dialog__footer 的右对齐，并加一条上边线与正文分开。 */
+  ::v-deep(.es-drawer-footer) {
+    flex: none;
+    text-align: right;
+    padding-top: 10px;
+    border-top: 1px solid #eee;
   }
 }
 
