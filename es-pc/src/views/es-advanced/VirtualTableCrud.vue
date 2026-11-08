@@ -1,6 +1,6 @@
 <template>
   <div class="virtual-crud-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">完整 CRUD — httpRequest + 分页 + useDialog</h4>
+    <h4 style="margin-bottom: 12px; color: var(--es-text-regular);">完整 CRUD — httpRequest + 分页 + useDialog</h4>
     <es-table
       ref="tableRef"
       :columns="columns"

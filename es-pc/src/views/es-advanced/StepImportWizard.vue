@@ -466,7 +466,7 @@ const openWizard = () => {
   margin: 0 0 14px;
   font-size: 13px;
   line-height: 1.8;
-  color: #595959;
+  color: var(--es-text-secondary);
 }
 
 .import-wizard .wizard-actions {
@@ -496,7 +496,7 @@ const openWizard = () => {
   border-radius: 3px;
   font-family: 'Fira Code', monospace;
   font-size: 12px;
-  color: #d63384;
+  color: var(--es-doc-inline-code-text);
 }
 
 .ant-modal .csv-tip {
@@ -508,7 +508,7 @@ const openWizard = () => {
 .ant-modal .wizard-summary {
   margin-bottom: 8px;
   font-size: 13px;
-  color: #595959;
+  color: var(--es-text-secondary);
 }
 
 .ant-modal .fix-panel {
@@ -538,6 +538,6 @@ const openWizard = () => {
   padding-left: 18px;
   font-size: 12px;
   line-height: 1.9;
-  color: #595959;
+  color: var(--es-text-secondary);
 }
 </style>

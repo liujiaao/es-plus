@@ -1,6 +1,6 @@
 <template>
   <div class="crud-page-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">EsCrudPage 一键 CRUD — 订单管理</h4>
+    <h4 style="margin-bottom: 12px; color: var(--es-text-regular);">EsCrudPage 一键 CRUD — 订单管理</h4>
     <es-crud-page
       ref="crudRef"
       :schema="pageSchema"

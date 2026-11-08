@@ -58,7 +58,7 @@ const schema = {
       isHiddenFooter: true,
       render: (h, { close, refresh }) => {
         return h('div', { style: 'padding: 20px; text-align: center;' }, [
-          h('p', { style: 'margin-bottom: 16px; color: #666;' }, '拖拽文件到此处或点击上传按钮'),
+          h('p', { style: 'margin-bottom: 16px; color: var(--es-text-secondary);' }, '拖拽文件到此处或点击上传按钮'),
           h(Upload, {
             drag: true,
             action: '#',

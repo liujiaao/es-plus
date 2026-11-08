@@ -37,7 +37,7 @@ const rendererize = (text) => text.replaceAll('{renderer}', 'antdv')
 
 .subtitle {
   font-size: 16px;
-  color: #666;
+  color: var(--es-text-secondary);
 }
 
 .code-block {
@@ -57,7 +57,7 @@ const rendererize = (text) => text.replaceAll('{renderer}', 'antdv')
 }
 
 section p {
-  color: #666;
+  color: var(--es-text-secondary);
   line-height: 1.8;
 }
 

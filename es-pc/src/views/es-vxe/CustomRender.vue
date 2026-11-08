@@ -52,7 +52,7 @@ const columns = [
       const isHigh = value > 15000
       return h(
         'span',
-        { style: `color:${isHigh ? '#52c41a' : '#606266'};font-weight:${isHigh ? 600 : 400}` },
+        { style: `color:${isHigh ? '#52c41a' : 'var(--es-text-regular)'};font-weight:${isHigh ? 600 : 400}` },
         `¥${Number(value).toLocaleString()}`
       )
     },

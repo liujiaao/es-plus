@@ -266,7 +266,7 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
 }
 
 .flagship-intro {
-  color: #666;
+  color: var(--es-text-secondary);
   line-height: 1.8;
   max-width: 900px;
 }
@@ -340,7 +340,7 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
   max-width: 78ch;
   font-size: 14px;
   line-height: 1.8;
-  color: #333;
+  color: var(--es-text-regular);
 }
 
 .story-points {
@@ -371,7 +371,7 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
   padding: 2px 8px;
   border-radius: 4px;
   background: var(--es-fill);
-  color: #333;
+  color: var(--es-text-primary);
   font-family: monospace;
   font-size: 12px;
   word-break: break-all;
@@ -381,7 +381,7 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
   margin: 8px 0 0;
   font-size: 13px;
   line-height: 1.7;
-  color: #666;
+  color: var(--es-text-secondary);
 }
 
 .story-actions {
@@ -395,7 +395,7 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
 .story-basis {
   font-size: 13px;
   line-height: 1.7;
-  color: #666;
+  color: var(--es-text-secondary);
 }
 
 .story-basis {
@@ -415,7 +415,7 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
   padding: 8px 12px;
   border-bottom: 1px solid #f0f0f0;
   text-align: left;
-  color: #333;
+  color: var(--es-text-regular);
 }
 
 .story-cost th {
@@ -458,7 +458,7 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
   margin-top: 2px;
   font-size: 13px;
   font-weight: 500;
-  color: #333;
+  color: var(--es-text-primary);
 }
 
 .story-metric-basis,
@@ -466,7 +466,7 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
   margin: 6px 0 0;
   font-size: 12px;
   line-height: 1.7;
-  color: #666;
+  color: var(--es-text-secondary);
 }
 
 .story-metric-counts {
@@ -491,7 +491,7 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
 .story-boundaries li {
   font-size: 14px;
   line-height: 1.8;
-  color: #333;
+  color: var(--es-text-regular);
   margin-bottom: 8px;
 }
 

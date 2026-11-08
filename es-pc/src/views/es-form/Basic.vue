@@ -83,7 +83,7 @@ const configBtn = [
 }
 .result-box h4 {
   margin-bottom: 8px;
-  color: #595959;
+  color: var(--es-text-secondary);
 }
 .result-box pre {
   margin: 0;

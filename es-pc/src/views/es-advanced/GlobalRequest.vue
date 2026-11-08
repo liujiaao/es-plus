@@ -114,6 +114,6 @@ const pageSchema = {
 }
 .log-detail code {
   font-family: 'Fira Code', monospace;
-  color: #d63384;
+  color: var(--es-doc-inline-code-text);
 }
 </style>

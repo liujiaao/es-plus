@@ -116,7 +116,7 @@ const itemTableOptions = {
   justify-content: flex-end;
   padding: 8px 12px;
   font-size: 13px;
-  color: #595959;
+  color: var(--es-text-secondary);
   background: var(--es-bg);
   border: 1px solid #f0f0f0;
   border-top: none;

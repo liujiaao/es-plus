@@ -124,6 +124,6 @@ const openProductPicker = () => {
 }
 .picked-label {
   font-size: 13px;
-  color: #606266;
+  color: var(--es-text-regular);
 }
 </style>

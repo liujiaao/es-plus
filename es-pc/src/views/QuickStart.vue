@@ -103,7 +103,7 @@ dialog({
 }
 
 .qs-hero p {
-  color: #666;
+  color: var(--es-text-secondary);
   line-height: 1.8;
 }
 
@@ -137,7 +137,7 @@ dialog({
 
 .case-pain,
 .case-win {
-  color: #666;
+  color: var(--es-text-secondary);
   line-height: 1.7;
   margin: 4px 0;
 }

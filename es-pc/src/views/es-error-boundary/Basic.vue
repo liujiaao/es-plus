@@ -239,6 +239,6 @@ const logError = (err, info) => {
   padding: 1px 5px;
   border-radius: 3px;
   font-family: 'Fira Code', monospace;
-  color: #d63384;
+  color: var(--es-doc-inline-code-text);
 }
 </style>

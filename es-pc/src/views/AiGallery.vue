@@ -150,11 +150,11 @@ function download(name, data) {
   h1 {
     font-size: 24px;
     margin: 8px 0 10px;
-    color: #1f1f1f;
+    color: var(--es-text-primary);
   }
 
   p {
-    color: #595959;
+    color: var(--es-text-secondary);
     line-height: 1.9;
     margin: 6px 0;
   }
@@ -228,7 +228,7 @@ function download(name, data) {
 
   h2 {
     font-size: 16px;
-    color: #1f1f1f;
+    color: var(--es-text-primary);
     margin: 0 0 12px;
   }
 }
@@ -256,7 +256,7 @@ function download(name, data) {
   h3 {
     font-size: 15px;
     margin: 8px 0 4px;
-    color: #1f1f1f;
+    color: var(--es-text-primary);
   }
 }
 
@@ -267,18 +267,34 @@ function download(name, data) {
   font-size: 12px;
 }
 
+/* 填充式状态胶囊：白字压亮色在暗色下只有 1.9–2.8:1。
+   浅色用加深一档的实色（白字 5.0+），深色反过来用浅色底 + 深色墨字。 */
 .ai-card-claim {
   padding: 1px 8px;
   border-radius: 8px;
   color: #fff;
-  background: var(--es-brand-primary);
+  background: var(--es-brand-strong);
 
   &.claim-compile {
-    background: var(--es-success);
+    background: var(--es-success-text);
   }
 
   &.claim-measure {
     background: var(--es-text-secondary);
+  }
+
+  .dark & {
+    color: var(--es-brand-tint);
+    background: var(--es-brand-strong);
+
+    &.claim-compile {
+      color: var(--es-success-tint);
+      background: var(--es-success);
+    }
+
+    &.claim-measure {
+      color: var(--es-bg);
+    }
   }
 }
 

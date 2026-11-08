@@ -355,7 +355,7 @@ function handleDialogConfirm(key, data) {
   margin: 0;
   font-size: 13px;
   line-height: 1.8;
-  color: #333;
+  color: var(--es-text-regular);
 }
 
 .step-index {
@@ -410,7 +410,7 @@ function handleDialogConfirm(key, data) {
   padding: 12px 14px;
   border-radius: 6px;
   background: var(--es-doc-code-block-bg);
-  color: #333;
+  color: var(--es-doc-code-block-text);
   font-size: 12px;
   line-height: 1.7;
   overflow-x: auto;
@@ -445,7 +445,7 @@ function handleDialogConfirm(key, data) {
   margin-top: 2px;
   font-size: 13px;
   font-weight: 500;
-  color: #333;
+  color: var(--es-text-regular);
 }
 
 .evidence-metric-basis {
@@ -464,7 +464,7 @@ function handleDialogConfirm(key, data) {
 .evidence-boundaries li {
   font-size: 14px;
   line-height: 1.8;
-  color: #333;
+  color: var(--es-text-regular);
   margin-bottom: 8px;
 }
 
@@ -504,6 +504,6 @@ function handleDialogConfirm(key, data) {
   margin: 2px 0 10px;
   font-size: 13px;
   line-height: 1.8;
-  color: #333;
+  color: var(--es-text-regular);
 }
 </style>

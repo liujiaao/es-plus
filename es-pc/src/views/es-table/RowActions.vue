@@ -170,7 +170,7 @@ const tableOptions = {
   gap: 8px;
   margin-bottom: 10px;
   font-size: 14px;
-  color: #606266;
+  color: var(--es-text-regular);
 }
 .role-switch .tip {
   color: #909399;

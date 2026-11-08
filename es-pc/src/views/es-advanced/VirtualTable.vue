@@ -1,6 +1,6 @@
 <template>
   <div class="virtual-table-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">万行数据 — 一次渲染 1 万条（默认引擎）</h4>
+    <h4 style="margin-bottom: 12px; color: var(--es-text-regular);">万行数据 — 一次渲染 1 万条（默认引擎）</h4>
     <es-table
       ref="tableRef"
       :columns="columns"

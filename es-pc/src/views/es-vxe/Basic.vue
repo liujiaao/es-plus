@@ -329,7 +329,7 @@ onMounted(async () => {
 }
 .wb-label {
   font-size: 13px;
-  color: #595959;
+  color: var(--es-text-secondary);
 }
 .wb-metrics {
   display: flex;
@@ -382,6 +382,6 @@ onMounted(async () => {
   padding: 1px 5px;
   border-radius: 3px;
   font-family: 'Fira Code', monospace;
-  color: #d63384;
+  color: var(--es-doc-inline-code-text);
 }
 </style>

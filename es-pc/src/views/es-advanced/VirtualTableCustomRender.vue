@@ -1,6 +1,6 @@
 <template>
   <div class="virtual-render-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">自定义渲染 — Progress / Tag / 具名插槽</h4>
+    <h4 style="margin-bottom: 12px; color: var(--es-text-regular);">自定义渲染 — Progress / Tag / 具名插槽</h4>
     <es-table
       ref="tableRef"
       :columns="columns"

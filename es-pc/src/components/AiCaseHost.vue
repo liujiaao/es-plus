@@ -145,7 +145,7 @@ const claimLabel = computed(() => CLAIM_LABEL[entry.value.claim] ?? entry.value.
   h1 {
     font-size: 22px;
     margin: 6px 0 8px;
-    color: #1f1f1f;
+    color: var(--es-text-primary);
   }
 }
 
@@ -165,7 +165,7 @@ const claimLabel = computed(() => CLAIM_LABEL[entry.value.claim] ?? entry.value.
   background: var(--es-fill-light);
   font-size: 13px;
   line-height: 1.8;
-  color: #595959;
+  color: var(--es-text-secondary);
 }
 
 .ai-case-bar {
@@ -205,7 +205,7 @@ const claimLabel = computed(() => CLAIM_LABEL[entry.value.claim] ?? entry.value.
   summary {
     cursor: pointer;
     font-size: 14px;
-    color: #1f1f1f;
+    color: var(--es-text-primary);
   }
 
   pre {

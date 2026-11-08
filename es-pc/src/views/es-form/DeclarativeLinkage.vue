@@ -58,7 +58,7 @@ const configBtn = [
 }
 .tip {
   margin: 0 0 16px;
-  color: #666;
+  color: var(--es-text-secondary);
   font-size: 13px;
 }
 .config-source {

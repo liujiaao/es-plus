@@ -223,7 +223,7 @@ h1 {
 }
 
 .subtitle {
-  color: #666;
+  color: var(--es-text-secondary);
   font-size: 15px;
 }
 
@@ -238,7 +238,7 @@ h3 {
   font-size: 18px;
   font-weight: 600;
   margin: 20px 0 12px;
-  color: #333;
+  color: var(--es-text-primary);
 }
 
 h4 {
@@ -247,7 +247,7 @@ h4 {
 }
 
 p {
-  color: #555;
+  color: var(--es-text-regular);
   line-height: 1.8;
   margin-bottom: 12px;
 }

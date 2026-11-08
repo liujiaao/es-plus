@@ -2,7 +2,8 @@
   <div>
     <a-space style="margin-bottom: 10px" wrap>
       <a-button size="small" type="primary" @click="addRow">新增行</a-button>
-      <a-button size="small" style="background:#52c41a;border-color:#52c41a;color:#fff" @click="validateAndSave">校验并保存</a-button>
+      <!-- 绿底按钮：浅色用加深一档的 success（白字 5.0:1）；深色由 scoped 样式反色 -->
+      <a-button size="small" class="save-btn" type="primary" @click="validateAndSave">校验并保存</a-button>
       <a-button size="small" @click="revertAll">撤销</a-button>
       <a-tag v-if="insertCount > 0" color="success">新增 {{ insertCount }}</a-tag>
       <a-tag v-if="updateCount > 0" color="warning">修改 {{ updateCount }}</a-tag>
@@ -141,3 +142,18 @@ async function revertAll() {
   message.info('已撤销所有修改')
 }
 </script>
+
+<style scoped>
+/* 白字压亮绿只有 2.27:1；浅色换成加深一档的 success，深色翻成浅底墨字 */
+.save-btn {
+  background: var(--es-success-text);
+  border-color: var(--es-success-text);
+  color: var(--es-success-tint);
+}
+
+.dark .save-btn {
+  background: var(--es-success);
+  border-color: var(--es-success);
+  color: var(--es-success-tint);
+}
+</style>

@@ -173,7 +173,7 @@ const layoutProps = {
   gap: 8px;
   margin-bottom: 8px;
   font-size: 14px;
-  color: #606266;
+  color: var(--es-text-regular);
 }
 .result-title em {
   font-style: normal;

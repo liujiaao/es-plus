@@ -119,7 +119,7 @@ const openEditDialog = () => {
 }
 .result-box h4 {
   margin-bottom: 12px;
-  color: #606266;
+  color: var(--es-text-regular);
 }
 .result-box pre {
   margin: 0;

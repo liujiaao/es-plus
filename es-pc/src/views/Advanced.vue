@@ -330,7 +330,7 @@ h1 {
 }
 
 .subtitle {
-  color: #666;
+  color: var(--es-text-secondary);
   font-size: 15px;
   line-height: 1.8;
 }
@@ -347,7 +347,7 @@ section {
 }
 
 section p {
-  color: #555;
+  color: var(--es-text-regular);
   line-height: 1.8;
   margin-bottom: 16px;
 }
@@ -358,6 +358,6 @@ code {
   border-radius: 4px;
   font-family: 'Fira Code', monospace;
   font-size: 13px;
-  color: #d63384;
+  color: var(--es-doc-inline-code-text);
 }
 </style>

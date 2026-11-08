@@ -176,7 +176,7 @@ const schemaCode = computed(() => JSON.stringify(schema, null, 2))
 .tri-evidence-title {
   font-size: 15px;
   font-weight: 600;
-  color: #1f2329;
+  color: var(--es-text-primary);
 }
 
 .tri-evidence-metric {
@@ -201,13 +201,13 @@ const schemaCode = computed(() => JSON.stringify(schema, null, 2))
 .tri-stat-label {
   font-size: 13px;
   font-weight: 600;
-  color: #1f2329;
+  color: var(--es-text-primary);
   margin-bottom: 6px;
 }
 
 .tri-stat-figures {
   font-size: 13px;
-  color: #4b5563;
+  color: var(--es-text-regular);
   line-height: 1.8;
 }
 
@@ -238,7 +238,7 @@ const schemaCode = computed(() => JSON.stringify(schema, null, 2))
 .tri-proof-header {
   margin: 18px 0 10px;
   font-size: 13px;
-  color: #4b5563;
+  color: var(--es-text-regular);
   line-height: 1.7;
 }
 
@@ -276,7 +276,7 @@ const schemaCode = computed(() => JSON.stringify(schema, null, 2))
 .tri-proof-pane-label {
   font-size: 12px;
   font-weight: 600;
-  color: #1f2329;
+  color: var(--es-text-primary);
 }
 
 .tri-proof-pane-path {
@@ -331,7 +331,7 @@ const schemaCode = computed(() => JSON.stringify(schema, null, 2))
   padding: 14px 16px;
   border: 1px dashed #e5e5e5;
   border-radius: 8px;
-  color: #666;
+  color: var(--es-text-secondary);
   font-size: 14px;
   line-height: 1.7;
 }

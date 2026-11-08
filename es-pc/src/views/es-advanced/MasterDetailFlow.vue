@@ -269,7 +269,7 @@ function openLineEditor() {
   margin: 0 0 12px;
   font-size: 13px;
   line-height: 1.8;
-  color: #666;
+  color: var(--es-text-secondary);
 }
 
 .flow-body {
@@ -292,7 +292,7 @@ function openLineEditor() {
 .flow-pane h4 {
   margin: 0 0 8px;
   font-size: 14px;
-  color: #1f1f1f;
+  color: var(--es-text-primary);
 }
 
 .flow-detail-head {

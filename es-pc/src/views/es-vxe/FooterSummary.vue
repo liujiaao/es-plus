@@ -8,7 +8,7 @@
     />
     <a-space style="margin-bottom: 10px" align="center">
       <a-button size="small" type="primary" @click="addRandomRow">随机新增一行</a-button>
-      <span style="font-size: 13px; color: #606266">
+      <span style="font-size: 13px; color: var(--es-text-regular)">
         合计薪资：<strong style="color: #1677ff">¥{{ totalSalary.toLocaleString() }}</strong>
         &nbsp;平均：<strong style="color: #52c41a">¥{{ avgSalary.toLocaleString() }}</strong>
       </span>

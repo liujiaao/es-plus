@@ -199,7 +199,7 @@ const delta = (v) => (v === 0 ? '—' : v > 0 ? `−${v}%` : `+${Math.abs(v)}%`)
 }
 
 .cases-hero p {
-  color: #666;
+  color: var(--es-text-secondary);
   line-height: 1.8;
   max-width: 720px;
   margin: 0 auto;
@@ -257,7 +257,7 @@ const delta = (v) => (v === 0 ? '—' : v > 0 ? `−${v}%` : `+${Math.abs(v)}%`)
 
   th {
     font-weight: 600;
-    color: #666;
+    color: var(--es-text-secondary);
     font-size: 12px;
   }
 
@@ -369,7 +369,7 @@ const delta = (v) => (v === 0 ? '—' : v > 0 ? `−${v}%` : `+${Math.abs(v)}%`)
 .flagship-cta-desc {
   font-size: 13px;
   line-height: 1.7;
-  color: #666;
+  color: var(--es-text-secondary);
 }
 
 .flagship-cta-arrow {
@@ -428,7 +428,7 @@ const delta = (v) => (v === 0 ? '—' : v > 0 ? `−${v}%` : `+${Math.abs(v)}%`)
 .case-win {
   font-size: 14px;
   line-height: 1.6;
-  color: #666;
+  color: var(--es-text-secondary);
   margin: 4px 0;
 }
 

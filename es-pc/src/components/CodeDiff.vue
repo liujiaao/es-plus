@@ -69,14 +69,16 @@ defineProps({
   border-radius: 4px;
 }
 
+/* 浅色药丸 + 同色系文字在深色下会留下两块刺眼的浅底，且正文字号对比不足；
+   改用状态 tint/text 配对，两套主题都由 token 决定。 */
 .diff-badge.bad {
-  background: #fef0f0;
-  color: #f56c6c;
+  background: var(--es-danger-tint);
+  color: var(--es-danger-text);
 }
 
 .diff-badge.good {
-  background: #f0f9eb;
-  color: #52c41a;
+  background: var(--es-success-tint);
+  color: var(--es-success-text);
 }
 
 .diff-lines {

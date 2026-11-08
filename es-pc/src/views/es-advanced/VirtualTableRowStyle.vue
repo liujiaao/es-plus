@@ -1,6 +1,6 @@
 <template>
   <div class="virtual-row-style-demo">
-    <h4 style="margin-bottom: 12px; color: #606266;">行样式与高亮 — rowClassName + row-click 事件</h4>
+    <h4 style="margin-bottom: 12px; color: var(--es-text-regular);">行样式与高亮 — rowClassName + row-click 事件</h4>
     <div style="margin-bottom: 12px; font-size: 13px; color: #909399;">
       <span>单击行高亮并查看详情。红色行 = 异常，绿色行 = 完成，默认 = 进行中</span>
     </div>

@@ -196,7 +196,7 @@ const engineColumns = [
 
 .subtitle {
   font-size: 16px;
-  color: #666;
+  color: var(--es-text-secondary);
 }
 
 .code-block {

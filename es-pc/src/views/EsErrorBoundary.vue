@@ -97,9 +97,9 @@ const boundaryMethods = [
 
 <style scoped>
 h1 { font-size: var(--es-text-3xl); font-weight: 700; color: var(--es-doc-heading); margin-bottom: 8px; }
-.subtitle { color: #666; font-size: 15px; line-height: 1.8; }
+.subtitle { color: var(--es-text-secondary); font-size: 15px; line-height: 1.8; }
 h2 { font-size: var(--es-text-2xl); font-weight: 600; margin: 24px 0 16px; color: var(--es-doc-heading); }
 section { scroll-margin-top: 100px; }
-section p { color: #555; line-height: 1.8; margin-bottom: 16px; }
-code { background: var(--es-fill); padding: 2px 6px; border-radius: 4px; font-family: 'Fira Code', monospace; font-size: 13px; color: #d63384; }
+section p { color: var(--es-text-regular); line-height: 1.8; margin-bottom: 16px; }
+code { background: var(--es-fill); padding: 2px 6px; border-radius: 4px; font-family: 'Fira Code', monospace; font-size: 13px; color: var(--es-doc-inline-code-text); }
 </style>

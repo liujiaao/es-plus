@@ -185,6 +185,6 @@ const layoutProps = {
 <style scoped>
 .example-form-search { padding: 20px; }
 .search-result { margin-top: 12px; }
-.result-list { margin: 8px 0 0; padding-left: 20px; color: #606266; font-size: 13px; line-height: 1.9; }
-.result-list { margin: 8px 0 0; padding-left: 20px; color: #606266; font-size: 13px; line-height: 1.9; }
+.result-list { margin: 8px 0 0; padding-left: 20px; color: var(--es-text-regular); font-size: 13px; line-height: 1.9; }
+.result-list { margin: 8px 0 0; padding-left: 20px; color: var(--es-text-regular); font-size: 13px; line-height: 1.9; }
 </style>

@@ -6,7 +6,7 @@
       style="margin-bottom: 10px"
       message="vxeConfig 深度合并原生 vxe-grid 配置（逃生舱，不经过 es-plus 适配层）；vxeOn 事件注入（cell-click 等原生事件）"
     />
-    <div style="margin-bottom: 8px; font-size: 13px; color: #606266">
+    <div style="margin-bottom: 8px; font-size: 13px; color: var(--es-text-regular)">
       单击单元格：<a-tag v-if="clickInfo" color="processing">{{ clickInfo }}</a-tag>
       <span style="margin-left: 16px">排序事件：<a-tag v-if="sortInfo" color="processing">{{ sortInfo }}</a-tag></span>
     </div>
