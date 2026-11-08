@@ -144,3 +144,51 @@ test('组件文档页：示例分组把 es-form 压到 ≤10,000px，深链自�
   expect(top, '深链示例没有滚进视口（realignToHash 在切组前就跑完了）').toBeGreaterThanOrEqual(0)
   expect(top).toBeLessThan(900)
 })
+
+// 「只有表单页分组」曾经是一次真实回归：es-form 做完分组后，es-table / es-crud-page /
+// 三个高级指南仍是 20+ 个演示一条长列表（es-table 单页 24k+ px）。这条守卫把
+// 「哪些页必须分组」写成清单 —— 新增长页时在这里补一行，而不是靠人记得。
+const GROUPED_PAGES = [
+  '/#/components/es-form',
+  '/#/components/es-table',
+  '/#/components/es-crud-page',
+  '/#/advanced/use-dialog',
+  '/#/advanced/linkage',
+  '/#/advanced/vxe-table',
+]
+
+test('示例较多的文档页都渲染分组标签条，且默认只挂一组', async ({ page }) => {
+  await page.setViewportSize(DESKTOP)
+  for (const path of GROUPED_PAGES) {
+    await gotoApp(page, path)
+    await page.locator('.examples-groups').first().waitFor({ state: 'visible' })
+    const tabs = await page.locator('.examples-group').count()
+    expect(tabs, `${path} 只有一个分组 —— 示例没有分组，长页会一屏到底`).toBeGreaterThan(1)
+
+    const active = await page.locator('.examples-group.is-active').count()
+    expect(active, `${path} 没有（或有多个）分组处于选中态`).toBe(1)
+
+    // 同一时刻只挂载选中那一组的示例：任一组都不该超过 7 个（最小组 2、最大组 7）
+    const mounted = await page.locator('.examples-list .code-playground').count()
+    expect(mounted, `${path} 一次挂载了整组之外的示例（v-for 没走 visibleExamples）`).toBeLessThanOrEqual(7)
+  }
+})
+
+test('高级指南的深链也会切到示例所在分组', async ({ page }) => {
+  await page.setViewportSize(DESKTOP)
+  // 虚拟滚动是 linkage 的第五组，默认不可见 —— 不切组就永远找不到锚点
+  await gotoApp(page, '/#/advanced/linkage#demo-virtual-table')
+  await page.locator('#demo-virtual-table').waitFor({ state: 'visible' })
+  await expect(page.locator('.examples-group.is-active')).toContainText('虚拟滚动')
+
+  await page.waitForFunction(
+    () => {
+      const el = document.querySelector('#demo-virtual-table') as HTMLElement | null
+      if (!el) return false
+      const top = el.getBoundingClientRect().top
+      return top >= 0 && top < 900
+    },
+    null,
+    { timeout: 8000 },
+  )
+})

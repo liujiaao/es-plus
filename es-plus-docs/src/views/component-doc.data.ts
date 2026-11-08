@@ -213,25 +213,25 @@ export const docsData: Record<string, any> = {
       { name: '联动', desc: '与 EsForm 无缝联动', icon: 'Connection' }
     ],
     examples: [
-      { key: 'basic', title: '配置化基础表格', description: '一份 columns JSON 渲染整张表格，不写模板、不写插槽。', component: getComponent('table/01-basic'), code: code('table/01-basic') },
-      { key: 'toolbar', title: '表格工具栏', description: '表格顶部操作区，支持 configBtn、leftText 配置和 default slot 自定义内容。', component: getComponent('table/02-toolbar'), code: code('table/02-toolbar') },
-      { key: 'custom', title: '自定义列渲染', description: 'render 函数、scopedSlots、formatter 多种自定义列渲染方式。', component: getComponent('table/03-custom'), code: code('table/03-custom') },
-      { key: 'selection', title: '多选与跨页记忆', description: 'multiSelect + cachePageSelection + rowKey，分页后切换页码仍能保持跨页勾选状态。', component: getComponent('table/04-selection'), code: code('table/04-selection') },
-      { key: 'edit', title: '点击单元格即编辑', description: '表格即编辑器，点击单元格进入编辑模式，支持批量保存/取消。', component: getComponent('table/05-edit'), code: code('table/05-edit') },
-      { key: 'sort', title: '前端 / 后端排序', description: '前端排序与后端排序两种模式。', component: getComponent('table/06-sort'), code: code('table/06-sort') },
-      { key: 'group', title: '分组表头', description: 'groups 嵌套列配置实现多级分组表头。', component: getComponent('table/07-group'), code: code('table/07-group') },
-      { key: 'fixed', title: '固定列与固定高度', description: 'fixed 固定列 + heightType: height 固定高度，宽表横向滚动时关键列始终可见。', component: getComponent('table/08-fixed'), code: code('table/08-fixed') },
-      { key: 'pagination', title: '分页表格：v-model 自动翻页', description: '配置 httpRequest + configTableOut 对接免费接口，v-model 双向绑定自动分页。', component: getComponent('table/09-pagination'), code: code('table/09-pagination') },
-      { key: 'remote-data', title: '远程数据表格', description: 'actionUrl + httpRequest + configTableOut 完整远程数据请求与分页。', component: getComponent('table/10-remote-data'), code: code('table/10-remote-data') },
-      { key: 'expand', title: '展开行与树形', description: 'type:expand 展开行 + children 树形数据两种层级展示模式。', component: getComponent('table/11-expand'), code: code('table/11-expand') },
-      { key: 'cell-merge', title: '声明式行合并与行样式', description: 'mergeConfig.rowsBy 声明式合并单元格（同一份 JSON 三端通用，无需手写 span 函数）+ rowClassName 条件行样式。', component: getComponent('table/12-cell-merge'), code: code('table/12-cell-merge') },
-      { key: 'query-table', title: '配置化查询：零 handleSearch', description: '查询区也是配置：es-form 嵌套进 es-table，按钮 key=query/rest + triggerEvent 自动联动，整页没有 handleSearch / handleReset。', component: getComponent('table/13-query-table'), code: code('table/13-query-table') },
-      { key: 'row-actions', title: '行操作按钮与动态显隐', description: 'btns 的 hidden 同时按行状态与角色求值：草稿/已驳回才出现「提交审核」，已通过不可删；工具栏新增、批量审核（按勾选行）、导出都真实落到数据源。', component: getComponent('table/14-row-actions'), code: code('table/14-row-actions') },
-      { key: 'dynamic-columns', title: '动态列与汇总行', description: 'hidCol 动态列显隐 + show-summary/summary-method 配置化汇总行。', component: getComponent('table/15-dynamic-columns'), code: code('table/15-dynamic-columns') },
-      { key: 'callback-pipeline', title: '请求回调管线', description: 'listenToCallBack brcb/qrcb 请求响应拦截 + configTableOut 字段映射 + entryQuery 默认参数。', component: getComponent('table/16-callback-pipeline'), code: code('table/16-callback-pipeline') },
-      { key: 'current-row', title: '当前行与主从联动', description: 'highlightCurrentRow 行高亮 + @current-change 事件驱动从表 + 汇总统计。', component: getComponent('table/17-current-row'), code: code('table/17-current-row') },
-      { key: 'table-height', title: '自适应容器高度', description: 'heightType: height 继承父容器高度 + ResizeObserver 自动计算，容器变表格自适应。', component: getComponent('table/18-table-height'), code: code('table/18-table-height') },
-      { key: 'code-label', title: '码值列：零 render 出标签', description: '状态是 0/1/2 这样的码值，列上写一份 dataOptions 就得到中文标签与语义色 —— 三端各自渲染原生标签（ElTag / el-tag / a-tag），没有一个 render 函数。未命中显示原值，空值走 emptyPlaceholder。', component: getComponent('table/19-code-label'), code: code('table/19-code-label') }
+      { group: '基础与列', key: 'basic', title: '配置化基础表格', description: '一份 columns JSON 渲染整张表格，不写模板、不写插槽。', component: getComponent('table/01-basic'), code: code('table/01-basic') },
+      { group: '基础与列', key: 'toolbar', title: '表格工具栏', description: '表格顶部操作区，支持 configBtn、leftText 配置和 default slot 自定义内容。', component: getComponent('table/02-toolbar'), code: code('table/02-toolbar') },
+      { group: '基础与列', key: 'custom', title: '自定义列渲染', description: 'render 函数、scopedSlots、formatter 多种自定义列渲染方式。', component: getComponent('table/03-custom'), code: code('table/03-custom') },
+      { group: '基础与列', key: 'selection', title: '多选与跨页记忆', description: 'multiSelect + cachePageSelection + rowKey，分页后切换页码仍能保持跨页勾选状态。', component: getComponent('table/04-selection'), code: code('table/04-selection') },
+      { group: '交互与数据', key: 'edit', title: '点击单元格即编辑', description: '表格即编辑器，点击单元格进入编辑模式，支持批量保存/取消。', component: getComponent('table/05-edit'), code: code('table/05-edit') },
+      { group: '交互与数据', key: 'sort', title: '前端 / 后端排序', description: '前端排序与后端排序两种模式。', component: getComponent('table/06-sort'), code: code('table/06-sort') },
+      { group: '结构与展示', key: 'group', title: '分组表头', description: 'groups 嵌套列配置实现多级分组表头。', component: getComponent('table/07-group'), code: code('table/07-group') },
+      { group: '交互与数据', key: 'fixed', title: '固定列与固定高度', description: 'fixed 固定列 + heightType: height 固定高度，宽表横向滚动时关键列始终可见。', component: getComponent('table/08-fixed'), code: code('table/08-fixed') },
+      { group: '交互与数据', key: 'pagination', title: '分页表格：v-model 自动翻页', description: '配置 httpRequest + configTableOut 对接免费接口，v-model 双向绑定自动分页。', component: getComponent('table/09-pagination'), code: code('table/09-pagination') },
+      { group: '交互与数据', key: 'remote-data', title: '远程数据表格', description: 'actionUrl + httpRequest + configTableOut 完整远程数据请求与分页。', component: getComponent('table/10-remote-data'), code: code('table/10-remote-data') },
+      { group: '结构与展示', key: 'expand', title: '展开行与树形', description: 'type:expand 展开行 + children 树形数据两种层级展示模式。', component: getComponent('table/11-expand'), code: code('table/11-expand') },
+      { group: '结构与展示', key: 'cell-merge', title: '声明式行合并与行样式', description: 'mergeConfig.rowsBy 声明式合并单元格（同一份 JSON 三端通用，无需手写 span 函数）+ rowClassName 条件行样式。', component: getComponent('table/12-cell-merge'), code: code('table/12-cell-merge') },
+      { group: '查询与行操作', key: 'query-table', title: '配置化查询：零 handleSearch', description: '查询区也是配置：es-form 嵌套进 es-table，按钮 key=query/rest + triggerEvent 自动联动，整页没有 handleSearch / handleReset。', component: getComponent('table/13-query-table'), code: code('table/13-query-table') },
+      { group: '查询与行操作', key: 'row-actions', title: '行操作按钮与动态显隐', description: 'btns 的 hidden 同时按行状态与角色求值：草稿/已驳回才出现「提交审核」，已通过不可删；工具栏新增、批量审核（按勾选行）、导出都真实落到数据源。', component: getComponent('table/14-row-actions'), code: code('table/14-row-actions') },
+      { group: '结构与展示', key: 'dynamic-columns', title: '动态列与汇总行', description: 'hidCol 动态列显隐 + show-summary/summary-method 配置化汇总行。', component: getComponent('table/15-dynamic-columns'), code: code('table/15-dynamic-columns') },
+      { group: '交互与数据', key: 'callback-pipeline', title: '请求回调管线', description: 'listenToCallBack brcb/qrcb 请求响应拦截 + configTableOut 字段映射 + entryQuery 默认参数。', component: getComponent('table/16-callback-pipeline'), code: code('table/16-callback-pipeline') },
+      { group: '查询与行操作', key: 'current-row', title: '当前行与主从联动', description: 'highlightCurrentRow 行高亮 + @current-change 事件驱动从表 + 汇总统计。', component: getComponent('table/17-current-row'), code: code('table/17-current-row') },
+      { group: '交互与数据', key: 'table-height', title: '自适应容器高度', description: 'heightType: height 继承父容器高度 + ResizeObserver 自动计算，容器变表格自适应。', component: getComponent('table/18-table-height'), code: code('table/18-table-height') },
+      { group: '结构与展示', key: 'code-label', title: '码值列：零 render 出标签', description: '状态是 0/1/2 这样的码值，列上写一份 dataOptions 就得到中文标签与语义色 —— 三端各自渲染原生标签（ElTag / el-tag / a-tag），没有一个 render 函数。未命中显示原值，空值走 emptyPlaceholder。', component: getComponent('table/19-code-label'), code: code('table/19-code-label') }
     ],
     api: {
       props: [
@@ -442,16 +442,16 @@ export const docsData: Record<string, any> = {
       { name: '程序化控制', desc: 'openDialog/closeDialog 方法支持外部程序化控制弹窗', icon: 'Setting' }
     ],
     examples: [
-      { key: 'basic', title: '基础 CRUD：一行 actions 派生', description: '只写一行 actions：工具栏、操作列、弹窗全部自动派生；增删改真正落到数据源。', component: getComponent('crud-page/01-basic'), code: code('crud-page/01-basic') },
-      { key: 'multi-dialog', title: '多弹窗绑定', description: '一个页面挂新增/编辑/批量分配三个弹窗，按钮到弹窗全靠 dialogKey 绑定。', component: getComponent('crud-page/02-multi-dialog'), code: code('crud-page/02-multi-dialog') },
-      { key: 'custom-render', title: '自定义弹窗内容', description: 'dialogs.render 接管弹窗：拖拽上传真的入库，统计面板读的是实时数据。', component: getComponent('crud-page/03-custom-render'), code: code('crud-page/03-custom-render') },
-      { key: 'dynamic-title', title: '动态标题与回填', description: 'title 写成函数跟着行数据变，编辑弹窗按 prop 路径自动回填选中行。', component: getComponent('crud-page/04-dynamic-title'), code: code('crud-page/04-dynamic-title') },
-      { key: 'row-confirm', title: '行确认与删除', description: '危险操作先走 confirm 二次确认，确认后才真正删除/发布/批量归档。', component: getComponent('crud-page/05-row-confirm'), code: code('crud-page/05-row-confirm') },
-      { key: 'permission', title: '权限控制按钮', description: 'permissionValue + configureEsPlus(permission)：切角色即时隐藏无权按钮。', component: getComponent('crud-page/06-permission'), code: code('crud-page/06-permission') },
-      { key: 'custom-footer', title: '自定义弹窗底部', description: 'configBtn 按 action 语义装配：custom 自己接线，confirm 走校验后提交。', component: getComponent('crud-page/07-custom-footer'), code: code('crud-page/07-custom-footer') },
-      { key: 'program-open', title: '程序化控制弹窗', description: 'ref.openDialog / closeDialog 程序化开关弹窗，保存结果回写列表。', component: getComponent('crud-page/08-program-open'), code: code('crud-page/08-program-open') },
-      { key: 'hidden-column', title: '隐藏操作列', description: 'operationColumn: false + 纯工具栏：CSV 导出与清空日志都在 btn-click 里真实执行。', component: getComponent('crud-page/09-hidden-column'), code: code('crud-page/09-hidden-column') },
-      { key: 'full-business', title: '完整业务：多弹窗 + 导出', description: '用户管理全功能：多弹窗 + 动态标题 + render 详情 + 批量启用 + CSV 导出。', component: getComponent('crud-page/10-full-business'), code: code('crud-page/10-full-business') }
+      { group: '基础', key: 'basic', title: '基础 CRUD：一行 actions 派生', description: '只写一行 actions：工具栏、操作列、弹窗全部自动派生；增删改真正落到数据源。', component: getComponent('crud-page/01-basic'), code: code('crud-page/01-basic') },
+      { group: '弹窗', key: 'multi-dialog', title: '多弹窗绑定', description: '一个页面挂新增/编辑/批量分配三个弹窗，按钮到弹窗全靠 dialogKey 绑定。', component: getComponent('crud-page/02-multi-dialog'), code: code('crud-page/02-multi-dialog') },
+      { group: '弹窗', key: 'custom-render', title: '自定义弹窗内容', description: 'dialogs.render 接管弹窗：拖拽上传真的入库，统计面板读的是实时数据。', component: getComponent('crud-page/03-custom-render'), code: code('crud-page/03-custom-render') },
+      { group: '基础', key: 'dynamic-title', title: '动态标题与回填', description: 'title 写成函数跟着行数据变，编辑弹窗按 prop 路径自动回填选中行。', component: getComponent('crud-page/04-dynamic-title'), code: code('crud-page/04-dynamic-title') },
+      { group: '基础', key: 'row-confirm', title: '行确认与删除', description: '危险操作先走 confirm 二次确认，确认后才真正删除/发布/批量归档。', component: getComponent('crud-page/05-row-confirm'), code: code('crud-page/05-row-confirm') },
+      { group: '权限与操作列', key: 'permission', title: '权限控制按钮', description: 'permissionValue + configureEsPlus(permission)：切角色即时隐藏无权按钮。', component: getComponent('crud-page/06-permission'), code: code('crud-page/06-permission') },
+      { group: '弹窗', key: 'custom-footer', title: '自定义弹窗底部', description: 'configBtn 按 action 语义装配：custom 自己接线，confirm 走校验后提交。', component: getComponent('crud-page/07-custom-footer'), code: code('crud-page/07-custom-footer') },
+      { group: '弹窗', key: 'program-open', title: '程序化控制弹窗', description: 'ref.openDialog / closeDialog 程序化开关弹窗，保存结果回写列表。', component: getComponent('crud-page/08-program-open'), code: code('crud-page/08-program-open') },
+      { group: '权限与操作列', key: 'hidden-column', title: '隐藏操作列', description: 'operationColumn: false + 纯工具栏：CSV 导出与清空日志都在 btn-click 里真实执行。', component: getComponent('crud-page/09-hidden-column'), code: code('crud-page/09-hidden-column') },
+      { group: '弹窗', key: 'full-business', title: '完整业务：多弹窗 + 导出', description: '用户管理全功能：多弹窗 + 动态标题 + render 详情 + 批量启用 + CSV 导出。', component: getComponent('crud-page/10-full-business'), code: code('crud-page/10-full-business') }
     ],
     api: {
       props: [

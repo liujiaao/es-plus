@@ -41,6 +41,10 @@
           <p class="examples-note">
             {{ t('advancedDoc.crossNote') }}
           </p>
+          <!-- 示例分组：与组件页同一份逻辑与外观（composables/useExampleGroups
+               + components/doc/ExampleGroupTabs.vue）。只有两个以上分组才渲染标签条，
+               锚点不变 —— #demo-<key> 深链会先切到所在分组再定位。 -->
+          <ExampleGroupTabs :groups="exampleGroups" :active="activeGroup" @select="selectGroup" />
           <div class="examples-list">
             <!--
               :id 让每个示例有自己的落点（/advanced/vxe-table#demo-cell-edit）。
@@ -48,13 +52,13 @@
               advanced-doc.data.ts 反查——改 key 会让案例卡的链接失效，那是**故意的**。
             -->
             <CodePlayground
-              v-for="(example, index) in currentDoc.examples"
-              :key="index"
+              v-for="example in visibleExamples"
+              :key="example.key"
               :id="'demo-' + example.key"
               :title="example.title"
               :description="example.description"
               :code="example.code"
-              :level="levelOf(Number(index), currentDoc.examples.length)"
+              :level="levelOf(currentDoc.examples.indexOf(example), currentDoc.examples.length)"
             >
               <template #preview>
                 <component :is="example.component" v-if="example.component" />
@@ -118,6 +122,8 @@ import { ref, computed, watch, onMounted, onBeforeUnmount, nextTick } from 'vue'
 import { useRoute } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import CodePlayground from '@/components/doc/CodePlayground.vue'
+import ExampleGroupTabs from '@/components/doc/ExampleGroupTabs.vue'
+import { useExampleGroups } from '@/composables/useExampleGroups'
 import { realignToHash } from '@/utils/hash-anchor'
 import DocMeta from '@/components/doc/DocMeta.vue'
 // 目录行为（标题发号 + 滚动高亮）与三站共用同一份实现
@@ -142,6 +148,19 @@ const currentDoc = computed(() => {
   const name = route.params.name
   return docsData[name] || { title: '未找到', description: '', examples: [] }
 })
+
+// 示例分组：20+ 个实时演示一条长列表读不动，按 examples[].group 折叠成几组；
+// 逻辑与组件页共用（composables/useExampleGroups），标签条外观也同一份。
+const {
+  groups: exampleGroups,
+  activeGroup,
+  visible: visibleExamples,
+  activateFromHash,
+  selectGroup,
+} = useExampleGroups(
+  () => currentDoc.value.examples,
+  () => String(route.hash || ''),
+)
 
 // 案例难度梯度：按案例在分类中的位置推断（案例已按 01→N 从简单到复杂排序）
 // L1 入门 / L2 基础 / L3 进阶 / L4 高级 / L5 复杂
@@ -197,12 +216,15 @@ watch(() => route.params.name, (name) => {
 watch(() => route.params.name, refreshToc, { immediate: true })
 
 // 示例是异步组件：路由先把页面滚到 `#demo-xxx`，内容随后撑开会把落点推走。
-// 这里盯到内容长完为止（用户一动手就让位）
+// 深链的目标可能不在默认分组里 —— 必须先切组、等 DOM 挂载，再开始重定位
+// （顺序反过来就是滚动到一个还不存在的元素，落空且不会自己重试）。
 let stopRealign = () => {}
 watch(
   () => route.hash,
-  (hash) => {
+  async (hash) => {
     stopRealign()
+    activateFromHash(String(hash || ''))
+    await nextTick()
     stopRealign = realignToHash(String(hash || ''))
   },
 )
