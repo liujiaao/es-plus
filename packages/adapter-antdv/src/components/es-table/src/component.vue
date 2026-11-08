@@ -850,6 +850,13 @@ const TABLE_INTERNAL_KEYS = new Set([
   'virtual', 'engine', 'rowHeight', 'estimatedRowHeight', 'overscanCount',
   'rowClassName', 'border', 'stripe', 'size', 'showHeader',
   'emptyText', 'headerCellStyle', 'highlightCurrentRow',
+  // vxe 引擎专有字段，不传给 a-table（它们经 `options` prop 直达 vxe-engine，
+  // 若宿主把它们当 attr 传给 <es-table>，原样落到 a-table 只会变成根节点上的死属性）。
+  'vxeConfig', 'vxeOn',
+  'showFooter', 'footerMethod', 'footerData',
+  'editConfig', 'exportConfig', 'toolbarConfig', 'columnConfig',
+  'keyboardConfig', 'mouseConfig', 'validConfig', 'keepSource', 'printConfig',
+  'treeConfig', 'proxyConfig', 'expandConfig', 'seqConfig',
   // AI-23：声明式合并单元格在默认引擎里由组件侧翻译成**列级 customCell**（a-table 无
   // span-method prop），不是 a-table 的直接 attrs，故列入内部键。
   'mergeConfig',

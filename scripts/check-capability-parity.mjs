@@ -19,12 +19,17 @@
  *      （`synthesizeLeadingColumns` / `buildLeadingColumns`），而不是各写一份 if。
  *      这是「同一配置三端列集合一致」的构造性保证。
  *
+ *   D. **运行时剥离表**：`build-grid-config.ts` 直传的每个 vxe 键都必须在三端的
+ *      `TABLE_INTERNAL_KEYS` 里 —— 否则默认引擎会把它当未知 attr 落到根节点。
+ *      （实测：keepSource / printConfig 两端都漏，antdv 整组 vxe 键都没列。）
+ *
  * ## 非空证明（每次跑都验，注入不红就 exit 1）
  *
  *   P1 删掉 vue3 默认引擎里的 `buildLeadingColumns(...)` → C 必须红
  *   P2 矩阵里加一个 schema 不存在的键                → A 必须红
  *   P3 让 `isSet` 永远判「没设」（设了也读不到）      → B 必须红（告警消失）
  *   P4 让 `capabilityWarnings` 对 partial 也告警      → A（only-none-warns）必须红
+ *   P5 从 vue3 的 `TABLE_INTERNAL_KEYS` 删一个键      → D 必须红
  *
  * P3 为什么不是「把 vue2 的 virtual 格子改成 full」：那是**改数据**——矩阵说 full，
  * B 就没有格子可查，判据是「不触发」而不是「变红」，证明不了 B 有效。要证明 B 有效，
@@ -43,6 +48,21 @@ const ROOT = join(__dirname, '..')
 const SHARED_INDEX = join(ROOT, 'packages/shared/src/index.ts')
 const CAPABILITY_SRC = join(ROOT, 'packages/shared/src/capability.ts')
 const GENERATOR_SRC = join(ROOT, 'packages/shared/src/structured-generator.ts')
+const GRID_CONFIG_SRC = join(ROOT, 'packages/core/src/vxe-engine/build-grid-config.ts')
+
+/**
+ * 三端的**运行时剥离表**（D 用）。
+ *
+ * vxe 直传键对默认引擎没有任何意义；不列入 `TABLE_INTERNAL_KEYS` 就会被 `v-bind`
+ * 当成未知 attr 落到根节点（`keepsource="false"` / `printconfig="true"`）。
+ * 修 keepSource / printConfig 时实测：vue3、vue2 都漏列，antdv 整组 vxe 键都没列 ——
+ * 这是「能力矩阵说 partial，但默认引擎被污染」的暗面，靠人眼看不出来。
+ */
+const INTERNAL_KEY_CONSUMERS = [
+  ['packages/vue3/src/components/es-table/src/component.vue', 'vue3'],
+  ['packages/vue2/src/components/es-table/component.vue', 'vue2'],
+  ['packages/adapter-antdv/src/components/es-table/src/component.vue', 'antdv'],
+]
 
 /** 七个列产出路径（相对仓根）。顺序无关，注释即用途。 */
 const COLUMN_CONSUMERS = [
@@ -328,14 +348,73 @@ function checkSuite(api) {
   return problems
 }
 
+/** 抓一个 component.vue 的 `TABLE_INTERNAL_KEYS` 键集；结构变了返回 null（不许空集恒绿）。 */
+function internalKeysOf(src) {
+  const m = src.match(/const TABLE_INTERNAL_KEYS = new Set\(\[([\s\S]*?)\]\)/)
+  if (!m) return null
+  const keys = new Set()
+  for (const t of m[1].matchAll(/['"]([A-Za-z_$][\w$]*)['"]/g)) keys.add(t[1])
+  return keys
+}
+
+/**
+ * vxe 一等公民（`build-grid-config.ts` 读的 `opts.<key>`）。
+ * `spanMethod` 例外：它真的是 el-table 的 prop（AI-23 的显式逃生舱），必须漏出去。
+ */
+function vxeFirstClassKeys() {
+  const src = readFileSync(GRID_CONFIG_SRC, 'utf-8')
+    .replace(/\/\*[\s\S]*?\*\//g, '')
+    .replace(/(^|[^:])\/\/.*$/gm, '$1')
+  const keys = new Set()
+  for (const m of src.matchAll(/\bopts\.([A-Za-z_$][\w$]*)/g)) keys.add(m[1])
+  keys.delete('spanMethod')
+  return keys
+}
+
+/**
+ * ── D. 运行时剥离表（默认引擎不得被 vxe 键污染）──
+ *
+ * @param {(rel: string) => string} read 相对仓根的源码读取（注入时可伪造）
+ */
+function checkInternalKeys(read) {
+  const problems = []
+  const wanted = vxeFirstClassKeys()
+  if (wanted.size < 10) {
+    problems.push(`D0 从 build-grid-config.ts 只解析出 ${wanted.size} 个直传键 —— 解析器失效`)
+    return problems
+  }
+  for (const [rel, target] of INTERNAL_KEY_CONSUMERS) {
+    let src
+    try {
+      src = read(rel)
+    } catch {
+      problems.push(`D0 找不到 ${rel}（target=${target}）—— 路径漂移，请同步守卫`)
+      continue
+    }
+    const keys = internalKeysOf(src)
+    if (!keys || keys.size < 10) {
+      problems.push(`D0 ${rel} 解析不出 TABLE_INTERNAL_KEYS —— 结构已变，别让本判据空跑`)
+      continue
+    }
+    for (const k of wanted) {
+      if (!keys.has(k)) {
+        problems.push(
+          `D1 target=${target} 的 TABLE_INTERNAL_KEYS 缺 "${k}" —— vxe 直传键会作为未知 attr 漏到默认引擎根节点`
+        )
+      }
+    }
+  }
+  return problems
+}
+
 async function main() {
   // 正向
   const api = await loadApi()
-  const problems = checkSuite(api)
+  const problems = [...checkSuite(api), ...checkInternalKeys((rel) => readSrc(join(ROOT, rel)))]
   if (problems.length) {
     for (const p of problems) fail(p)
   } else {
-    console.log(`✅ 能力矩阵三方对账通过（${api.CAPABILITIES.length} 个键 × ${api.CAPABILITY_TARGETS.length} 端；none 格双向告警；${COLUMN_CONSUMERS.length} 个列产出路径共用 core 单源）`)
+    console.log(`✅ 能力矩阵三方对账通过（${api.CAPABILITIES.length} 个键 × ${api.CAPABILITY_TARGETS.length} 端；none 格双向告警；${COLUMN_CONSUMERS.length} 个列产出路径共用 core 单源；${INTERNAL_KEY_CONSUMERS.length} 端的 TABLE_INTERNAL_KEYS 覆盖 ${vxeFirstClassKeys().size} 个 vxe 直传键）`)
   }
 
   // ── 非空证明：每种注入都必须让**对应**判据变红 ──
@@ -398,6 +477,18 @@ async function main() {
           ),
       },
     },
+    {
+      name: 'P5 从 vue3 的 TABLE_INTERNAL_KEYS 删掉 keyboardConfig',
+      expect: /D1 target=vue3 .*keyboardConfig/,
+      override: () => {
+        const abs = join(ROOT, INTERNAL_KEY_CONSUMERS[0][0])
+        const src = readFileSync(abs, 'utf-8')
+        const next = src.replace("'keyboardConfig', 'mouseConfig'", "'mouseConfig'")
+        if (next === src) throw new Error('P5 注入锚点未命中（vue3 TABLE_INTERNAL_KEYS 结构已变）')
+        overrides.set(abs, next)
+      },
+      run: () => checkInternalKeys((rel) => readSrc(join(ROOT, rel))),
+    },
   ]
 
   for (const inj of injections) {
@@ -417,7 +508,7 @@ async function main() {
       fail(`${inj.name}：注入后打包失败（注入点已失效）：${err?.message ?? err}`)
       continue
     }
-    const got = checkSuite(injected)
+    const got = inj.run ? inj.run() : checkSuite(injected)
     overrides.clear()
     const hit = got.find((p) => inj.expect.test(p))
     if (hit) {
@@ -429,7 +520,7 @@ async function main() {
 
   cleanup()
   if (failed) process.exit(1)
-  console.log('✅ 能力矩阵守卫（含 4 条非空证明）全绿')
+  console.log('✅ 能力矩阵守卫（含 5 条非空证明）全绿')
 }
 
 main().catch((err) => {

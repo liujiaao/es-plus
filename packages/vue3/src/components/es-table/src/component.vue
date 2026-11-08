@@ -614,6 +614,9 @@ const TABLE_INTERNAL_KEYS = new Set([
   'editConfig', 'exportConfig', 'toolbarConfig', 'columnConfig',
   'keyboardConfig', 'mouseConfig', 'validConfig',
   'treeConfig', 'proxyConfig', 'expandConfig', 'seqConfig',
+  // AI-31：vxe 一等公民的 JSON 子集里此前漏列的两个 —— keepSource / printConfig 也不是
+  // el-table 的 prop，漏列会被 v-bind 当成未知 attr 落到根节点（keepsource="false"）。
+  'keepSource', 'printConfig',
   // AI-23：声明式合并单元格由组件侧翻译成 el-table 的 spanMethod，不是 el-table 的 prop。
   'mergeConfig',
   // 服务端排序声明：由请求层消费，el-table 没有这个 prop。
