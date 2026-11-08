@@ -128,6 +128,9 @@ describe.each([
     expect(backend.lastListParams?.[firstQueryProp(config)], '查询值应随 formParams 下发').toBe('ZZZ')
   })
 
+  // 这条走完整弹窗挂载（useDialog → teleport → EsForm），单跑约 4.3s；全量并行时会
+  // 逼近 vitest 默认 5s 上限而**间歇性**超时（2026-11-07 全量跑红、单文件跑绿）。
+  // 判据不变，只放宽这一条的预算 —— 它测的是「弹窗能开」，不是「够不够快」。
   it(`弹窗能开：点「${dialogTrigger}」→ 真实 useDialog 渲染 EsForm 输入框`, async () => {
     const trigger = findButtonByText(wrapper.element, dialogTrigger)
     expect(trigger, `生成物应渲染出「${dialogTrigger}」按钮`).toBeTruthy()
@@ -137,7 +140,7 @@ describe.each([
 
     const dialogInput = document.querySelector('.el-dialog .el-input__inner')
     expect(dialogInput, '弹窗内应渲染出 EsForm 的输入框').toBeTruthy()
-  })
+  }, 15_000)
 })
 
 // ────────────────────────────────────────────────────────────────────────────
