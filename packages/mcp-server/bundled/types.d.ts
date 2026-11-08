@@ -7,6 +7,8 @@ import type {
   ListenToCallBack as CoreListenToCallBack,
   FormDataOption,
   TableColumnDataOption,
+  ColumnFilterMode,
+  TableColumnFilterOption,
   VxeEditRender,
   VxeEditConfig,
   VxeExportConfig,
@@ -29,6 +31,8 @@ import type {
 export type {
   FormDataOption,
   TableColumnDataOption,
+  ColumnFilterMode,
+  TableColumnFilterOption,
   VxeEditRender,
   VxeEditConfig,
   VxeExportConfig,
@@ -291,6 +295,14 @@ export interface TableColumn {
    * 用户显式 `render` / `scopedSlots.customRender` / `formatter` 优先级更高。
    */
   dataOptions?: TableColumnDataOption[]
+  /** 列筛选（W3-2）：纯 JSON 选项，`value` 为行数据存储值 */
+  filters?: TableColumnFilterOption[]
+  /** 筛选是否多选（缺省 true，三端显式对齐） */
+  filterMultiple?: boolean
+  /** 本地匹配模式，缺省 `'equals'` */
+  filterMode?: ColumnFilterMode
+  /** 自定义本地筛选谓词（Tier C 函数扩展点，不进 AI 契约） */
+  filterMethod?: (value: unknown, row: Record<string, unknown>, column?: unknown) => boolean
   hidCol?: boolean
   /** 字段级权限编码（配合全局 `permission` 函数过滤）：无权限时该列不渲染（在 es-table 的 filteredColumns 里与 hidCol 同层过滤）。 */
   permissionValue?: string

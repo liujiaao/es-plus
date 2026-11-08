@@ -328,6 +328,10 @@ const REQUIRED_FIELDS = [
   { schema: 'form-item.schema.json', path: ['properties', 'isHidden'], label: 'FormItemOption.isHidden (声明式条件显隐)' },
   { schema: 'form-item.schema.json', path: ['properties', 'reactions'], label: 'FormItemOption.reactions (字段联动)' },
   { schema: 'table-column.schema.json', path: ['properties', 'labelKey'], label: 'TableColumn.labelKey (i18n)' },
+  // W3-2 列筛选：JSON 单源必须与 ColumnSchema / core TableColumn 同键。
+  { schema: 'table-column.schema.json', path: ['properties', 'filters'], label: 'TableColumn.filters (列筛选选项)' },
+  { schema: 'table-column.schema.json', path: ['properties', 'filterMultiple'], label: 'TableColumn.filterMultiple' },
+  { schema: 'table-column.schema.json', path: ['properties', 'filterMode'], label: 'TableColumn.filterMode (本地比较语义)' },
   { schema: 'table-options.schema.json', path: ['properties', 'tabHeight'], label: 'TableOptions.tabHeight' },
   { schema: 'table-options.schema.json', path: ['properties', 'maxHeight'], label: 'TableOptions.maxHeight' },
   { schema: 'table-options.schema.json', path: ['properties', 'engine'], label: 'TableOptions.engine' },
@@ -689,6 +693,21 @@ function checkStructuredConfigZod() {
         ok = false
       } else if (!/\bexpandConfig\s*:\s*z\s*\n?\s*\.object\(/.test(colBlock)) {
         fail(`${label} 的 ColumnSchema 未声明 expandConfig: z.object(...)（列上声明的展开内容会被 Zod 静默剥掉，展开器恒空）`)
+        ok = false
+      }
+      // W3-2 列筛选：`filters` / `filterMultiple` / `filterMode` 是纯 JSON 契约键。
+      // 同一原因 —— ColumnSchema 决定生成器的列白名单，漏声明 = 筛选配置被
+      // `sanitizeExplicitColumns` 静默剥掉（表头无漏斗、零告警）。
+      if (!/\bfilters\s*:\s*z\s*\n?\s*\.array\(/.test(colBlock)) {
+        fail(`${label} 的 ColumnSchema 未声明 filters: z.array(...)（列筛选选项会被 Zod 静默剥掉）`)
+        ok = false
+      }
+      if (!/\bfilterMultiple\s*:\s*z\s*\n?\s*\.boolean\(/.test(colBlock)) {
+        fail(`${label} 的 ColumnSchema 未声明 filterMultiple: z.boolean(...)（多选筛选开关会被剥掉）`)
+        ok = false
+      }
+      if (!/\bfilterMode\s*:\s*z\s*\n?\s*\.enum\(/.test(colBlock)) {
+        fail(`${label} 的 ColumnSchema 未声明 filterMode: z.enum([...])（本地比较语义会被剥掉）`)
         ok = false
       }
     }

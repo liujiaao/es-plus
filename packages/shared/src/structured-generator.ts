@@ -2229,6 +2229,19 @@ export function pushSfcColumn(
       lines.push(`${inner}dataOptions: ${inlineJson(col.dataOptions)},`)
     }
   }
+  // filters（W3-2 列筛选）是纯 JSON 选项（text/value）→ 同 btns/dataOptions。
+  // `filterMode` / `filterMultiple` 是标量，直接发射（三端适配器按同一口径读）。
+  // 只发 JSON：`filterMethod` 是函数，不在 AI 契约里（组件契约仍接受手写函数）。
+  if (col.filters !== undefined && col.filters !== null) {
+    const nonJson = findNonJsonValues(col.filters, 'filters')
+    if (nonJson.length > 0) {
+      warnings.push(`列级 filters 含无法 JSON 化的值（${nonJson.join(', ')}）—— 整键已省略以保证编译通过。`)
+    } else {
+      lines.push(`${inner}filters: ${inlineJson(col.filters)},`)
+    }
+  }
+  bool('filterMultiple')
+  str('filterMode')
   // `x-*` 是有意的扩展元数据（`sanitizeExplicitColumns` 明确保留）。SFC/片段路径
   // 此前只发白名单键，于是同一份列在 schema 模式里保留、在 SFC 里静默消失 ——
   // 这里按 JSON 数据发射，三种模式回到同一口径。

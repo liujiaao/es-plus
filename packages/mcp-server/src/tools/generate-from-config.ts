@@ -320,6 +320,32 @@ export const ColumnSchema: z.ZodType<any> = z.lazy(() =>
     sortable: z.boolean().optional(),
     ellipsis: z.boolean().optional(),
     showOverflowTooltip: z.boolean().optional(),
+    // W3-2 column filters — mirrors the shared authoritative ColumnSchema.
+    // Must be declared here too: Zod strips unknown keys, and THIS copy is what
+    // validates tool arguments (a stripped key = filters silently never render).
+    filters: z
+      .array(
+        z.object({
+          text: z.string().describe("Option text shown in the filter dropdown."),
+          value: z
+            .union([z.string(), z.number(), z.boolean()])
+            .describe('Row value matched by this option (loose primitive compare: 1 matches "1").'),
+        })
+      )
+      .optional()
+      .describe(
+        "Declarative column filter options (PLAIN JSON — never a JS function). Rendered by the default engines and engine:'vxe'; the virtual engine (vue3 engine:'virtual') has NO filter UI. Filtering is LOCAL (the wrapper filters rows in the browser), so do not combine it with server-side paging/proxy contracts for the same column."
+      ),
+    filterMultiple: z
+      .boolean()
+      .optional()
+      .describe("Allow selecting several filter options at once (default true)."),
+    filterMode: z
+      .enum(["equals", "includes"])
+      .optional()
+      .describe(
+        "Local comparison for `filters` (default 'equals'): 'equals' = value equality (booleans/numbers compare loosely against strings), 'includes' = the cell text CONTAINS the selected option value (text search)."
+      ),
     permissionValue: z.string().optional().describe('Permission code; the column is not rendered without it'),
     groups: z
       .array(ColumnSchema)
