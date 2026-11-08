@@ -201,6 +201,15 @@ export type { LeadingColumnSpec, LeadingColumnType } from './table-columns.js'
 export { findTableDataOption, resolveTableCellDisplay } from './table-cell.js'
 export type { TableCellDisplay } from './table-cell.js'
 
+// ─── 列筛选（W3-2）：本地匹配语义单源，三端各引擎只做签名适配 ──────
+export {
+  normalizeFilterMode,
+  matchesColumnFilter,
+  columnFilterKey,
+  hasColumnFilters,
+  buildColumnFilterMethod,
+} from './table-filter.js'
+
 // ─── 默认引擎 CSV 导出兜底（`exportData()` 在 el-table / a-table 上没有实现）──
 export {
   buildCsv,

@@ -569,6 +569,24 @@ export interface TableColumn {
    * ] }
    */
   dataOptions?: TableColumnDataOption[]
+  /**
+   * 列筛选（W3-2）：筛选面板的选项列表。**纯 JSON**，`value` 必须是行数据里的存储值。
+   *
+   * - 默认引擎：el-table 透传 `filters`、a-table 透传 `filters` + 合成 `onFilter`；
+   * - vxe 引擎：列上 `filters` + 合成 `filterMethod`；
+   * - 虚拟引擎不渲染筛选 UI（DEV 下告警）；
+   * - 本地匹配语义见 core `table-filter.ts`（默认 `equals`，number ↔ string 宽松相等）。
+   */
+  filters?: TableColumnFilterOption[]
+  /** 是否多选（缺省 true，三端显式对齐，不依赖各引擎默认值） */
+  filterMultiple?: boolean
+  /** 本地匹配模式，缺省 `'equals'`；`'includes'` 为字符串包含 */
+  filterMode?: ColumnFilterMode
+  /**
+   * 自定义本地筛选谓词（函数扩展点，Tier C，不进 AI 契约）。
+   * 声明后三端都原样使用它，不再按 `filterMode` 合成。
+   */
+  filterMethod?: (value: unknown, row: ModelData, column?: unknown) => boolean
   /** 隐藏列（保留配置但不渲染） */
   hidCol?: boolean
   /**
@@ -624,6 +642,17 @@ export interface TableColumnDataOption {
   value: string | number | boolean
   /** 命中后以「标签」渲染，三端分别映射到 ElTag / el-tag / a-tag 的语义色 */
   tagType?: 'primary' | 'success' | 'warning' | 'danger' | 'info'
+}
+
+/** 列筛选的本地匹配模式（`TableColumn.filterMode`，W3-2）。 */
+export type ColumnFilterMode = 'equals' | 'includes'
+
+/** 列筛选面板的一个选项：`value` 与行数据比较，`text` 只用于展示。 */
+export interface TableColumnFilterOption {
+  /** 筛选面板里展示的文本 */
+  text: string
+  /** 与行数据比较的存储值（number/string 宽松相等） */
+  value: string | number | boolean
 }
 
 /**
