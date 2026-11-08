@@ -843,6 +843,12 @@ function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): Structu
     ...(tOpts.toolbarConfig !== undefined ? { toolbarConfig: tOpts.toolbarConfig } : {}),
     ...(tOpts.columnConfig ? { columnConfig: tOpts.columnConfig } : {}),
     ...(tOpts.keepSource !== undefined ? { keepSource: tOpts.keepSource } : {}),
+    // vxe 一等公民 · 配置型（AI-31 Batch 2B）：对象原样透传，`false` 语义保留。
+    ...(tOpts.keyboardConfig ? { keyboardConfig: tOpts.keyboardConfig } : {}),
+    ...(tOpts.mouseConfig ? { mouseConfig: tOpts.mouseConfig } : {}),
+    ...(tOpts.validConfig ? { validConfig: tOpts.validConfig } : {}),
+    ...(tOpts.seqConfig ? { seqConfig: tOpts.seqConfig } : {}),
+    ...(tOpts.printConfig !== undefined ? { printConfig: tOpts.printConfig } : {}),
   }
 
   // Query form layout (minFoldRows for collapse)
@@ -1364,6 +1370,12 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   if (tOpts.toolbarConfig !== undefined) lines.push(`  toolbarConfig: ${inlineJson(tOpts.toolbarConfig)},`)
   if (tOpts.columnConfig) lines.push(`  columnConfig: ${inlineJson(tOpts.columnConfig)},`)
   if (tOpts.keepSource !== undefined) lines.push(`  keepSource: ${tOpts.keepSource},`)
+  // vxe 一等公民 · 配置型（AI-31 Batch 2B）：对象走 inlineJson，`true` 也安全（JSON 字面量）。
+  if (tOpts.keyboardConfig) lines.push(`  keyboardConfig: ${inlineJson(tOpts.keyboardConfig)},`)
+  if (tOpts.mouseConfig) lines.push(`  mouseConfig: ${inlineJson(tOpts.mouseConfig)},`)
+  if (tOpts.validConfig) lines.push(`  validConfig: ${inlineJson(tOpts.validConfig)},`)
+  if (tOpts.seqConfig) lines.push(`  seqConfig: ${inlineJson(tOpts.seqConfig)},`)
+  if (tOpts.printConfig !== undefined) lines.push(`  printConfig: ${inlineJson(tOpts.printConfig)},`)
   lines.push(`}`)
 
   // delete handler

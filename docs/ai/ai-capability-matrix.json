@@ -347,7 +347,7 @@
       "targets": {
         "vue3": {
           "level": "partial",
-          "note": "仅 engine:'vxe' 消费原生 exportData；默认引擎改走 core CSV 兜底（只支持 csv）"
+          "note": "engine:'vxe' 走 vxe-table 原生 exportData（xlsx/csv/xml/html）；默认 / 虚拟引擎只用 filename 与 type:'csv' 驱动 core 的 CSV 兜底，其它格式明确抛错"
         },
         "vue2": {
           "level": "partial",
@@ -396,6 +396,86 @@
         "vue3": {
           "level": "partial",
           "note": "仅 engine:'vxe' 的行内编辑消费（保留编辑前快照）；其它引擎忽略"
+        },
+        "vue2": {
+          "level": "partial",
+          "note": "同上"
+        },
+        "antdv": {
+          "level": "partial",
+          "note": "同上"
+        }
+      }
+    },
+    "tableOptions.keyboardConfig": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅 engine:'vxe' 消费（core build-grid-config 直传 vxe-grid）；默认 / 虚拟引擎忽略"
+        },
+        "vue2": {
+          "level": "partial",
+          "note": "同上（vue2 的 vxe 适配器同样消费）"
+        },
+        "antdv": {
+          "level": "partial",
+          "note": "同上（antdv 的 vxe 适配器同样消费）"
+        }
+      }
+    },
+    "tableOptions.mouseConfig": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅 engine:'vxe' 消费（鼠标点选单元格）；默认 / 虚拟引擎忽略"
+        },
+        "vue2": {
+          "level": "partial",
+          "note": "同上"
+        },
+        "antdv": {
+          "level": "partial",
+          "note": "同上"
+        }
+      }
+    },
+    "tableOptions.validConfig": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅 engine:'vxe' 消费（配合列 editRender 的 rules）；默认 / 虚拟引擎忽略"
+        },
+        "vue2": {
+          "level": "partial",
+          "note": "同上"
+        },
+        "antdv": {
+          "level": "partial",
+          "note": "同上"
+        }
+      }
+    },
+    "tableOptions.seqConfig": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅 engine:'vxe' 消费（序号列起始值；seqMethod 函数不进 AI 契约）；默认 / 虚拟引擎忽略"
+        },
+        "vue2": {
+          "level": "partial",
+          "note": "同上"
+        },
+        "antdv": {
+          "level": "partial",
+          "note": "同上"
+        }
+      }
+    },
+    "tableOptions.printConfig": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅 engine:'vxe' 消费（true 展开为默认打印配置）；默认 / 虚拟引擎忽略"
         },
         "vue2": {
           "level": "partial",

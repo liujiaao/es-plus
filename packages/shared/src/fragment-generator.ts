@@ -351,6 +351,23 @@ export interface TableBlockOptions {
   toolbarConfig?: boolean | Record<string, unknown>
   columnConfig?: Record<string, unknown>
   keepSource?: boolean
+  keyboardConfig?: {
+    isArrow?: boolean
+    isTab?: boolean
+    isEnter?: boolean
+    isEdit?: boolean
+    isDel?: boolean
+    enterToTab?: boolean
+  }
+  mouseConfig?: { selected?: boolean }
+  validConfig?: {
+    autoPos?: boolean
+    message?: 'default' | 'tooltip' | 'modal' | 'none'
+    msgMode?: 'single' | 'full'
+  }
+  /** 只收 JSON 可承载的 `startIndex`；`seqMethod` 是函数，走运行时逃生舱。 */
+  seqConfig?: { startIndex?: number }
+  printConfig?: boolean | Record<string, unknown>
 }
 
 /**
@@ -406,6 +423,12 @@ export const TABLE_BLOCK_OPTION_ORDER = [
   'toolbarConfig',
   'columnConfig',
   'keepSource',
+  // vxe 一等公民 · 配置型（AI-31 Batch 2B）：继续追加在尾部。
+  'keyboardConfig',
+  'mouseConfig',
+  'validConfig',
+  'seqConfig',
+  'printConfig',
 ] as const
 
 /**

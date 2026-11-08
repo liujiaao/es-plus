@@ -86,6 +86,11 @@ const SAMPLE = {
   'tableOptions.toolbarConfig': true,
   'tableOptions.columnConfig': { resizable: true },
   'tableOptions.keepSource': true,
+  'tableOptions.keyboardConfig': { isArrow: true, isEdit: true },
+  'tableOptions.mouseConfig': { selected: true },
+  'tableOptions.validConfig': { autoPos: true, message: 'tooltip' },
+  'tableOptions.seqConfig': { startIndex: 10 },
+  'tableOptions.printConfig': true,
 }
 
 /** 文件名 → 覆盖文本（注入用；正向跑为空）。 */

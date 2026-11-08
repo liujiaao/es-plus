@@ -1692,6 +1692,63 @@ describe('AI-31 — vxe 一等公民的 JSON 子集', () => {
   })
 })
 
+describe('AI-31 Batch 2B — vxe 配置型键的 JSON 子集', () => {
+  const TO = {
+    engine: 'vxe',
+    keyboardConfig: { isArrow: true, isTab: false, isEdit: true },
+    mouseConfig: { selected: true },
+    validConfig: { autoPos: true, message: 'tooltip', msgMode: 'full' },
+    seqConfig: { startIndex: 10 },
+    printConfig: { columns: [{ field: 'a' }] },
+  }
+  const KEYS = ['keyboardConfig', 'mouseConfig', 'validConfig', 'seqConfig', 'printConfig'] as const
+  const cfg = (extra: Record<string, unknown> = {}) => ({
+    name: 'T',
+    apiUrl: '/x',
+    fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+    actions: ['view'],
+    tableOptions: TO,
+    ...extra,
+  })
+
+  it('Zod 解析保留 5 个键（含 false 子键，不被静默 strip）', () => {
+    const r: any = StructuredCrudConfigSchema.safeParse(cfg())
+    expect(r.success).toBe(true)
+    for (const k of KEYS) expect(r.data.tableOptions[k], `键 ${k} 不得被剥`).toBeDefined()
+    expect(r.data.tableOptions.keyboardConfig.isTab).toBe(false)
+  })
+
+  it('schema 模式发射全部键（嵌套对象原样落盘）', () => {
+    const { code } = generateFromConfig(StructuredCrudConfigSchema.parse(cfg()) as any)
+    const m = code.match(/export\s+const\s+pageSchema[^=]*=\s*(\{[\s\S]*\})\s*$/)!
+    const to: any = JSON.parse(m[1]).tableOptions
+    expect(to.keyboardConfig).toEqual({ isArrow: true, isTab: false, isEdit: true })
+    expect(to.mouseConfig).toEqual({ selected: true })
+    expect(to.validConfig).toEqual({ autoPos: true, message: 'tooltip', msgMode: 'full' })
+    expect(to.seqConfig).toEqual({ startIndex: 10 })
+    expect(to.printConfig).toEqual({ columns: [{ field: 'a' }] })
+  })
+
+  it('sfc 模式同样发射，printConfig: true 也直出', () => {
+    const { code } = generateFromConfig(StructuredCrudConfigSchema.parse(cfg({ mode: 'sfc' })) as any)
+    for (const k of KEYS) expect(new RegExp('\\b' + k + '\\s*:').test(code), k).toBe(true)
+    expect(code).toContain('keyboardConfig: {"isArrow":true,"isTab":false,"isEdit":true},')
+    expect(code).toContain('seqConfig: {"startIndex":10},')
+    const withTrue = generateFromConfig(
+      StructuredCrudConfigSchema.parse(cfg({ mode: 'sfc', tableOptions: { engine: 'vxe', printConfig: true } })) as any
+    )
+    expect(withTrue.code).toContain('printConfig: true,')
+  })
+
+  it('未给任何配置型键时两种模式都不添键（零回归）', () => {
+    const base = { name: 'T', apiUrl: '/x', fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['view'] }
+    for (const mode of ['schema', 'sfc'] as const) {
+      const { code } = generateFromConfig(StructuredCrudConfigSchema.parse({ ...base, mode }) as any)
+      for (const k of KEYS) expect(new RegExp('\\b' + k + '\\s*:').test(code), `${mode}/${k}`).toBe(false)
+    }
+  })
+})
+
 describe('AI-35 — 声明的弹窗必须有人能打开（dialogs 不参与按钮派生）', () => {
   const F = [{ prop: 'a', label: 'A', formtype: 'Input' as const }]
   const dlg = { add: { title: '新增' }, edit: { title: '编辑' } }

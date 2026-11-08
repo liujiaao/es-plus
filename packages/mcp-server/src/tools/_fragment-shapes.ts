@@ -408,6 +408,37 @@ export const tableBlockOptionsSchema = z.object({
   toolbarConfig: z.union([z.boolean(), z.record(z.string(), z.unknown())]).optional().describe("vxe toolbar config (true = defaults); engine:'vxe' only."),
   columnConfig: z.record(z.string(), z.unknown()).optional().describe("vxe column config, e.g. { resizable: true, showOverflow: 'tooltip' }; engine:'vxe' only."),
   keepSource: z.boolean().optional().describe('Keep pre-edit row snapshots for revertData()/getUpdateRecords(); vxe inline editing only.'),
+  keyboardConfig: z
+    .object({
+      isArrow: z.boolean().optional(),
+      isTab: z.boolean().optional(),
+      isEnter: z.boolean().optional(),
+      isEdit: z.boolean().optional(),
+      isDel: z.boolean().optional(),
+      enterToTab: z.boolean().optional(),
+    })
+    .optional()
+    .describe("vxe keyboard navigation; engine:'vxe' only."),
+  mouseConfig: z
+    .object({ selected: z.boolean().optional() })
+    .optional()
+    .describe("vxe cell-selection mode ({ selected: true }); engine:'vxe' only."),
+  validConfig: z
+    .object({
+      autoPos: z.boolean().optional(),
+      message: z.enum(['default', 'tooltip', 'modal', 'none']).optional(),
+      msgMode: z.enum(['single', 'full']).optional(),
+    })
+    .optional()
+    .describe("vxe cell-validation feedback; engine:'vxe' only."),
+  seqConfig: z
+    .object({ startIndex: z.number().int().optional() })
+    .optional()
+    .describe("vxe sequence-column startIndex (seqMethod is a function and stays out of JSON); engine:'vxe' only."),
+  printConfig: z
+    .union([z.boolean(), z.record(z.string(), z.unknown())])
+    .optional()
+    .describe("vxe print config (true = defaults); engine:'vxe' only."),
 }).passthrough();
 
 /** `generate_table` 的分页播种（权威 schema 顶层 `pagination` 的数据子集）。 */

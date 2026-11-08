@@ -617,6 +617,26 @@ const configShape = {
       toolbarConfig: z.union([z.boolean(), z.record(z.string(), z.unknown())]).optional(),
       columnConfig: z.record(z.string(), z.unknown()).optional(),
       keepSource: z.boolean().optional(),
+      keyboardConfig: z
+        .object({
+          isArrow: z.boolean().optional(),
+          isTab: z.boolean().optional(),
+          isEnter: z.boolean().optional(),
+          isEdit: z.boolean().optional(),
+          isDel: z.boolean().optional(),
+          enterToTab: z.boolean().optional(),
+        })
+        .optional(),
+      mouseConfig: z.object({ selected: z.boolean().optional() }).optional(),
+      validConfig: z
+        .object({
+          autoPos: z.boolean().optional(),
+          message: z.enum(['default', 'tooltip', 'modal', 'none']).optional(),
+          msgMode: z.enum(['single', 'full']).optional(),
+        })
+        .optional(),
+      seqConfig: z.object({ startIndex: z.number().int().optional() }).optional(),
+      printConfig: z.union([z.boolean(), z.record(z.string(), z.unknown())]).optional(),
     })
     .optional(),
   pagination: z

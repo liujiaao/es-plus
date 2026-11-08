@@ -767,6 +767,61 @@ export const StructuredCrudConfigSchema = z.object({
       .describe(
         "Keep a pre-edit snapshot of each row so revertData() / getUpdateRecords() / getInsertRecords() work. Auto-enabled when editConfig is set. Advanced: vxe inline editing only."
       ),
+    // ── vxe 一等公民 · 配置型（JSON 安全子集，AI-31 Batch 2B）────────────
+    // 与上一组同因：core `TableOptions` 已声明、`build-grid-config.ts` 直传 vxe-grid，
+    // 但此前 AI Zod 零声明 → 经 AI 入口被静默 strip。只收 JSON 可承载的形态：
+    // `seqConfig.seqMethod` 是函数，不进契约（Tier-3 逃生舱）。
+    keyboardConfig: z
+      .object({
+        isArrow: z.boolean().optional().describe('Arrow keys move the cell focus.'),
+        isTab: z.boolean().optional().describe('Tab moves to the next cell.'),
+        isEnter: z.boolean().optional().describe('Enter confirms and moves down.'),
+        isEdit: z.boolean().optional().describe('Any printable character enters edit mode.'),
+        isDel: z.boolean().optional().describe('Delete / Backspace clears the cell.'),
+        enterToTab: z.boolean().optional().describe('Enter behaves like Tab.'),
+      })
+      .optional()
+      .describe(
+        "vxe keyboard navigation. Advanced: only consumed with engine:'vxe', typically together with editConfig."
+      ),
+    mouseConfig: z
+      .object({
+        selected: z.boolean().optional().describe('Click a cell to highlight/select it (arrow keys then move it).'),
+      })
+      .optional()
+      .describe(
+        "vxe cell-selection mode (`{ selected: true }` enables click-to-select). Advanced: only with engine:'vxe'."
+      ),
+    validConfig: z
+      .object({
+        autoPos: z.boolean().optional().describe('Scroll the first invalid cell into view.'),
+        message: z
+          .enum(['default', 'tooltip', 'modal', 'none'])
+          .optional()
+          .describe("How validation feedback is shown (default 'default')."),
+        msgMode: z
+          .enum(['single', 'full'])
+          .optional()
+          .describe("Show one message or the full message list (default 'single')."),
+      })
+      .optional()
+      .describe(
+        "vxe cell validation feedback (pair with `rules` on the column's editRender). Advanced: only with engine:'vxe'."
+      ),
+    seqConfig: z
+      .object({
+        startIndex: z.number().int().optional().describe('First serial number (default 1).'),
+      })
+      .optional()
+      .describe(
+        "vxe sequence-column config (needs `snIndex: true` or a type:'index' column). Only `startIndex` is JSON-safe — `seqMethod` is a function and stays in the runtime escape hatch. Advanced: only with engine:'vxe'."
+      ),
+    printConfig: z
+      .union([z.boolean(), z.record(z.string(), z.unknown())])
+      .optional()
+      .describe(
+        "vxe print config: `true` for defaults, or e.g. { columns: [{ field: 'name' }] }. Advanced: only with engine:'vxe'."
+      ),
   }).optional(),
   pagination: z.object({
     pageSize: z.number().int().default(10).describe('Rows per page on first render (default 10).'),

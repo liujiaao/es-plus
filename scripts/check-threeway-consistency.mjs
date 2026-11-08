@@ -329,6 +329,20 @@ const PROBE = {
       lazy: false,
     },
     expandConfig: { expandAll: true, accordion: false, lazy: false },
+    // AI-31 vxe 一等公民（JSON 子集）：探针同样必须设满。`keepSource` 取 false
+    // —— 生成器对它是 `!== undefined` 门，取 false 才证明「false 也发射」（真值门
+    // 会让它与「未实现」在产物里长得一模一样）。
+    showFooter: true,
+    footerData: [['合计', 1000]],
+    exportConfig: { filename: 'probe', type: 'csv' },
+    toolbarConfig: true,
+    columnConfig: { resizable: true },
+    keepSource: false,
+    keyboardConfig: { isArrow: true, isTab: false },
+    mouseConfig: { selected: true },
+    validConfig: { autoPos: true, message: 'tooltip' },
+    seqConfig: { startIndex: 10 },
+    printConfig: true,
   },
 }
 

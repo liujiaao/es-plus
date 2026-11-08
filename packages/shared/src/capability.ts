@@ -259,6 +259,46 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       antdv: partial('同上'),
     },
   },
+  {
+    key: 'tableOptions.keyboardConfig',
+    targets: {
+      vue3: partial("仅 engine:'vxe' 消费（core build-grid-config 直传 vxe-grid）；默认 / 虚拟引擎忽略"),
+      vue2: partial('同上（vue2 的 vxe 适配器同样消费）'),
+      antdv: partial('同上（antdv 的 vxe 适配器同样消费）'),
+    },
+  },
+  {
+    key: 'tableOptions.mouseConfig',
+    targets: {
+      vue3: partial("仅 engine:'vxe' 消费（鼠标点选单元格）；默认 / 虚拟引擎忽略"),
+      vue2: partial('同上'),
+      antdv: partial('同上'),
+    },
+  },
+  {
+    key: 'tableOptions.validConfig',
+    targets: {
+      vue3: partial("仅 engine:'vxe' 消费（配合列 editRender 的 rules）；默认 / 虚拟引擎忽略"),
+      vue2: partial('同上'),
+      antdv: partial('同上'),
+    },
+  },
+  {
+    key: 'tableOptions.seqConfig',
+    targets: {
+      vue3: partial("仅 engine:'vxe' 消费（序号列起始值；seqMethod 函数不进 AI 契约）；默认 / 虚拟引擎忽略"),
+      vue2: partial('同上'),
+      antdv: partial('同上'),
+    },
+  },
+  {
+    key: 'tableOptions.printConfig',
+    targets: {
+      vue3: partial("仅 engine:'vxe' 消费（true 展开为默认打印配置）；默认 / 虚拟引擎忽略"),
+      vue2: partial('同上'),
+      antdv: partial('同上'),
+    },
+  },
 ]
 
 /** 取一格（key 不存在时返回 undefined —— 未列入 ≠ 不支持）。 */

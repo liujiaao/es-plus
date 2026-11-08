@@ -323,6 +323,33 @@ describe('generateTableBlock — 容器级词汇（Wave 4）', () => {
     expect(at('columnConfig')).toBeLessThan(at('keepSource'))
   })
 
+  it('vxe 配置型键（Batch 2B）：逐键发射，且接在 keepSource 之后', () => {
+    const { code } = generateTableBlock({
+      fields: columns,
+      apiUrl: '/api/orders',
+      tableOptions: {
+        engine: 'vxe',
+        keepSource: true,
+        keyboardConfig: { isArrow: true, isTab: false },
+        mouseConfig: { selected: true },
+        validConfig: { autoPos: true, message: 'tooltip' },
+        seqConfig: { startIndex: 10 },
+        printConfig: true,
+      },
+    })
+    expect(code).toContain('  keyboardConfig: {"isArrow":true,"isTab":false},')
+    expect(code).toContain('  mouseConfig: {"selected":true},')
+    expect(code).toContain('  validConfig: {"autoPos":true,"message":"tooltip"},')
+    expect(code).toContain('  seqConfig: {"startIndex":10},')
+    expect(code).toContain('  printConfig: true,')
+    const at = (k: string) => code.indexOf(`\n  ${k}:`)
+    expect(at('keepSource')).toBeLessThan(at('keyboardConfig'))
+    expect(at('keyboardConfig')).toBeLessThan(at('mouseConfig'))
+    expect(at('mouseConfig')).toBeLessThan(at('validConfig'))
+    expect(at('validConfig')).toBeLessThan(at('seqConfig'))
+    expect(at('seqConfig')).toBeLessThan(at('printConfig'))
+  })
+
 })
 
 const dialogFields = [
