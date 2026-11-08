@@ -216,7 +216,10 @@ export const docsData: Record<string, any> = {
     ],
     examples: [
       { group: '基础与列', key: 'basic', title: '配置化基础表格', description: '一份 columns JSON 渲染整张表格，不写模板、不写插槽。', component: getComponent('table/01-basic'), code: code('table/01-basic') },
-      { group: '基础与列', key: 'toolbar', title: '表格工具栏', description: '表格顶部操作区，支持 configBtn、leftText 配置和 default slot 自定义内容。', component: getComponent('table/02-toolbar'), code: code('table/02-toolbar') },
+      // 工具栏归「查询与行操作」：它讲的 configBtn / leftText / default 插槽就是顶部按钮区，
+      // 与「行操作按钮与动态显隐」同题。同时给默认组腾出高度 —— W4 补完 a11y 证据后
+      // 默认组把整页顶到 10,130px（超过 10,000 验收线），移出这 391px 的一块留出余量。
+      { group: '查询与行操作', key: 'toolbar', title: '表格工具栏', description: '表格顶部操作区，支持 configBtn、leftText 配置和 default slot 自定义内容。', component: getComponent('table/02-toolbar'), code: code('table/02-toolbar') },
       { group: '基础与列', key: 'custom', title: '自定义列渲染', description: 'render 函数、scopedSlots、formatter 多种自定义列渲染方式。', component: getComponent('table/03-custom'), code: code('table/03-custom') },
       // 分组按「实测高度」平衡：默认组（第一组）决定落地页高度，须 ≤10,000px。
       // 多选/跨页记忆归交互组 —— 它整块 496px，留在默认组会把首屏顶到 10,092px。
