@@ -406,8 +406,9 @@ const tableEvents = [
   { key: '4', event: 'size-change', params: '(pagination, size)', desc: '每页条数变化' },
   { key: '5', event: 'change-table-sort', params: '({ column, prop, order })', desc: '排序变化：column 为列配置，prop 为字段名，order 为 ascending / descending / null' },
   { key: '6', event: 'selection-change', params: '(rows)', desc: '勾选变化：当前页选中行（default / vxe 同口径）；跨页全集用 getSelectionRows()' },
-  { key: '7', event: 'request-error', params: '(error)', desc: '自动加载失败（命令式 refresh/reload 的 rejection 不在此列）' },
-  { key: '8', event: 'cell-edit', params: '({ row, prop, value, oldValue })', desc: 'vxe 行内编辑提交（失焦 / 换行）：每改一格发一条，未改值不发；旧值由引擎补上（原生 edit-closed 没有）' },
+  { key: '7', event: 'filter-change', params: '({ prop, values })', desc: '列筛选变化：逐列派发，prop 为字段名、values 为选中值数组（清空时为空数组）；a-table 一次 change 会按列逐条派发，默认引擎 / vxe 同形' },
+  { key: '8', event: 'request-error', params: '(error)', desc: '自动加载失败（命令式 refresh/reload 的 rejection 不在此列）' },
+  { key: '9', event: 'cell-edit', params: '({ row, prop, value, oldValue })', desc: 'vxe 行内编辑提交（失焦 / 换行）：每改一格发一条，未改值不发；旧值由引擎补上（原生 edit-closed 没有）' },
 ]
 
 const tableMethods = [

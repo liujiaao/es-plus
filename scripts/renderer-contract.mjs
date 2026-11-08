@@ -106,6 +106,9 @@ export const EMIT_CONTRACT = {
       'size-change',
       'change-table-sort',
       'request-error',
+      // 列筛选变化（三引擎归一后逐列派发）：键名是字段名而不是 el-table 的内部数值列 id。
+      // 默认 / vxe / a-table 三端同形；虚拟引擎无筛选 UI，不发。
+      'filter-change',
       // 行内编辑提交（仅 vxe 引擎；未改值不发）。vxe 原生 edit-closed 只给 { row, column }，
       // 归一后带 { row, prop, value, oldValue } —— 判定单源在 core/table-edit.ts。
       'cell-edit',
@@ -150,9 +153,10 @@ export const EMIT_CONTRACT = {
       vue2: {
         'selection-change': {
           reason:
-            'Element UI / vxe-grid 的原生事件：两个引擎都经 v-on="$listeners" 透传，' +
-            'Vue 2 的 _g 会把宿主监听器与显式内部监听合并为数组；组件不 emit，避免双触发。' +
-            'virtual 引擎在 Vue 2 不支持，降级 el-table，链路同上。',
+            'Element UI / vxe-grid 的原生事件：vxe 经 v-on="$listeners" 透传；el-table 经 ' +
+            '`elTableListeners()`（转发 $listeners 但剔除 filter-change，由显式处理器归一后 emit）' +
+            '透传，Vue 2 的 _g 会把宿主监听器与显式内部监听合并为数组；组件不 emit selection-change，' +
+            '避免双触发。virtual 引擎在 Vue 2 不支持，降级 el-table，链路同上。',
           paths: [
             {
               engine: 'vxe-grid',
@@ -162,7 +166,8 @@ export const EMIT_CONTRACT = {
             {
               engine: 'el-table',
               anchor: '<el-table',
-              anchorTokens: ['v-on="$listeners"', '@selection-change="handleTableSelectionChange"'],
+              anchorTokens: ['v-on="elTableListeners()"', '@selection-change="handleTableSelectionChange"'],
+              sourceTokens: ['const elTableListeners = () =>'],
             },
           ],
         },

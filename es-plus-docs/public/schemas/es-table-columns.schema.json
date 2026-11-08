@@ -236,6 +236,52 @@
           "additionalProperties": false
         }
       },
+      "filters": {
+        "type": "array",
+        "description": "Declarative column filter options (W3-2). PLAIN JSON only — never a JS function; `filterMethod` is a component-level escape hatch and is NOT part of the AI/generated contract. Rendered by the default engines (el-table / element-ui / a-table) and engine: 'vxe'; the virtual engine (vue3 engine: 'virtual') has NO filter UI. Filtering is LOCAL (rows are filtered in the browser), so do not combine it with server-side paging/proxy contracts for the same column.",
+        "items": {
+          "type": "object",
+          "required": [
+            "text",
+            "value"
+          ],
+          "properties": {
+            "text": {
+              "type": "string",
+              "description": "Option text shown in the filter dropdown"
+            },
+            "value": {
+              "oneOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "number"
+                },
+                {
+                  "type": "boolean"
+                }
+              ],
+              "description": "Row value this option matches (loose primitive compare: 1 matches \"1\")"
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "filterMultiple": {
+        "type": "boolean",
+        "default": true,
+        "description": "Allow selecting several filter options at once (default true)"
+      },
+      "filterMode": {
+        "type": "string",
+        "enum": [
+          "equals",
+          "includes"
+        ],
+        "default": "equals",
+        "description": "Local comparison for `filters`: 'equals' = value equality (booleans/numbers compare loosely against strings), 'includes' = the cell text CONTAINS the selected option value (text search)"
+      },
       "editRender": {
         "type": "object",
         "description": "Column-level inline editor (AI-09 子项④). vxe engine only — requires tableOptions.editConfig AND tableOptions.engine: 'vxe'. Marks THIS column editable and picks its editor; a column without `editRender` is not editable. Function-valued fields (events) and custom-registered renderers are out of scope.",

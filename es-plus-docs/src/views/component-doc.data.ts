@@ -269,6 +269,10 @@ export const docsData: Record<string, any> = {
         { name: 'type', type: 'string', default: '-', desc: '特殊列类型：selection（复选框多选，组件不提供单选列）/expand/index' },
         { name: 'emptyPlaceholder', type: 'string', default: '-', desc: '空值占位文本，默认 "-"' },
         { name: 'dataOptions', type: 'TableColumnDataOption[]', default: '-', desc: '码值映射 [{ label, value, tagType? }]：命中显示 label，tagType 渲染 ElTag；未命中原值。render / formatter 优先' },
+        { name: 'filters', type: 'Array<{ text, value }>', default: '-', desc: '列筛选选项（纯 JSON）。默认引擎（el-table / element-ui / a-table）与 engine: "vxe" 渲染表头漏斗并本地过滤；虚拟引擎无筛选 UI（DEV 告警并点名这些列）' },
+        { name: 'filterMultiple', type: 'boolean', default: 'true', desc: '列筛选是否可多选' },
+        { name: 'filterMode', type: "'equals' | 'includes'", default: "'equals'", desc: "本地比较语义：equals = 值相等（数字/字符串宽松比较，1 命中 \"1\"）；includes = 单元格文本包含选中值。三端同一实现（core 的 table-filter）" },
+        { name: 'filterMethod', type: 'Function | undefined', default: '-', desc: '(value, row, column?) => boolean，自定义筛选谓词（Tier C 扩展点，优先级高于 filterMode）；不进 AI 配置契约' },
         { name: 'editRender', type: 'Object', default: '-', desc: 'vxe：行内编辑渲染器，需配合 options.editConfig' },
         { name: 'footerFormatter', type: 'Function', default: '-', desc: 'vxe：表尾单元格格式化，配合 options.showFooter' }
       ],
@@ -338,6 +342,7 @@ export const docsData: Record<string, any> = {
         { name: 'size-change', params: '(pagination, size)', desc: '每页条数变化时触发' },
         { name: 'change-table-sort', params: '({ column, prop, order })', desc: '排序变化时触发：column 为列配置，prop 为字段名，order 为 ascending / descending / null（三引擎同一形状）' },
         { name: 'selection-change', params: '(rows)', desc: '勾选变化：当前页选中行数组（default / virtual / vxe 同口径）；跨页全集用 getSelectionRows() 取' },
+        { name: 'filter-change', params: '({ prop, values })', desc: '列筛选变化：逐列派发，prop 为字段名、values 为选中值数组（清空时为空数组）。本地过滤由引擎完成，监听本事件用于服务端筛选（自行带条件重取）。default / vxe 同形；a-table 一次 change 会按列逐条派发；虚拟引擎不发' },
         { name: 'cell-edit', params: '({ row, prop, value, oldValue })', desc: 'vxe 行内编辑提交（失焦 / 换行时）：每改一格发一条，未改值不发。vxe 原生 edit-closed 只给 { row, column }，这里把字段名与旧值一并补上；行模式（editConfig.mode: "row"）一次会话改几格就发几条' },
         { name: 'request-error', params: '(error)', desc: '自动取数失败时触发；错误同时挂在 requestError 上，成功后复位为 null' }
       ],
