@@ -192,3 +192,48 @@ test('高级指南的深链也会切到示例所在分组', async ({ page }) => 
     { timeout: 8000 },
   )
 })
+
+// P2-5：审计记的是「中英文首页 section 数不一致」，复核时已经对上了（模板里没有
+// 按语言分支的 section），但没有守卫 —— 下一次谁给英文版加/删一节，没人会发现。
+// 语言键是 localStorage 'language'（locales/index.ts），没有 URL 参数，所以这里
+// 用「写入 → reload」而不是找语言按钮（按钮的实现以后可以换，存储键是契约）。
+test('首页：中英文 section 数一致，<html lang> 跟随语言', async ({ page }) => {
+  await page.setViewportSize(DESKTOP)
+
+  const readHome = () =>
+    page.evaluate(() => ({
+      sections: document.querySelectorAll('.home-page > section').length,
+      lang: document.documentElement.lang,
+      title: (document.querySelector('h1')?.innerText || '').trim(),
+    }))
+
+  await gotoApp(page, '/#/')
+  await page.locator('.home-page').waitFor({ state: 'visible' })
+  const zh = await readHome()
+  expect(zh.sections, '首页 section 太少，选择器或页面结构变了').toBeGreaterThanOrEqual(4)
+  expect(zh.lang).toBe('zh-CN')
+  expect(zh.title.length).toBeGreaterThan(4)
+
+  await page.evaluate(() => localStorage.setItem('language', 'en-US'))
+  await page.reload({ waitUntil: 'domcontentloaded' })
+  await page.locator('.home-page').waitFor({ state: 'visible' })
+  const en = await readHome()
+
+  expect(en.sections, '中英文首页的 section 数不一致 —— 有一种语言少/多了一整节').toBe(zh.sections)
+  expect(en.lang, '<html lang> 没有跟随语言（屏幕阅读器会用中文音库念英文）').toBe('en-US')
+  expect(en.title, '切到英文后 H1 没变 —— i18n 没生效，这条断言会变成假绿').not.toBe(zh.title)
+})
+
+// 平板断点是审计没覆盖的一段：之前只量了 1440 与 390。容器宽度 1024 / 768 恰好
+// 落在侧栏折叠（1280）与移动布局（768）的边界上，横向溢出最容易在这里出现。
+test('1440 / 1024 / 768 / 390：首页与文档页都无横向溢出', async ({ page }) => {
+  const PAGES = ['/#/', '/#/components/es-table', '/#/cases']
+  for (const width of [1440, 1024, 768, 390]) {
+    await page.setViewportSize({ width, height: width >= 1000 ? 900 : 844 })
+    for (const path of PAGES) {
+      await gotoApp(page, path)
+      await page.waitForTimeout(400)
+      expect(await overflowX(page), `${path} 在 ${width}px 下横向溢出`).toBeLessThanOrEqual(1)
+    }
+  }
+})

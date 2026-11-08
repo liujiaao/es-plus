@@ -34,12 +34,12 @@ export default defineConfig({
       name: 'vue2',
       // 窄屏腿（mobile.spec.ts）打的是主站，不属于 vue2 fixture —— 两个都要排除，
       // 否则 vue2 那条 dev server 会去跑一个它根本不服务的站点。
-      testIgnore: /(ai-gallery|ai-crud|mobile|layout)\.spec\.ts/,
+      testIgnore: /(ai-gallery|ai-crud|mobile|layout|contrast)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${PORT}` },
     },
     {
       name: 'ai-gallery-docs',
-      testMatch: /(ai-gallery|ai-crud|layout)\.spec\.ts/,
+      testMatch: /(ai-gallery|ai-crud|layout|contrast)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${DOCS_PORT}` },
     },
     {
