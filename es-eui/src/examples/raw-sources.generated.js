@@ -4873,7 +4873,7 @@ export default {
   gap: 10px;
 }
 .eb-kpi strong {
-  font-size: 26px;
+  font-size: var(--es-text-26);
   color: #303133;
   font-variant-numeric: tabular-nums;
 }
