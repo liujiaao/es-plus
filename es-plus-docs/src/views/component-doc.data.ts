@@ -434,6 +434,14 @@ export const docsData: Record<string, any> = {
         evidence: { file: 'packages/vue3/src/components/es-table/src/table-btns.vue', contains: 'el-button' }
       },
       {
+        text: '加载中容器带 aria-busy：读屏能知道「看到的是旧数据、正在刷新」—— 视觉上的 v-loading 遮罩对读屏不存在',
+        evidence: { file: 'packages/vue3/src/components/es-table/src/component.vue', contains: 'aria-busy' }
+      },
+      {
+        text: '空态是 role="status"：请求回来但没有数据是一次状态变化，读屏会播报「暂无数据」，而不是等用户自己移到表格上才发现',
+        evidence: { file: 'packages/vue3/src/components/es-table/src/component.vue', contains: 'role="status"' }
+      },
+      {
         text: '边界：表格行本身不可聚焦、也不能用方向键遍历（Element Plus 的 el-table 不是 grid role）—— 要键盘多选请开 multiSelect 的勾选框，那是原生 checkbox',
         evidence: { file: 'packages/vue3/src/components/es-table/src/component.vue', contains: 'multiSelect' }
       }
@@ -583,6 +591,10 @@ export const docsData: Record<string, any> = {
       {
         text: '弹窗走 es-dialog（el-dialog 底座）：打开后焦点进入弹窗、Esc 关闭、关闭后焦点回到触发按钮 —— 沿用 Element Plus 的默认行为，本组件没有关掉它',
         evidence: { file: 'packages/vue3/src/components/es-dialog/src/component.vue', contains: '<el-dialog' }
+      },
+      {
+        text: '弹窗头部只有图标的「全屏 / 关闭」不再是无名按钮：补了 role="button"、tabindex 与 aria-label（名字走 locale，可被 messages 覆盖），Enter / Space 也能触发',
+        evidence: { file: 'packages/vue3/src/components/es-dialog/src/component.vue', contains: 'aria-label' }
       }
     ],
     related: [

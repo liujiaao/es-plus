@@ -186,6 +186,37 @@ app.use(ESPlus, {
 })
 ```
 
+### 库内置文案（`locale` / `messages`）
+
+`t` 只服务 `labelKey`（业务字段文案）。库里还有一批**框架自己产生**的用户可见文案 ——
+空态、加载中、CRUD 自动派生的按钮名（新增 / 编辑 / 查看 / 删除 / 导出 / 导入）、
+操作列标题、删除与二次确认、弹窗的取消 / 确定，以及弹窗头部图标按钮的
+`aria-label`（全屏 / 退出全屏 / 关闭）。它们走独立的字典，**不要**把库文案塞进 `t`：
+
+```typescript
+app.use(ESPlus, {
+  // ① 整体换语言：内置字典 zh-CN / en-US
+  locale: 'en-US',
+  // ② 或逐键覆盖（优先级高于字典），例如只改一处措辞
+  messages: { operation: 'Actions', close: 'Dismiss' }
+})
+```
+
+三种写法等价于「全局字典 + 单键覆盖」：
+
+| 写法 | 结果 |
+|------|------|
+| 不传 | 简体中文（与 v1.5 之前的字面量逐字一致） |
+| `locale: 'en-US'` | 整本英文字典 |
+| `locale: { name: 'en-GB', messages: { add: 'New' } }` | `name` 以 `en` 开头时以英文为底，再用 `messages` 覆盖单键；非 `en` 名称回落中文 |
+
+字典键：`emptyText` / `loading` / `add` / `edit` / `view` / `delete` / `export` / `import` /
+`query` / `reset` / `operation` / `cancel` / `ok` / `confirm` / `tip` / `deleteConfirm` /
+`confirmAction` / `fullscreen` / `exitFullscreen` / `close`。
+
+> `locale` / `messages` 在 `app.use()` 时读取：请在首屏渲染前完成安装（一直是这个要求）。
+> 运行期热切换不在当前版本内。
+
 ---
 
 ## 组合使用

@@ -214,6 +214,8 @@ type: 'component'
 
 - 排序方向通过表头 aria-sort 暴露：排序状态机由组件自己推进（同列 asc→desc→取消、换列从 asc 起），顺带修好了 sortBy.order 恒为 undefined 导致 aria-sort 永久缺失的问题（证据：`packages/vue3/src/components/es-table/src/engines/use-virtual-sort.ts` 含 `aria-sort`）
 - 工具栏与行操作按钮都是 el-button（原生 <button>），键盘可达；按钮的 hidden 是条件求值后不渲染，而不是 display:none 留在 Tab 序列里（证据：`packages/vue3/src/components/es-table/src/table-btns.vue` 含 `el-button`）
+- 加载中容器带 aria-busy：读屏能知道「看到的是旧数据、正在刷新」—— 视觉上的 v-loading 遮罩对读屏不存在（证据：`packages/vue3/src/components/es-table/src/component.vue` 含 `aria-busy`）
+- 空态是 role="status"：请求回来但没有数据是一次状态变化，读屏会播报「暂无数据」，而不是等用户自己移到表格上才发现（证据：`packages/vue3/src/components/es-table/src/component.vue` 含 `role="status"`）
 - 边界：表格行本身不可聚焦、也不能用方向键遍历（Element Plus 的 el-table 不是 grid role）—— 要键盘多选请开 multiSelect 的勾选框，那是原生 checkbox（证据：`packages/vue3/src/components/es-table/src/component.vue` 含 `multiSelect`）
 
 ## 相关
