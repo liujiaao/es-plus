@@ -196,7 +196,9 @@ const gridConfig = computed(() => {
     }
   }
 
-  const effectiveHeaderStyle = opts.headerCellStyle !== undefined ? opts.headerCellStyle : { background: '#f5f7fa' }
+  // 只透传调用方给的值，**不再补默认底色**（同 a-table 引擎）：内联 style 会压过主题，
+  // 暗色下表头成为唯一亮块。底色交给主题 CSS。
+  const effectiveHeaderStyle = opts.headerCellStyle
   if (effectiveHeaderStyle) {
     base.headerCellConfig = {
       style: typeof effectiveHeaderStyle === 'function'

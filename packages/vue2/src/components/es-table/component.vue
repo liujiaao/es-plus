@@ -245,10 +245,12 @@ const defaultOptions: TableOptions = {
   loading: false,
   border: false,
   size: 'small',
-  // 用 backgroundColor 而非 background 简写：vxe 引擎的表头竖线/底线画在
-  // .vxe-header--column 的 background-image(linear-gradient) 上，background 简写会把
-  // background-image 一并重置为 none，导致表头竖线消失（#5）。el-table 引擎不受影响。
-  headerCellStyle: { backgroundColor: '#f5f7fa' },
+  // 表头底色**刻意不做默认值**（同 vue3）：以前下发 `{ backgroundColor: '#f5f7fa' }`，
+  // 内联样式压过 Element UI 的主题，暗色只得靠宿主 `!important` 压回。
+  // 底色改由主题 CSS 决定；宿主不定义时就是组件库自己的表头色。
+  // 另注：若将来重新引入内联值，必须用 backgroundColor 而非 background 简写 ——
+  // vxe 引擎的表头竖线/底线画在 .vxe-header--column 的 background-image(linear-gradient) 上，
+  // background 简写会把 background-image 一并重置为 none，表头竖线消失（#5）。el-table 引擎不受影响。
   highlightCurrentRow: true,
   cachePageSelection: true,
 }

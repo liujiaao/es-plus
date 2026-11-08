@@ -793,7 +793,8 @@ function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): Structu
     border: tOpts.border !== false,
     stripe: tOpts.stripe !== false,
     highlightCurrentRow: tOpts.highlightCurrentRow !== false,
-    headerCellStyle: tOpts.headerCellStyle || { background: '#f5f7fa' },
+    // 表头底色只在用户给了才发：默认内联样式会压过宿主主题（暗色表头成唯一亮块）。
+    ...(tOpts.headerCellStyle ? { headerCellStyle: tOpts.headerCellStyle } : {}),
     apiParams: { url: config.apiUrl },
     rowkey: tOpts.rowkey || 'id',
     ...(tOpts.heightType ? { heightType: tOpts.heightType } : {}),
@@ -1278,9 +1279,12 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   lines.push(`  stripe: ${tOpts.stripe !== false},`)
   lines.push(`  highlightCurrentRow: ${tOpts.highlightCurrentRow !== false},`)
   // F3（W2.4）：`headerCellStyle` 一度在这里写死 `{ background: '#f5f7fa' }` ——
-  // schema 模式尊重用户值（上方 tableOptions 构造的 `tOpts.headerCellStyle || 默认`），
-  // SFC 却把它静默换回默认值：同 config 换 mode 表头样式就变，且零告警。
-  lines.push(`  headerCellStyle: ${inlineJson(tOpts.headerCellStyle || { background: '#f5f7fa' })},`)
+  // schema 模式尊重用户值，SFC 却把它静默换回默认值：同 config 换 mode 表头样式就变。
+  // 现在与 schema 模式同口径：**只在用户给了时才发**，默认底色交给主题 CSS
+  //（内联样式会压过宿主主题，暗色下表头成为唯一亮块）。
+  if (tOpts.headerCellStyle) {
+    lines.push(`  headerCellStyle: ${inlineJson(tOpts.headerCellStyle)},`)
+  }
   lines.push(`  apiParams: { url: ${q(config.apiUrl)} },`)
   lines.push(`  rowkey: ${q(tOpts.rowkey || 'id')},`)
   if (tOpts.heightType) lines.push(`  heightType: ${q(tOpts.heightType)},`)

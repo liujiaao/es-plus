@@ -227,9 +227,10 @@ const gridConfig = computed(() => {
     }
   }
 
-  // headerCellStyle：未显式设置时沿用 defaultOptions 同款默认背景，对齐 el-table 路径行为
-  // 显式设置 false/null 可关闭背景；设置对象/函数则使用指定样式
-  const effectiveHeaderStyle = opts.headerCellStyle !== undefined ? opts.headerCellStyle : { background: '#f5f7fa' }
+  // headerCellStyle：只透传调用方给的值，**不再补默认底色**（同 el-table 路径与另两端）：
+  // 内联样式会压过主题，暗色下表头成为唯一亮块。显式设置 false/null 可关闭背景；
+  // 设置对象/函数则使用指定样式。底色默认由主题 CSS 提供。
+  const effectiveHeaderStyle = opts.headerCellStyle
   if (effectiveHeaderStyle) {
     base.headerCellConfig = {
       style: typeof effectiveHeaderStyle === 'function'

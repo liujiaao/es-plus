@@ -404,7 +404,8 @@ export function generateScaffold(
       lines.push(`      border: true,`);
       lines.push(`      stripe: true,`);
       lines.push(`      highlightCurrentRow: true,`);
-      lines.push(`      headerCellStyle: { background: '#f5f7fa' },`);
+      // 不生成 headerCellStyle 默认值：内联样式会压过宿主主题（暗色表头成唯一亮块），
+      // 表头底色交给主题 CSS / 组件库默认。
       lines.push(`      apiParams: { url: '/api/xxx' },  // TODO: 替换为实际接口地址`);
       lines.push(`      rowkey: 'id'`);
       lines.push(`    }`);
@@ -458,7 +459,8 @@ export function generateScaffold(
     lines.push(`  border: true,`);
     lines.push(`  stripe: true,`);
     lines.push(`  highlightCurrentRow: true,`);
-    lines.push(`  headerCellStyle: { background: '#f5f7fa' },`);
+    // 不生成 headerCellStyle 默认值：内联样式会压过宿主主题（暗色表头成唯一亮块），
+    // 表头底色交给主题 CSS / 组件库默认。
     lines.push(`  apiParams: { url: '/api/xxx' },  // TODO: 替换为实际接口地址`);
     lines.push(`  rowkey: 'id'`);
     lines.push(`}`);

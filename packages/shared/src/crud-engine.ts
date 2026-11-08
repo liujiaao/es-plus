@@ -561,7 +561,7 @@ export function generateCrudConfig(input: string): GeneratedConfig {
     border: true,
     stripe: true,
     highlightCurrentRow: true,
-    headerCellStyle: { background: '#f5f7fa' },
+    // 表头底色不设默认值（同 schema-generator）：内联样式会压过宿主主题。
     rowkey: 'id',
     ...optionPatches,
   }

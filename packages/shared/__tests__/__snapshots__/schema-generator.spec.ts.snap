@@ -231,9 +231,6 @@ exports[`generateCrudSchema â€” snapshot tests > generates stable schema for: å‘
       "url": "/api/xxx",
     },
     "border": true,
-    "headerCellStyle": {
-      "background": "#f5f7fa",
-    },
     "highlightCurrentRow": true,
     "rowkey": "id",
     "stripe": true,
@@ -484,9 +481,6 @@ exports[`generateCrudSchema â€” snapshot tests > generates stable schema for: å•
       "url": "/api/xxx",
     },
     "border": true,
-    "headerCellStyle": {
-      "background": "#f5f7fa",
-    },
     "highlightCurrentRow": true,
     "rowkey": "id",
     "stripe": true,
@@ -720,9 +714,6 @@ exports[`generateCrudSchema â€” snapshot tests > generates stable schema for: æ–
       "url": "/api/xxx",
     },
     "border": true,
-    "headerCellStyle": {
-      "background": "#f5f7fa",
-    },
     "highlightCurrentRow": true,
     "rowkey": "id",
     "stripe": true,
@@ -976,9 +967,6 @@ exports[`generateCrudSchema â€” snapshot tests > generates stable schema for: æ—
       "url": "/api/xxx",
     },
     "border": true,
-    "headerCellStyle": {
-      "background": "#f5f7fa",
-    },
     "highlightCurrentRow": true,
     "rowkey": "id",
     "stripe": true,
@@ -1175,9 +1163,6 @@ exports[`generateCrudSchema â€” snapshot tests > generates stable schema for: ç”
       "url": "/api/xxx",
     },
     "border": true,
-    "headerCellStyle": {
-      "background": "#f5f7fa",
-    },
     "highlightCurrentRow": true,
     "rowkey": "id",
     "stripe": true,
@@ -1391,9 +1376,6 @@ exports[`generateCrudSchema â€” snapshot tests > generates stable schema for: ç³
       "url": "/api/xxx",
     },
     "border": true,
-    "headerCellStyle": {
-      "background": "#f5f7fa",
-    },
     "highlightCurrentRow": true,
     "rowkey": "id",
     "stripe": true,
@@ -1574,9 +1556,6 @@ exports[`generateCrudSchema â€” snapshot tests > generates stable schema for: è§
       "url": "/api/xxx",
     },
     "border": true,
-    "headerCellStyle": {
-      "background": "#f5f7fa",
-    },
     "highlightCurrentRow": true,
     "rowkey": "id",
     "stripe": true,
@@ -1834,9 +1813,6 @@ exports[`generateCrudSchema â€” snapshot tests > generates stable schema for: è®
       "url": "/api/xxx",
     },
     "border": true,
-    "headerCellStyle": {
-      "background": "#f5f7fa",
-    },
     "highlightCurrentRow": true,
     "rowkey": "id",
     "stripe": true,

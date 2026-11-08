@@ -91,7 +91,8 @@ function buildCrudPageSchema(config: GeneratedConfig): {
     border: true,
     stripe: true,
     highlightCurrentRow: true,
-    headerCellStyle: { background: '#f5f7fa' },
+    // 表头底色不设默认值：内联样式会压过宿主主题（暗色表头成唯一亮块），
+    // 底色由主题 CSS 负责；用户传了才透传（下面的 ...config.tableOptions）。
     apiParams: { url: '/api/xxx' },
     rowkey: 'id',
     ...(config.tableOptions ?? {}),

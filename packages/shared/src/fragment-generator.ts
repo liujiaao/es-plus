@@ -355,7 +355,6 @@ export const TABLE_BLOCK_ALWAYS = [
   'border',
   'stripe',
   'highlightCurrentRow',
-  'headerCellStyle',
   'rowkey',
 ] as const
 
@@ -367,6 +366,9 @@ export const TABLE_BLOCK_OPTION_ORDER = [
   'heightType',
   'tabHeight',
   'height',
+  // 表头底色：给了才发（此前是 ALWAYS 里的写死默认值 —— 内联样式压过宿主主题，
+  // 暗色下表头成为唯一亮块）。缺省交给主题 CSS。
+  'headerCellStyle',
   'virtual',
   'rowHeight',
   'estimatedRowHeight',
@@ -614,8 +616,8 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
   lines.push(`  stripe: ${t.stripe !== false},`)
   lines.push(`  highlightCurrentRow: ${t.highlightCurrentRow !== false},`)
   // F3 补证：此前这里写死 `#f5f7fa`，用户值无处可传 —— 片段与 SFC 同病、系统性静默丢弃。
-  // 现在尊重 `tableOptions.headerCellStyle`，缺省仍回落到原来的默认背景。
-  lines.push(`  headerCellStyle: ${inlineJson(t.headerCellStyle || { background: '#f5f7fa' })},`)
+  // 现在只在用户给了时才发（见 TABLE_BLOCK_OPTION_ORDER）；缺省底色交给主题 CSS，
+  // 不再往产物里塞一个会压过宿主主题的内联值。
   if (input.apiUrl) lines.push(`  apiParams: { url: ${q(input.apiUrl)} },`)
   lines.push(`  rowkey: ${q(rowkey)},`)
   // P10：顶层 treeConfig（跨端窄子集）与 tableOptions.treeConfig（vxe 富子集）

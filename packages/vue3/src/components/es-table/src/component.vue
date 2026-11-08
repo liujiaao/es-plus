@@ -132,7 +132,10 @@ const defaultOptions: TableOptions = {
   loading: false,
   border: false,
   size: 'small',
-  headerCellStyle: { background: '#f5f7fa' },
+  // 表头底色**刻意不做默认值**：以前这里下发 `headerCellStyle: { background: '#f5f7fa' }`，
+  // 内联样式压过一切主题变量，暗色下只剩表头一块亮色，只能靠宿主 `!important` 抢救。
+  // 底色改由主题 CSS 决定（`.table_component .el-table th`，见共享主题），
+  // 宿主不定义时就是组件库自己的表头色。
   highlightCurrentRow: true,
   cachePageSelection: true
 }

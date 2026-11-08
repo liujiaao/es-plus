@@ -117,9 +117,6 @@ export default defineComponent({
       "border": true,
       "stripe": true,
       "highlightCurrentRow": true,
-      "headerCellStyle": {
-        "background": "#f5f7fa"
-      },
       "rowkey": "id"
     }
 
@@ -452,9 +449,6 @@ export default defineComponent({
       "border": true,
       "stripe": true,
       "highlightCurrentRow": true,
-      "headerCellStyle": {
-        "background": "#f5f7fa"
-      },
       "rowkey": "id"
     }
 
@@ -787,9 +781,6 @@ export default defineComponent({
       "border": true,
       "stripe": true,
       "highlightCurrentRow": true,
-      "headerCellStyle": {
-        "background": "#f5f7fa"
-      },
       "rowkey": "id"
     }
 
@@ -1089,9 +1080,6 @@ export default defineComponent({
       "border": true,
       "stripe": true,
       "highlightCurrentRow": true,
-      "headerCellStyle": {
-        "background": "#f5f7fa"
-      },
       "rowkey": "id"
     }
 
@@ -1407,9 +1395,6 @@ export default defineComponent({
       "border": true,
       "stripe": true,
       "highlightCurrentRow": true,
-      "headerCellStyle": {
-        "background": "#f5f7fa"
-      },
       "rowkey": "id"
     }
 
@@ -1691,9 +1676,6 @@ export default defineComponent({
       "border": true,
       "stripe": true,
       "highlightCurrentRow": true,
-      "headerCellStyle": {
-        "background": "#f5f7fa"
-      },
       "rowkey": "id"
     }
 
@@ -1981,9 +1963,6 @@ export default defineComponent({
       "border": true,
       "stripe": true,
       "highlightCurrentRow": true,
-      "headerCellStyle": {
-        "background": "#f5f7fa"
-      },
       "rowkey": "id"
     }
 
@@ -2266,9 +2245,6 @@ export default defineComponent({
       "border": true,
       "stripe": true,
       "highlightCurrentRow": true,
-      "headerCellStyle": {
-        "background": "#f5f7fa"
-      },
       "rowkey": "id"
     }
 

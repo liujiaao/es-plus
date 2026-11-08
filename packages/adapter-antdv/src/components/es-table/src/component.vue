@@ -178,7 +178,9 @@ const defaultOptions: TableOptions = {
   loading: false,
   border: false,
   size: 'small' as const,
-  headerCellStyle: { background: '#f5f7fa' },
+  // 表头底色**刻意不做默认值**（三端同口径）：以前这里下发 `headerCellStyle: { background: '#f5f7fa' }`，
+  // a-table 把它渲染成 <tr> 上的内联样式，压过暗色算法，只能靠宿主 !important 抢救。
+  // 底色改由主题 CSS 决定（`.table_component .ant-table-thead > tr > th`）。
   highlightCurrentRow: true,
   cachePageSelection: true,
   showHeader: true,

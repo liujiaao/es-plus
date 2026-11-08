@@ -194,9 +194,10 @@ describe('generateTableBlock — 边界', () => {
     expect(code).not.toContain('#f5f7fa')
   })
 
-  it('未提供 headerCellStyle → 回落到默认背景（保持既有产物）', () => {
+  it('未提供 headerCellStyle → 不发射内联默认色（底色交给主题 CSS）', () => {
     const { code } = generateTableBlock({ fields: columns, apiUrl: '/api/orders' })
-    expect(code).toContain('headerCellStyle: {"background":"#f5f7fa"}')
+    expect(code).not.toContain('headerCellStyle')
+    expect(code).not.toContain('#f5f7fa')
   })
 
   it('vue2 数据源发单向 :data-source（F7：组件从不 emit update:dataSource）+ 分页仍用 .sync', () => {

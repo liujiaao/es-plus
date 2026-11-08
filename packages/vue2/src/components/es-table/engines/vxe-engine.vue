@@ -265,10 +265,11 @@ export default defineComponent({
       }
 
       // ── vxe v3 API：headerCellStyle/headerCellClassName 为顶层属性（v4 中在 headerCellConfig 内）──
-      // 注意：vxe 表头竖线/底线是画在 .vxe-header--column 的 background-image(linear-gradient) 上，
-      // 默认背景必须用 backgroundColor（而非 background 简写）——background 简写会把 background-image
-      // 一并重置为 none，导致表头竖线消失（#5，表体不受影响因为未注入 cellStyle）。
-      const effectiveHeaderStyle = opts.headerCellStyle !== undefined ? opts.headerCellStyle : { backgroundColor: '#f5f7fa' }
+      // 只透传调用方给的值，**不再补默认底色**（同 el-table 引擎）：内联 style 会压过主题，
+      // 暗色下表头成为唯一亮块。底色交给主题 CSS。
+      // 注意：调用方给的值若用 background 简写，vxe 表头竖线/底线
+      //（画在 .vxe-header--column 的 background-image 上）会被一并重置为 none（#5）。
+      const effectiveHeaderStyle = opts.headerCellStyle
       if (effectiveHeaderStyle) {
         base.headerCellStyle = typeof effectiveHeaderStyle === 'function'
           ? ({ column, columnIndex }: any) => (effectiveHeaderStyle as Function)({ column, columnIndex })
