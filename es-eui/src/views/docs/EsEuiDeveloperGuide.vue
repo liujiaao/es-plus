@@ -1,7 +1,9 @@
 <template>
   <div class="dev-guide-page">
     <!-- Hero Section -->
-    <section class="hero-section">
+    <!-- data-ungrouped：hero 不属于任何一篇（章节切换只切正文），
+         守卫 scripts/check-section-groups.mjs 靠这个标记区分「有意不分组」与「漏了 v-if」 -->
+    <section class="hero-section" data-ungrouped>
       <div class="hero-badge">
         <i class="el-icon-s-management" />
         <span>开发手册</span>
@@ -14,8 +16,25 @@
       </p>
     </section>
 
+    <!-- 章节切换：七篇原本一条 26,638px 的长列表（本仓最长的页）。按篇切 tab 后
+         同一时刻只挂当前篇，深链（#ch-form / 篇内 #formtype-table）会自动切到所在篇。
+         与 es-pc 的 SectionTabs 同一套交互，外观跟随本站既有的 demo-group-links 胶囊。 -->
+    <nav class="chapter-tabs" aria-label="手册章节">
+      <button
+        v-for="chapter in chapters"
+        :key="chapter.id"
+        type="button"
+        class="chapter-tab"
+        :class="{ 'is-active': activeChapter === chapter.id }"
+        :aria-pressed="String(activeChapter === chapter.id)"
+        @click="selectChapter(chapter.id)"
+      >
+        {{ chapter.label }}
+      </button>
+    </nav>
+
     <!-- ==================== 第一篇：架构剖析 ==================== -->
-    <section class="section">
+    <section v-if="isChapter('ch-architecture')" id="ch-architecture" class="section">
       <div class="section-header">
         <div class="section-icon blue">
           <i class="el-icon-s-marketing" />
@@ -206,7 +225,7 @@ if (formPutList.get(capitalize(item.formtype))) {
     </section>
 
     <!-- ==================== 第二篇：快速上手 ==================== -->
-    <section class="section">
+    <section v-if="isChapter('ch-quickstart')" id="ch-quickstart" class="section">
       <div class="section-header">
         <div class="section-icon green">
           <i class="el-icon-time" />
@@ -342,7 +361,7 @@ export default {
     </section>
 
     <!-- ==================== 第三篇：EsForm 完全配置手册 ==================== -->
-    <section class="section">
+    <section v-if="isChapter('ch-form')" id="ch-form" class="section">
       <div class="section-header">
         <div class="section-icon purple">
           <i class="el-icon-s-order" />
@@ -675,7 +694,7 @@ export default {
     </section>
 
     <!-- ==================== 第四篇：EsTable 完全配置手册 ==================== -->
-    <section class="section">
+    <section v-if="isChapter('ch-table')" id="ch-table" class="section">
       <div class="section-header">
         <div class="section-icon blue">
           <i class="el-icon-s-data" />
@@ -1000,7 +1019,7 @@ export default {
     </section>
 
     <!-- ==================== 第五篇：useDialog 完全配置手册 ==================== -->
-    <section class="section">
+    <section v-if="isChapter('ch-dialog')" id="ch-dialog" class="section">
       <div class="section-header">
         <div class="section-icon orange">
           <i class="el-icon-s-claim" />
@@ -1122,7 +1141,7 @@ export default {
     </section>
 
     <!-- ==================== 第六篇：组件联动模式 ==================== -->
-    <section class="section">
+    <section v-if="isChapter('ch-linkage')" id="ch-linkage" class="section">
       <div class="section-header">
         <div class="section-icon green">
           <i class="el-icon-connection" />
@@ -1236,7 +1255,7 @@ export default {
     </section>
 
     <!-- ==================== 附录 ==================== -->
-    <section class="section">
+    <section v-if="isChapter('ch-appendix')" id="ch-appendix" class="section">
       <div class="section-header">
         <div class="section-icon blue">
           <i class="el-icon-collection-tag" />
@@ -1288,10 +1307,28 @@ export default {
 </template>
 
 <script>
+import { notifyTocChanged } from '@/utils/doc-chrome'
+
 export default {
   name: 'EsEuiDeveloperGuide',
   data() {
     return {
+      /**
+       * 章节分组：七篇原本同屏（26,638px），一次只挂一篇。
+       * `id` 必须与模板里 `<section id>` 一一对应；`anchors` 是「篇内锚点 → 所在篇」，
+       * 深链落在篇内小标题上时也要先把那一篇切出来（例：3.2 的 #formtype-table）。
+       * 分类与模板的同步由 scripts/check-section-groups.mjs 静态核对。
+       */
+      chapters: [
+        { id: 'ch-architecture', label: '架构剖析' },
+        { id: 'ch-quickstart', label: '快速上手' },
+        { id: 'ch-form', label: 'EsForm 手册' },
+        { id: 'ch-table', label: 'EsTable 手册' },
+        { id: 'ch-dialog', label: 'useDialog 手册' },
+        { id: 'ch-linkage', label: '组件联动' },
+        { id: 'ch-appendix', label: '附录速查' }],
+      anchors: { 'formtype-table': 'ch-form' },
+      activeChapter: 'ch-architecture',
       pipeSteps: [
         { name: 'brcb(params)', desc: '请求前参数转换。接收合并后的请求参数，返回最终参数' },
         { name: 'httpRequestInstance()', desc: '调用 EsTable.httpRequest 或 options.httpRequest 发起 HTTP 请求' },
@@ -1324,6 +1361,50 @@ export default {
         { name: 'Rate', comp: 'el-rate', desc: '评分' },
         { name: 'Upload', comp: 'el-upload', desc: '文件上传' }
       ]
+    }
+  },
+  created() {
+    // 首屏带 #ch-form 这类深链：同步定篇，第一帧就渲染对的那一篇（不先闪默认篇）
+    const key = this.chapterForHash(this.$route.hash)
+    if (key) this.activeChapter = key
+  },
+  watch: {
+    // 站内跳转 / 篇内锚点：先切篇（DOM 才会出现），再自己对准落点 ——
+    // 路由的 scrollBehavior 在这个 tick 之前就跑完了，那时目标篇还没渲染
+    '$route.hash'(hash) {
+      const key = this.chapterForHash(hash)
+      if (!key || key === this.activeChapter) return
+      this.activeChapter = key
+      this.$nextTick(() => this.scrollToAnchor(hash))
+    },
+    // 切篇只换正文、不改 route.path，右栏「本页目录」不会自己重算 ——
+    // 广播一次让它跟着换（DocShell 订阅）。
+    activeChapter() {
+      this.$nextTick(() => notifyTocChanged())
+    }
+  },
+  methods: {
+    isChapter(id) {
+      return this.activeChapter === id
+    },
+    /** hash → 篇 id：先认篇自己的 id，再认篇内锚点（anchors） */
+    chapterForHash(hash) {
+      const id = String(hash || '').replace(/^#/, '')
+      if (!id) return ''
+      if (this.chapters.some((chapter) => chapter.id === id)) return id
+      return this.anchors[id] || ''
+    },
+    selectChapter(id) {
+      if (this.activeChapter === id) return
+      this.activeChapter = id
+      // 整篇换掉：把新篇顶部带回视口。不按「滚回页首」处理 ——
+      // 用户可能已经滚到篇的中段，回页首等于白扔一屏滚动距离。
+      this.$nextTick(() => this.scrollToAnchor('#' + id))
+    },
+    scrollToAnchor(hash) {
+      const el = document.querySelector(String(hash || '').trim())
+      if (!el) return
+      window.scrollTo({ top: window.scrollY + el.getBoundingClientRect().top - 88 })
     }
   }
 }
@@ -1386,6 +1467,51 @@ $bg-light: #f7fafc;
     font-size: var(--es-text-base);
     line-height: var(--es-leading-relaxed);
     p { color: var(--es-text-regular); }
+  }
+}
+
+// 章节切换标签条：外观沿用本站例子页入口（demo-group-links）的胶囊，
+// 激活态用品牌浅底 + 品牌字（实测 4.75:1 浅色 / 6.18:1 暗色）。
+// sticky：篇内可能有两千多像素，切篇不用每次滚回页首。
+// top 与底色跟本站外壳对齐：顶栏 `position: fixed` 高 60px、正文底是 --es-bg。
+.chapter-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--es-space-2);
+  position: sticky;
+  top: 60px;
+  z-index: 20;
+  margin: calc(-1 * var(--es-space-2)) 0 var(--es-space-5);
+  padding: var(--es-space-2) 0;
+  background: var(--es-bg);
+
+  .chapter-tab {
+    padding: var(--es-space-1) var(--es-space-4);
+    border: 1px solid var(--es-border-light);
+    border-radius: var(--es-radius-full);
+    background: transparent;
+    color: var(--es-text-regular);
+    font-size: var(--es-text-sm);
+    cursor: pointer;
+    transition: color var(--es-duration-fast) var(--es-ease),
+      border-color var(--es-duration-fast) var(--es-ease),
+      background-color var(--es-duration-fast) var(--es-ease);
+
+    &:hover {
+      color: var(--es-brand-strong);
+      border-color: var(--es-brand-primary);
+    }
+
+    &.is-active {
+      color: var(--es-brand-strong);
+      background: var(--es-brand-tint);
+      border-color: var(--es-brand-primary);
+    }
+
+    &:focus-visible {
+      outline: 2px solid var(--es-brand-primary);
+      outline-offset: 2px;
+    }
   }
 }
 

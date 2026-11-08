@@ -132,7 +132,7 @@
  * 最后更新取数）此前只有 es-plus-docs 有。壳层写一次，两个壳各传一个 groups
  * 就够了；写成两份迟早分叉。
  */
-import { collectHeadings, createScrollSpy, scrollToHeading, lastUpdatedFor } from '@/utils/doc-chrome'
+import { collectHeadings, createScrollSpy, scrollToHeading, lastUpdatedFor, onTocChanged } from '@/utils/doc-chrome'
 import { docEntryForRouteName, docNeighbors, docSections } from '@/utils/doc-nav'
 import DocMeta from './DocMeta.vue'
 
@@ -181,8 +181,13 @@ export default {
   },
   mounted() {
     this.refreshToc()
+    // 正文整段换掉、但路由 path 没变的情况（开发指南切章节）不会触发上面的
+    // '$route.path'：由页面广播一次，这里跟着重算目录，否则右栏一直列着上一篇的小标题。
+    this.stopTocWatch = onTocChanged(() => this.refreshToc())
   },
   beforeDestroy() {
+    if (this.stopTocWatch) this.stopTocWatch()
+    this.stopTocWatch = null
     this.stopSpy()
   },
   methods: {
@@ -209,9 +214,14 @@ export default {
       this.tocRetry = 0
       this.scrollSpy = createScrollSpy(headings, {
         onChange: (id) => {
-          this.activeHeading = id
+          // 换篇的一两个 tick 里，上一篇的 spy 可能还留着一次滚动/定时回调：
+          // 那一刻正文已经换掉、旧标题全不在 DOM，它算出来的 id 属于上一篇。
+          // 收下它只会让高亮整段消失（新目录里没有这个 id），所以先按本篇目录过滤。
+          if (this.toc.some((h) => h.id === id)) this.activeHeading = id
         }
       })
+      // 旧高亮 id 一定不在新篇里：先落到本篇第一个标题，别让高亮空着等下一次滚动
+      if (!this.toc.some((h) => h.id === this.activeHeading)) this.activeHeading = headings[0].id
     },
     refreshToc() {
       this.tocRetry = 0
