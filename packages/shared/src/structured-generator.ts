@@ -129,6 +129,35 @@ interface TableOpts {
     accordion?: boolean
     lazy?: boolean
   }
+  // ── AI-31：vxe 一等公民 JSON 子集（11 键，仅 `engine:'vxe'` 消费；默认 / 虚拟引擎忽略）。
+  //    契约源在各端 `TableOptions` + `build-grid-config.ts` 直传；Zod 层见
+  //    `structured-config.schema.ts` 的同名键。此处只是发射白名单的类型投影，
+  //    函数型成员（footerMethod / seqConfig.seqMethod / exportConfig.download …）
+  //    刻意排除 —— 它们是代码不是 JSON。
+  showFooter?: boolean
+  footerData?: unknown[][]
+  exportConfig?: Record<string, unknown>
+  toolbarConfig?: boolean | Record<string, unknown>
+  columnConfig?: Record<string, unknown>
+  keepSource?: boolean
+  keyboardConfig?: {
+    isArrow?: boolean
+    isTab?: boolean
+    isEnter?: boolean
+    isEdit?: boolean
+    isDel?: boolean
+    enterToTab?: boolean
+  }
+  mouseConfig?: { selected?: boolean }
+  validConfig?: {
+    autoPos?: boolean
+    message?: 'default' | 'tooltip' | 'modal' | 'none'
+    msgMode?: 'single' | 'full'
+  }
+  /** vxe 序号列起点。只收 JSON 安全的 `startIndex`；`seqMethod` 是函数，不进配置。 */
+  seqConfig?: { startIndex?: number }
+  /** vxe 打印开关（`true`）或打印配置对象；`beforePrintMethod` 等函数成员不进 JSON。 */
+  printConfig?: boolean | Record<string, unknown>
 }
 
 export interface StructuredGenerateResult {
