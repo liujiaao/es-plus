@@ -260,6 +260,26 @@ function checkContrast() {
     assertContrast(`浅色 ${kind} 标题/提示框底`, color(lightVars, token), parseColor(background), 4.5)
   }
 
+  // 站点自带的深色代码块：共享 docs-content.css 只保证 `.code-block-wrapper` 的
+  // token 配对，站点如果把裸 `pre` 改成深色底，文字色必须同文件写死并过 4.5 ——
+  // 否则会吃到浅色主题的 `--es-doc-code-block-text`（#24292e），深底深字。
+  // 实测过一次：es-eui 七个路由的代码示例只有 1.30:1（#24292e 压 #0f1010）。
+  {
+    const euiApp = readText(join(ROOT, 'es-eui', 'src', 'App.vue'))
+    const preBg = euiApp.match(/(?:^|\n)pre\s*\{[^}]*background:\s*(#[0-9a-f]{3,6})/i)
+    const preCode = euiApp.match(
+      /pre:not\(\.code-block-wrapper pre\)\s+code\s*\{[^}]*color:\s*(#[0-9a-f]{3,6})/i,
+    )
+    if (preBg && preCode) {
+      assertContrast('es-eui 深色代码块 文字/底', parseColor(preCode[1]), parseColor(preBg[1]), 4.5)
+    } else if (preBg) {
+      fail(
+        '对比度：es-eui 的 `pre` 有深色字面底，但没有配套的代码文字色' +
+          '（`pre:not(.code-block-wrapper pre) code { color: … }`）—— 代码文字会沿用浅色主题 token，深底深字',
+      )
+    }
+  }
+
   // 非文本：焦点环要 ≥3:1（WCAG 2.2 SC 1.4.11）
   assertContrast('焦点环/白（非文本）', color(lightVars, '--es-link'), WHITE, 3)
   assertContrast('焦点环/页面底（非文本）', color(lightVars, '--es-link'), PAGE_LIGHT, 3)

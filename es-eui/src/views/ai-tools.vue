@@ -89,6 +89,10 @@ export default {
   margin: 0;
   white-space: pre-wrap;
   word-break: break-word;
+  /* 卡片自己就是浅底（--es-doc-code-block-bg 同档的浅灰），这里不能沿用站点全局
+   * `pre` 的深色终端底：深底 + 下面那条深灰文字色实测只有 1.46:1。让 pre 透明，
+   * 由 el-card 提供底色。 */
+  background: transparent;
 }
 
 .code-block code {

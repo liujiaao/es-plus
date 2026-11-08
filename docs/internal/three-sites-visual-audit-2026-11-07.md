@@ -518,6 +518,24 @@ es-pc 22 条路由 × 1440 / 390   亮块 0 / 0
 
 守卫补了一节 A2：两站的 `vxe-install` 必须同时出现 `onThemeApplied(` 与 `VxeUI.setTheme(`，store 必须真的 `appliedListeners.forEach` 通知回调 —— 做了变异测试（把 `VxeUI.setTheme(` 改成下标写法，守卫按预期变红）。
 
+### 9.10 es-eui 代码块对比度（2026-11-08，用户报「代码示例看不清」）
+
+`/guide/quickstart` 的代码示例是浅色文字色压在深色底上吗？不是 —— 是**深底深字**。实测 `code` 的 color 为 `rgb(36,41,46)`、最近不透明祖先是 `rgb(15,16,16)`，WCAG 对比度 **1.30:1**（正文门槛 4.5）。
+
+根因不是配色选错，是**两套代码块契约撞在一起**：
+
+- 共享 `docs-content.css` 的 `.es-doc-content pre code { color: var(--es-doc-code-block-text) }` 假设「代码块底色 = `--es-doc-code-block-bg`」（浅色主题下 `#f6f8fa`）；
+- es-eui 自己的 `App.vue` 把裸 `pre` 写死成深色终端底（`#0f1010`），且 `.es-doc-content pre` 的 background 在共享文件里是注释掉的 —— 底色与文字色来自两套互不知情的规则。
+
+受影响的 7 个路由：`/guide`、`/guide/quickstart`、`/guide/installation`、`/guide/configuration`、`/guide/developer-guide`、`/component/installation`、`/component/quickstart`。`/ai-tools` 是另一种形态：el-card 浅底，但全局深色 `pre` 压在卡片里，同样是 1.46:1。
+
+修法（都保留原有视觉，只修可读性）：
+
+- es-eui `App.vue`：新增 `pre:not(.code-block-wrapper pre) code { color: #dcdfe4 }`，特异性压过共享规则；`:not()` 把三站统一的 `.code-block-wrapper`（浅底）排除，它继续走 token；
+- es-eui `ai-tools.vue`：`.code-block pre { background: transparent }`，让 el-card 提供浅底。
+
+守卫：`check:a11y` 的 D 组新增一条 —— 若 `es-eui/src/App.vue` 的裸 `pre` 有深色字面底，必须有配套的代码文字色，且对比度 ≥ 4.5（变异测试把颜色改回深色文字，守卫报 `1.30:1`）。探针留在 `audit/contrast-probe-eui.mjs`：32 条路由逐条算 `pre code` 与其不透明祖先背景的比值，修前 8 条路由红、修后全绿。
+
 ---
 
 ## 附录 A：量化证据表

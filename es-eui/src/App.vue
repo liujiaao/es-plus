@@ -619,20 +619,26 @@ body {
   margin-bottom: var(--es-space-3);
 }
 
-/* 代码块 */
+/* 代码块（深色终端风，本站固定，不跟随主题） */
 pre {
   background: #0f1010; // #f5f7fa;
   padding: 15px 20px;
   border-radius: 4px;
   overflow-x: auto;
   margin: 15px 0;
+}
 
-  code {
-    font-family: 'Courier New', Consolas, monospace;
-    font-size: 13px;
-    color: #dcdfe4;
-    line-height: 1.6;
-  }
+/* 深色代码块的文字色必须显式声明，并且**压过共享 docs-content.css 的
+ * `.es-doc-content pre code { color: var(--es-doc-code-block-text) }`。
+ * 那条规则的颜色是给 `.code-block-wrapper`（浅底，三站统一的代码块）用的；
+ * 落到这里的深底上就是主题的深色文字压深色底，实测对比度 1.3:1 —— 快速开始等
+ * 七个路由的代码示例基本不可读。`:not()` 把 wrapper 排除在外，它仍走 token。
+ * 特异性：`.es-doc-content` + `pre` + `:not(pre 后代)` + `code` > 0,1,2。 */
+pre:not(.code-block-wrapper pre) code {
+  font-family: 'Courier New', Consolas, monospace;
+  font-size: 13px;
+  color: #dcdfe4;
+  line-height: 1.6;
 }
 
 /* 行内代码 */
