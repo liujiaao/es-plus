@@ -72,6 +72,24 @@
           <p class="examples-note">
             {{ t('advancedDoc.crossNote') }}
           </p>
+          <!-- 示例分组（审计 P1-11 / 验收 4）：EsForm 有 20 个实时演示，单页 8,810px。
+               分组后同一时刻只挂载一组，页面高度回到可读范围；锚点不变 ——
+               #demo-<key> 深链会自动切到它所在的分组（见 activateFromHash）。
+               只有两个以上分组才渲染这排按钮，单组组件的行为与以前完全一致。 -->
+          <div v-if="exampleGroups.length > 1" class="examples-groups">
+            <button
+              v-for="group in exampleGroups"
+              :key="group.name"
+              type="button"
+              class="examples-group"
+              :class="{ 'is-active': group.name === activeGroup }"
+              :aria-pressed="group.name === activeGroup"
+              @click="selectGroup(group.name)"
+            >
+              {{ group.name }}
+              <span class="examples-group-count">{{ group.items.length }}</span>
+            </button>
+          </div>
           <div class="examples-list">
             <!--
               :id 让每个示例有自己的落点（/components/es-table#demo-selection）。
@@ -79,18 +97,18 @@
               component-doc.data.ts 反查——改 key 会让案例卡的链接失效，那是**故意的**。
             -->
             <CodePlayground
-              v-for="(example, index) in currentDoc.examples"
-              :key="index"
+              v-for="example in visibleExamples"
+              :key="example.key"
               :id="'demo-' + example.key"
               :title="example.title"
               :description="example.description"
               :code="example.code"
-              :level="levelOf(Number(index), currentDoc.examples.length)"
+              :level="levelOf(currentDoc.examples.indexOf(example), currentDoc.examples.length)"
             >
               <template #preview>
                 <component :is="example.component" v-if="example.component" />
                 <div v-else class="placeholder-preview">
-                  <el-alert :title="`案例 ${Number(index) + 1}: ${example.title}`" type="info" />
+                  <el-alert :title="`案例 ${currentDoc.examples.indexOf(example) + 1}: ${example.title}`" type="info" />
                 </div>
               </template>
             </CodePlayground>
@@ -278,6 +296,65 @@ const levelOf = (index: number, total: number): number => {
   return 5
 }
 
+/**
+ * 示例分组：数据里给 examples[].group 填了名字才启用，按**首次出现顺序**排列。
+ * 单组（或没填 group）返回空数组 —— 模板据此不渲染分组按钮，老页面表现不变。
+ */
+const exampleGroups = computed(() => {
+  const list: any[] = currentDoc.value.examples || []
+  if (!list.some((ex) => ex.group)) return []
+  const order: string[] = []
+  const byGroup = new Map<string, any[]>()
+  for (const ex of list) {
+    const name = ex.group || '其他'
+    if (!byGroup.has(name)) {
+      byGroup.set(name, [])
+      order.push(name)
+    }
+    byGroup.get(name)!.push(ex)
+  }
+  return order.length > 1 ? order.map((name) => ({ name, items: byGroup.get(name)! })) : []
+})
+
+const activeGroup = ref('')
+
+const visibleExamples = computed(() => {
+  const list: any[] = currentDoc.value.examples || []
+  if (!exampleGroups.value.length) return list
+  return exampleGroups.value.find((g) => g.name === activeGroup.value)?.items || []
+})
+
+/**
+ * 深链优先：`#demo-<key>` 指向的示例可能不在默认分组里。先把分组切过去，
+ * 元素才会在 DOM 里出现，realignToHash 随后才找得到落点。
+ * 返回是否命中（没命中时调用方保持当前分组）。
+ */
+function activateFromHash(hash = String(route.hash || '')): boolean {
+  const matched = /^#demo-(.+)$/.exec(hash)
+  if (!matched) return false
+  const group = exampleGroups.value.find((g) => g.items.some((ex) => ex.key === matched[1]))
+  if (!group) return false
+  if (activeGroup.value !== group.name) activeGroup.value = group.name
+  return true
+}
+
+// 换组件 / 首次进入：默认第一组；带 #demo-<key> 时优先跟随深链
+watch(
+  exampleGroups,
+  (groups) => {
+    if (!groups.length) {
+      activeGroup.value = ''
+      return
+    }
+    if (!activateFromHash()) activeGroup.value = groups[0].name
+  },
+  { immediate: true },
+)
+
+const selectGroup = (name: string) => {
+  activeGroup.value = name
+}
+
 useHead({
   title: () => currentDoc.value.title,
   meta: [
@@ -377,11 +454,15 @@ watch(() => route.params.name, refreshToc, { immediate: true })
 
 // 示例是异步组件：路由先把页面滚到 `#demo-xxx`，内容随后撑开会把落点推走。
 // 这里盯到内容长完为止（用户一动手就让位）
+// 分组页还要多一步：先切到锚点所在的分组，等 DOM 出现后再 realign —— 否则
+// realignToHash 面对的是一个当时还不存在的元素，只能放弃。
 let stopRealign = () => {}
 watch(
   () => route.hash,
-  (hash) => {
+  async (hash) => {
     stopRealign()
+    activateFromHash(String(hash || ''))
+    await nextTick()
     stopRealign = realignToHash(String(hash || ''))
   },
 )
@@ -506,6 +587,53 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 24px;
+}
+
+/* 示例分组按钮：胶囊 + 计数。颜色与间距全走令牌，暗色下自动跟随 */
+.examples-groups {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--es-space-2);
+  margin: 0 0 var(--es-space-5);
+}
+
+.examples-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--es-space-2);
+  padding: var(--es-space-2) var(--es-space-4);
+  border: 1px solid var(--border-color-lighter);
+  border-radius: var(--es-radius-full);
+  background-color: transparent;
+  color: var(--text-color-regular);
+  font-size: var(--es-text-sm);
+  line-height: var(--es-leading-tight);
+  cursor: pointer;
+  transition: color var(--es-duration-base) var(--es-ease),
+    border-color var(--es-duration-base) var(--es-ease),
+    background-color var(--es-duration-base) var(--es-ease);
+
+  &:hover {
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+  }
+
+  &.is-active {
+    color: var(--es-brand-strong);
+    border-color: var(--primary-color);
+    background-color: var(--primary-color-light);
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--primary-color);
+    outline-offset: 2px;
+  }
+}
+
+.examples-group-count {
+  font-size: var(--es-text-xs);
+  font-variant-numeric: tabular-nums;
+  color: var(--text-color-secondary);
 }
 
 .placeholder-preview {

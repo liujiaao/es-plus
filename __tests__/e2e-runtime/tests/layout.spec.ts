@@ -104,3 +104,43 @@ test('组件文档页：390 下无横向溢出，演示表格可横滑而不是�
   expect(fits || table?.wrapOverflowX === 'auto').toBe(true)
   expect(fits || table?.wrapCanScroll).toBe(true)
 })
+
+test('组件文档页：示例分组把 es-form 压到 ≤10,000px，深链自动切到所在分组', async ({ page }) => {
+  await page.setViewportSize(DESKTOP)
+
+  // 1) 默认只挂载第一组：20 个实时演示不再同屏，页面高度回到验收线内
+  await gotoApp(page, '/#/components/es-form')
+  await page.locator('.examples-groups').first().waitFor({ state: 'visible' })
+  const mounted = await page.locator('.examples-list .code-playground').count()
+  expect(mounted, '一次挂载全部示例 —— 分组没有生效').toBeGreaterThan(0)
+  expect(mounted, '一次挂载了整组之外的示例（v-for 没走 visibleExamples）').toBeLessThanOrEqual(6)
+
+  const height = await page.evaluate(() => document.body.scrollHeight)
+  expect(height, 'es-form 单页高度超过 10,000px（审计 §8 验收 4；分组前 13,954px）').toBeLessThanOrEqual(10000)
+
+  // 2) 深链到第五组的示例：分组必须自动切过去，且落点真的进了视口 ——
+  //    cases.json 里全是 `#demo-<key>` 锚点，切组失败等于所有案例卡链接失效
+  await gotoApp(page, '/#/components/es-form#demo-search-form')
+  await page.locator('#demo-search-form').waitFor({ state: 'visible' })
+  await expect(page.locator('.examples-group.is-active')).toContainText('模式与组合')
+
+  // 落点由 realignToHash 在「内容长完」后二次对准（异步示例撑开会把目标推下去，
+  // 实测 0.5–1s 后才到位）。这里等它收敛，而不是在 visible 的那一刻就断言坐标。
+  await page.waitForFunction(
+    () => {
+      const el = document.querySelector('#demo-search-form') as HTMLElement | null
+      if (!el) return false
+      const top = el.getBoundingClientRect().top
+      return top >= 0 && top < 900
+    },
+    null,
+    { timeout: 8000 },
+  )
+
+  const top = await page.evaluate(() => {
+    const el = document.querySelector('#demo-search-form') as HTMLElement | null
+    return el ? el.getBoundingClientRect().top : -1
+  })
+  expect(top, '深链示例没有滚进视口（realignToHash 在切组前就跑完了）').toBeGreaterThanOrEqual(0)
+  expect(top).toBeLessThan(900)
+})
