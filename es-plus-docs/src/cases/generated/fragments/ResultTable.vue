@@ -32,7 +32,6 @@ const options = {
   border: true,
   stripe: true,
   highlightCurrentRow: true,
-  headerCellStyle: {"background":"#f5f7fa"},
   rowkey: 'id',
 }
 

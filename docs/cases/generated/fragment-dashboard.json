@@ -154,8 +154,8 @@
       "tool": "generate_table",
       "label": "结果表格",
       "file": "ResultTable.vue",
-      "lines": 47,
-      "bytes": 1290
+      "lines": 46,
+      "bytes": 1245
     },
     "dialog": {
       "tool": "generate_dialog",
@@ -169,7 +169,7 @@
     "vue3": {
       "bytes": {
         "filter": 1434,
-        "table": 1290,
+        "table": 1245,
         "dialog": 2895
       },
       "note": "Vue 3 + Element Plus（@es-plus/vue3）—— 主文档站真跑"
@@ -177,7 +177,7 @@
     "vue2": {
       "bytes": {
         "filter": 1545,
-        "table": 1412,
+        "table": 1367,
         "dialog": 3010
       },
       "note": "Vue 2 + Element UI（@es-plus/vue2）—— 只做语法编译验证（见 knownGaps）"
@@ -185,7 +185,7 @@
     "antdv": {
       "bytes": {
         "filter": 1434,
-        "table": 1290,
+        "table": 1245,
         "dialog": 2904
       },
       "note": "Vue 3 + Ant Design Vue（@es-plus/adapter-antdv）—— es-pc 真跑"

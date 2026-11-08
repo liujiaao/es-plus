@@ -21,8 +21,8 @@
       },
       "ai": {
         "file": "docs/cases/generated/employee-roster.json",
-        "lines": 363,
-        "bytes": 7631,
+        "lines": 360,
+        "bytes": 7569,
         "events": 0,
         "functions": 0,
         "vIf": 0,

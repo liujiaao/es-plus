@@ -80,9 +80,6 @@
     "border": true,
     "stripe": true,
     "highlightCurrentRow": true,
-    "headerCellStyle": {
-      "background": "#f5f7fa"
-    },
     "apiParams": {
       "url": "/api/employees"
     },

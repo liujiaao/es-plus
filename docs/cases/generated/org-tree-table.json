@@ -48,9 +48,6 @@
     "border": true,
     "stripe": false,
     "highlightCurrentRow": true,
-    "headerCellStyle": {
-      "background": "#f5f7fa"
-    },
     "apiParams": {
       "url": "/api/departments"
     },
