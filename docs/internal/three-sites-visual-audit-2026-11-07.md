@@ -576,8 +576,62 @@ Ant Design Vue 自身暗色调色板（`#1668dc` 链接、白字压 `#dc4446`）
 `/component/estable` **12,610 → 11,287px**（390 下 19,194px），三个子页
 4,124 / 3,488 / 4,141px。
 
-**仍未处理（下一批）**：`/components/es-table` 10,092px（验收线 10,000，差 92px）；
-es-pc `/es-form` 12,961px、`/es-table` 17,910px 仍是手写 section + 锚点、没有分组。
+**长页分组（同日，选 A：section 切换）**：见 §9.12。
+
+---
+
+### 9.12 第七轮：手写 section 长页改为「分组切换」（2026-11-08）
+
+主站的 `useExampleGroups` 只管**数据驱动的示例列表**（示例数组 → 分组 → `v-show`）。
+es-pc `/es-form`、`/es-table` 与 es-eui 开发指南是**手写 section + 锚点**，照搬不成立，
+另做一套「同一时刻只挂一组正文」的切换。
+
+**es-pc（Vue 3）**：`useSectionGroups(groups, hash)` + `components/doc/SectionTabs.vue`。
+
+| 页面 | 改前 | 默认组 | 最长的组 |
+|---|---|---|---|
+| `/es-form` | 12,961px | 5,744px | 6,661px |
+| `/es-table` | 17,910px | 7,821px | 8,640px |
+
+残留的大头是**始终可见的 API 表**（约 3,930 / 5,600px），这是有意的：右栏目录与
+深链会落到 API 小标题上，把 API 也切进某一组就会让「目录项点不到」。标签条
+`position: sticky` 吸在顶栏下（64px / <992px 56px），换组不必滚回页首。
+
+**es-eui（Vue 2，选项式）**：开发指南原来的七篇同屏（26,638px），改为 `chapters`
++ `isChapter(id)`。桌面端逐篇 2,185–7,979px（最长为「EsTable 手册」），
+390 下最大 12,775px；七档全部无横向溢出。
+
+**深链与锚点**：都保留。es-pc 的 `activateFromHash` 在 setup 里同步定组（第一帧就
+渲染对的那组，不先闪默认组），路由 `scrollBehavior` 与组内锚点校正共用
+`route.meta.anchorTop`（120 = 标签条 + 顶栏），实测落点正好 120。es-eui 走
+`created()` 同步定篇 + `watch '$route.hash'` 先切篇再对准落点；篇内锚点
+（如 `#formtype-table`）经 `anchors` 映射回所在篇。
+
+**两处只有分组才暴露的缺陷，同批修掉**：
+
+1. **右栏目录不跟着换**。主站与 es-eui 的目录都只在 `$route.path` 变化时重建，
+   而切组/切篇只改正文、不改 path —— 右栏会一直列着上一组的小标题。
+   在 `docs/theme/doc-chrome.js` 加 `notifyTocChanged()` / `onTocChanged()` 的
+   window 事件，es-pc `DocLayout.vue` 与 es-eui `DocShell.vue` 各自订阅
+   （三站同一份文件，经 `theme:sync` 分发）。
+2. **旧 spy 的迟到回调把高亮打空**。换篇的那一两个 tick 里，上一篇的
+   `createScrollSpy` 还可能有一次滚动/定时回调：此刻正文已换、旧标题全部不在
+   DOM，它算出来的 id 属于上一篇，收下后新目录里没有这个 id，高亮整段消失
+   （连切两篇必现）。`DocShell.collectToc` 现在按本篇目录过滤 `onChange`，
+   并在换目录后把不属于本篇的旧 id 落到本篇第一个标题。
+
+**可访问性**：标签条激活态「品牌字压品牌浅底」实测 4.24:1，13px 字不合格。
+两个标签组件（主站 `ExampleGroupTabs`、es-pc `SectionTabs`）统一改用
+`--es-brand-tint` → **4.75:1（浅色）/ 6.18:1（暗色）**。
+
+**守卫**：新增 `check:section-groups`（`scripts/check-section-groups.mjs`），静态
+核对三页的「分组声明 ↔ 模板 v-if」：section 必须有 id 且有分组判据、声明的 id
+必须存在、两边 key 必须一致、同一 id 不得重复登记、`anchors` 只能指向已声明的篇
+（`data-ungrouped` 是 hero 这类有意不分组块的显式豁免）。已进 `page-quality` 组，
+`check:consistency` 现为 **138 步 / 14 组，全绿**。
+
+**同批已关闭**：主站 `/components/es-table` 10,092px → **9,540px**（提交 `b83f9af`，
+示例组重平衡），回到 10,000 验收线下。
 
 **`headerCellStyle` 债务已根治（同日，选 A：不再注入缺省内联值）**：
 三端 `es-table` 的 `defaultOptions`（含两个 vxe 引擎）不再下发
