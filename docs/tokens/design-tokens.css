@@ -41,6 +41,7 @@
   --es-bg-page: #f7f8fa;              /* 页面底 */
   --es-fill: #f2f4f7;                 /* 填充 */
   --es-fill-light: #f7f8fa;           /* 浅填充 / 悬停 */
+  --es-table-header-bg: #f5f7fa;      /* 表头底色（组件库不再下发内联默认值，见主题 CSS） */
 
   /* ── 状态色 ── */
   --es-success: #16a34a;
@@ -140,6 +141,7 @@
   --es-bg-page: #141414;
   --es-fill: #2c2e31;
   --es-fill-light: #2c2e31;
+  --es-table-header-bg: #2c2e31;
 
   --es-success: #34d399;
   --es-warning: #fbbf24;

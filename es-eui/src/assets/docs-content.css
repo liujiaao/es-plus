@@ -677,42 +677,32 @@
 .dark .es-doc-content .danger,
 .dark .es-doc-content .custom-block.danger { background: rgba(220, 38, 38, 0.12); }
 
-/* Element Plus / vxe-table 的表头背景是**内联样式**：组件库默认下发
-   `headerCellStyle: { background: '#f5f7fa' }`（三端同款默认值，见各 packages 下
-   es-table 的 defaultOptions），Element Plus 的暗色变量管不到内联样式，
-   于是深色页面上只有表头是一块亮色。这里用 !important 压回主题色 ——
-   !important 是对「内联样式」的唯一手段。
-   作用域是 `.dark` 全局而非 `.es-doc-content` / `.es-doc-chrome`：表头亮块
-   在**非正文页**同样出现（片段看板等普通页面），按文档壳收窄会漏掉它们。
-   深色站里库默认的 #f5f7fa 表头在任何位置都是错的，没有需要保留的例外。
-   根治要改组件库默认值（改成 var(--el-table-header-bg-color, #f5f7fa)），
-   那会动 schema 默认值与生成器产物，留作库侧后续，不在这里顺手改。
-   注意：注释里不能出现「星号紧跟斜杠」——那会提前闭合本注释，紧跟其后的规则
-   会被 CSS 解析器当成非法 token 整条丢弃（这条规则曾因此在浏览器里完全不存在）。 */
-.dark .el-table th.el-table__cell,
-.dark .vxe-table--header th {
-  background-color: var(--es-fill) !important;
+/* 表头底色：三端组件库**不再**下发 `headerCellStyle` 内联默认值（见各 packages 下
+   es-table 的 defaultOptions）。内联样式压过一切主题变量 —— 暗色下表头成为唯一亮块，
+   过去只能靠 !important 抢救，而 !important 又只能压回又一个写死的值。现在底色由
+   主题提供：亮色沿用原来的 #f5f7fa，暗色随 --es-table-header-bg 一起翻转。
+   !important 仍保留：组件库自己的表头规则特异性更高（ADV 是
+   `.ant-table-wrapper .ant-table-thead > tr > th`），且 vxe 的表头底色走它的主题变量。
+   作用域限定 `.table_component`（es-table 根节点），不碰正文 markdown 表。
+   注意：注释里不能出现「星号紧跟斜杠」——那会提前闭合本注释，规则会被整条丢弃。 */
+.table_component .el-table th,
+.table_component .vxe-table--header th,
+.table_component .ant-table-thead > tr > th {
+  background-color: var(--es-table-header-bg) !important;
 }
 
-/* Ant Design Vue 端同病：表头由组件默认下发内联 background: '#f5f7fa'，
-   斑马纹（.table-striped）与当前行高亮（.table-striped 同源的组件 CSS）分别是
-   #fafafa / #e6f4ff —— 都是编译进库里的字面量，暗色算法管不到。
-   同样用 !important + 更高特异性压回主题色。
-
-   注意落点：adapter-antdv 把 `headerCellStyle` 交给 a-table 的 customHeaderRow，
-   内联样式落在 **<tr>** 上（不是 th）。只管 th 的话，行底那块亮色仍在 —— 实测
-   /es-table、/flagship-approval、/ai-generated 的表头行 computed 背景都是
-   rgb(245,247,250)。所以 tr 与 th 各压一条：th 管 ADV 自己下发的 #fafafa,
-   tr 管内联的 #f5f7fa。 */
-.dark .ant-table-thead > tr {
-  background: var(--es-fill) !important;
-}
-
-.dark .ant-table-thead > tr > th {
-  background: var(--es-fill) !important;
-  /* 表头文字也走令牌：演示用的 headerCellStyle 常带 color（如 #303133），
-     那条内联样式挂在 <tr> 上被 th 继承 —— 深色下就是「深底深字」。 */
+/* ADV 端的表头文字：demo 的 headerCellStyle 常带 color（如 #303133），
+   那条内联样式挂在 <tr> 上被 th 继承 —— 深色下就是「深底深字」。 */
+.dark .table_component .ant-table-thead > tr > th {
   color: var(--es-text-primary);
+}
+
+/* 用户**显式**给了 headerCellStyle 时，ADV 把它渲染成 <tr> 上的内联 background
+   （演示「表头样式」那个例子就传了 #f5f7fa）。内联样式压过上面的 th 规则 ——
+   th 被压回深色，可 tr 自己仍画着一整行亮色。深色下统一压回表头 token，
+   与「深色站里写死的亮色表头一律不成立」的既有口径一致。 */
+.dark .table_component .ant-table-thead > tr {
+  background: var(--es-table-header-bg) !important;
 }
 
 .dark .table-striped .ant-table-tbody > tr:nth-child(even) {
