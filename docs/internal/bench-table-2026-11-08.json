@@ -1,0 +1,92 @@
+{
+  "generatedAt": "2026-11-08T13:58:29.856Z",
+  "note": "W4 可观测产物：不做门禁，只用于同机同 fixture 的前后对比。vite dev server（未打包的 ESM）+ 无头 Chromium：firstRowMs 含模块加载与首屏渲染，绝对值只在本机同一次环境内可比。",
+  "node": "v20.15.0",
+  "playwright": "1.62.0",
+  "fixture": "__tests__/e2e-runtime/table（?local=0，全部行进 DOM）",
+  "viewport": {
+    "width": 1280,
+    "height": 800
+  },
+  "scrollSampleMs": 1800,
+  "cases": [
+    {
+      "lib": "vue3",
+      "rows": 1000,
+      "firstRowMs": 1140,
+      "renderedRows": 1000,
+      "scroll": {
+        "frames": 109,
+        "p50": 16.7,
+        "p95": 16.7,
+        "max": 16.8
+      },
+      "errors": []
+    },
+    {
+      "lib": "vue3",
+      "rows": 5000,
+      "firstRowMs": 5408,
+      "renderedRows": 5000,
+      "scroll": {
+        "frames": 94,
+        "p50": 16.7,
+        "p95": 33.3,
+        "max": 50
+      },
+      "errors": []
+    },
+    {
+      "lib": "vue3",
+      "rows": 20000,
+      "firstRowMs": 44028,
+      "renderedRows": 20000,
+      "scroll": {
+        "frames": 46,
+        "p50": 16.7,
+        "p95": 150,
+        "max": 283.3
+      },
+      "errors": []
+    },
+    {
+      "lib": "antdv",
+      "rows": 1000,
+      "firstRowMs": 1322,
+      "renderedRows": 1000,
+      "scroll": {
+        "frames": 110,
+        "p50": 16.7,
+        "p95": 16.7,
+        "max": 16.8
+      },
+      "errors": []
+    },
+    {
+      "lib": "antdv",
+      "rows": 5000,
+      "firstRowMs": 12369,
+      "renderedRows": 5000,
+      "scroll": {
+        "frames": 108,
+        "p50": 16.7,
+        "p95": 16.8,
+        "max": 33.4
+      },
+      "errors": []
+    },
+    {
+      "lib": "antdv",
+      "rows": 20000,
+      "firstRowMs": 510295,
+      "renderedRows": 20000,
+      "scroll": {
+        "frames": 59,
+        "p50": 16.7,
+        "p95": 100,
+        "max": 200
+      },
+      "errors": []
+    }
+  ]
+}
