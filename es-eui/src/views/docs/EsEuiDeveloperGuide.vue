@@ -1349,22 +1349,44 @@ $bg-light: #f7fafc;
 }
 
 // Hero
+// 审计 P0-3：深海军蓝渐变 + 白字与另七页/另两站的浅色语言不一致，统一为品牌浅底。
 .hero-section {
   text-align: center;
-  padding: 60px 20px;
-  background: linear-gradient(135deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  border-radius: 20px;
-  margin-bottom: 50px;
-  color: white;
+  padding: var(--es-space-7) var(--es-space-4);
+  background: var(--es-brand-tint);
+  border: 1px solid var(--es-border-lighter);
+  border-radius: var(--es-radius-lg);
+  margin-bottom: var(--es-space-6);
+
   .hero-badge {
     display: inline-flex; align-items: center; gap: 8px;
-    padding: 8px 20px; background: rgba(255,255,255,0.12);
-    border-radius: 50px; font-size: 14px; margin-bottom: 20px;
+    padding: 6px 16px;
+    background: var(--es-bg);
+    border: 1px solid var(--es-border-light);
+    color: var(--es-brand-strong);
+    border-radius: var(--es-radius-full);
+    font-size: var(--es-text-sm);
+    font-weight: 600;
+    margin-bottom: var(--es-space-4);
   }
-  .hero-title { font-size: 38px; font-weight: 700; margin: 0 0 16px; }
-  .hero-desc { max-width: 600px; color: #fff; margin: 0 auto; font-size: 16px; opacity: 0.85;  p {
-      color: #fff;
-  }}
+
+  .hero-title {
+    font-size: var(--es-display-sm);
+    line-height: var(--es-leading-tight);
+    letter-spacing: -0.02em;
+    font-weight: 700;
+    margin: 0 0 var(--es-space-3);
+    color: var(--es-text-primary);
+  }
+
+  .hero-desc {
+    max-width: 640px;
+    color: var(--es-text-regular);
+    margin: 0 auto;
+    font-size: var(--es-text-base);
+    line-height: var(--es-leading-relaxed);
+    p { color: var(--es-text-regular); }
+  }
 }
 
 // Section

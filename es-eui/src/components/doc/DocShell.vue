@@ -1,8 +1,25 @@
 <template>
   <div class="docs-page">
     <!-- 左侧导航：条目由 DOC_NAV 派生（utils/doc-nav.js），组序由 groups 决定。
-         此前两个壳各手写一份 router-link 列表，页面改名/挪组要同步多处且不会报错。 -->
-    <aside class="side-nav">
+         此前两个壳各手写一份 router-link 列表，页面改名/挪组要同步多处且不会报错。
+
+         窄屏（<769px）收成抽屉：默认不占位，点下面的「文档目录」按钮滑出。
+         此前它是 static 375×380，把正文整体推到了首屏之外（审计 P0-5）。 -->
+    <button
+      class="side-nav-toggle"
+      aria-controls="es-side-nav"
+      :aria-expanded="String(sideNavOpen)"
+      @click="sideNavOpen = !sideNavOpen"
+    >
+      <i class="el-icon-menu"></i>
+      {{ sideNavOpen ? '收起目录' : '文档目录' }}
+    </button>
+
+    <aside
+      id="es-side-nav"
+      class="side-nav"
+      :class="{ 'is-open': sideNavOpen }"
+    >
       <div
         v-for="section in sections"
         :key="section.title"
@@ -22,6 +39,13 @@
         </router-link>
       </div>
     </aside>
+
+    <!-- 抽屉打开时的遮罩：点一下就关，避免用户被抽屉困住 -->
+    <div
+      v-if="sideNavOpen"
+      class="side-nav-mask"
+      @click="sideNavOpen = false"
+    ></div>
 
     <!-- 右侧内容：正文 + 右栏目录（.es-doc-with-toc 由 docs-chrome.css 定义）。
          非文档页（DOC_NAV 未登记）时 docEntry 为 undefined，chrome 整体不渲染。 -->
@@ -123,6 +147,8 @@ export default {
     return {
       toc: [],
       activeHeading: '',
+      // 窄屏文档目录抽屉（桌面端这组状态不起作用）
+      sideNavOpen: false,
       // 路由视图是异步组件：route 变了 DOM 还没到，收集不到标题就再等一帧
       tocRetry: 0
     }
@@ -148,6 +174,8 @@ export default {
     // 只认 path，不认 fullPath：点目录项只会改 hash，正文没换，重建 spy 会把
     // 「钉住被点小节」的状态一起丢掉 —— 表现就是平滑滚动途中高亮又一路跳过去。
     '$route.path'() {
+      // 跳页后收起抽屉：否则它会盖住刚打开的页面
+      this.sideNavOpen = false
       this.refreshToc()
     }
   },

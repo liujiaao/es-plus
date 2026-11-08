@@ -82,6 +82,8 @@
           >
             <i class="el-icon-link"></i> GitHub
           </a>
+          <!-- 站内搜索（审计 P1-4）：词表取自路由 meta.title，样式见 docs-chrome.css -->
+          <DocSearch />
           <el-dropdown
             trigger="click"
             class="site-switcher"
@@ -104,15 +106,18 @@
       </div>
     </header>
 
-    <!-- Vue3 升级引导横幅 -->
+    <!-- 渲染端说明条（审计 P1-6）：此前是 position: fixed 的深色渐变条，
+         一条 32px 的固定条 + 顶栏 60px 让每一页首屏都先被吃掉 92px，而且它
+         永远盖在内容上方。现在它回到文档流里跟着滚走 —— 需要时看得见，
+         读正文时不占地方。视觉也从「营销横幅」降级为中性提示条。 -->
     <div
       v-show="!bannerClosed"
       class="upgrade-banner"
     >
       <div class="banner-inner">
-        <span class="banner-tag">NEW</span>
+        <span class="banner-tag">渲染端</span>
         <span class="banner-text">
-          本页为 ES-Plus 的 <strong>Vue 2 + Element UI</strong> 渲染器文档。完整文档（含 <strong>三端通用对比</strong> 与 <strong>AI 工具链</strong>）见主文档站
+          本站是 ES-Plus 的 <strong>Vue 2 + Element UI</strong> 渲染器文档；完整文档（含<strong>三端通用对比</strong>与<strong>AI 工具链</strong>）见主文档站
         </span>
         <a
           href="https://main.esplus-ai.com/"
@@ -120,7 +125,7 @@
           rel="noopener"
           class="banner-link"
         >
-          查看 ES-Plus 文档 <i class="el-icon-top-right"></i>
+          前往主文档站 <i class="el-icon-top-right"></i>
         </a>
         <button
           class="banner-close"
@@ -137,7 +142,6 @@
       id="es-main"
       tabindex="-1"
       class="main"
-      :class="{ 'banner-visible': !bannerClosed }"
     >
       <router-view />
     </main>
@@ -153,10 +157,11 @@
 import { SITES, SITE_KEY } from '@/utils/sites'
 import { bindSkipLink } from '@/utils/doc-chrome'
 import DocFooter from '@/components/doc/DocFooter.vue'
+import DocSearch from '@/components/doc/DocSearch.vue'
 
 export default {
   name: 'App',
-  components: { DocFooter },
+  components: { DocFooter, DocSearch },
   data() {
     return {
       bannerClosed: false,
@@ -224,23 +229,27 @@ export default {
 body {
   font-family: var(--es-font-sans);
   font-size: 14px;
-  color: #303133;
-  background-color: #fff;
+  color: var(--es-text-regular);
+  background-color: var(--es-bg);
 }
 
 /* 纵向 flex：正文吃满剩余高度，页脚永远落在视口底部（路线图 1.8）。
-   此前这里只是 min-height，正文自己又写死 100vh - 60px，页脚被推到屏幕外一屏。 */
+   此前这里只是 min-height，正文自己又写死 100vh - 60px，页脚被推到屏幕外一屏。
+
+   padding-top 60px 让位给 fixed 顶栏：渲染端说明条现在是普通文档流元素，
+   它必须排在顶栏**下方**而不是被顶栏盖住。 */
 #app {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
+  padding-top: 60px;
 }
 
 /* 顶部导航 */
 .header {
   height: 60px;
-  background-color: #fff;
-  border-bottom: 1px solid #e6e6e6;
+  background-color: var(--es-bg);
+  border-bottom: 1px solid var(--es-border-lighter);
   position: fixed;
   top: 0;
   left: 0;
@@ -282,8 +291,8 @@ body {
     }
 
     .logo-text {
-      font-size: 20px;
-      color: #303133;
+      font-size: 18px;
+      color: var(--es-text-primary);
       font-weight: 600;
     }
   }
@@ -300,13 +309,13 @@ body {
     border: none;
     border-radius: 6px;
     background: transparent;
-    color: #606266;
+    color: var(--es-text-regular);
     font-size: 20px;
     cursor: pointer;
 
     &:hover {
-      background: #f5f7fa;
-      color: var(--es-brand-primary);
+      background: var(--es-fill);
+      color: var(--es-brand-strong);
     }
   }
 
@@ -317,20 +326,20 @@ body {
 
     a {
       display: inline-block;
-      padding: 0 20px;
-      color: #606266;
+      padding: 0 16px;
+      color: var(--es-text-regular);
       text-decoration: none;
       font-size: 15px;
-      transition: color var(--es-duration-slow) var(--es-ease);
+      transition: color var(--es-duration-base) var(--es-ease);
       line-height: 60px;
 
       &:hover,
       &.active {
-        color: var(--es-brand-primary);
+        color: var(--es-brand-strong);
       }
 
       &.router-link-active {
-        color: var(--es-brand-primary);
+        color: var(--es-brand-strong);
         font-weight: 500;
       }
     }
@@ -348,13 +357,13 @@ body {
         display: inline-flex;
         align-items: center;
         height: 60px;
-        color: #606266;
+        color: var(--es-text-regular);
         font-size: 15px;
         cursor: pointer;
-        transition: color var(--es-duration-slow) var(--es-ease);
+        transition: color var(--es-duration-base) var(--es-ease);
 
         &:hover {
-          color: var(--es-brand-primary);
+          color: var(--es-brand-strong);
         }
 
         .el-icon-refresh {
@@ -374,61 +383,52 @@ body {
 .main {
   flex: 1 1 auto;
   min-height: 0;
-  padding-top: 60px;
-  /* 不对外边距做过渡（路线图 2.8：只动 opacity / transform / 颜色类）：
-     padding-top 每帧都要重排整页，横幅出现时省下这一下反而更稳 */
-
-  &.banner-visible {
-    padding-top: 92px;
-  }
+  /* 顶栏的 60px 由 #app 的 padding-top 让出来，这里不再重复避让；
+     说明条回到文档流后，「横幅出现/关闭」不再引起整页位移。 */
 }
 
-/* Vue3 升级引导横幅 */
+/* 渲染端说明条（审计 P1-6）：普通文档流 + 中性配色，跟着页面滚走。
+   此前是 fixed 的 32px 深色渐变条，等于每条路由的首屏都被扣掉 92px。 */
 .upgrade-banner {
-  position: fixed;
-  top: 60px;
-  left: 0;
-  right: 0;
-  z-index: 99;
-  background: linear-gradient(90deg, #1a1a2e 0%, #16213e 50%, #0f3460 100%);
-  height: 32px;
+  position: relative; /* 关闭按钮 absolute 的定位基准 */
+  background: var(--es-brand-tint);
+  border-bottom: 1px solid var(--es-border-lighter);
+  min-height: 36px;
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
 }
 
 .banner-inner {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 12px;
+  gap: var(--es-space-3);
   max-width: var(--es-layout-max);
-  padding: 0 20px;
+  padding: 6px 20px;
   width: 100%;
 }
 
 .banner-tag {
   display: inline-block;
   padding: 1px 8px;
-  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
+  background: var(--es-brand-strong);
   color: #fff;
-  font-size: 11px;
-  font-weight: 700;
-  border-radius: 3px;
-  letter-spacing: 0.5px;
+  font-size: var(--es-text-xs);
+  font-weight: 600;
+  border-radius: var(--es-radius-xs);
+  letter-spacing: 0.02em;
   line-height: 18px;
   flex-shrink: 0;
 }
 
 .banner-text {
-  color: #cbd5e1;
-  font-size: 13px;
-  line-height: 32px;
-  white-space: nowrap;
+  color: var(--es-text-secondary);
+  font-size: var(--es-text-sm);
+  line-height: 1.5;
 
   strong {
-    color: #60a5fa;
+    color: var(--es-text-primary);
     font-weight: 600;
   }
 }
@@ -437,20 +437,18 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  padding: 3px 14px;
-  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
-  color: #fff;
-  font-size: 12px;
-  font-weight: 500;
-  border-radius: 4px;
+  color: var(--es-brand-strong);
+  font-size: var(--es-text-sm);
+  font-weight: 600;
   text-decoration: none;
   white-space: nowrap;
-  transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
+  transition: color var(--es-duration-base) var(--es-ease);
   flex-shrink: 0;
 
   &:hover {
-    opacity: 0.9;
-    box-shadow: 0 2px 10px rgba(59, 130, 246, 0.4);
+    color: var(--es-text-primary);
+    text-decoration: underline;
+    text-underline-offset: 3px;
   }
 
   i {
@@ -468,15 +466,16 @@ body {
   height: 22px;
   background: transparent;
   border: none;
-  color: #64748b;
+  color: var(--es-text-secondary);
   cursor: pointer;
-  border-radius: 4px;
-  transition: color var(--es-duration-base) var(--es-ease), background-color var(--es-duration-base) var(--es-ease), border-color var(--es-duration-base) var(--es-ease), box-shadow var(--es-duration-base) var(--es-ease), transform var(--es-duration-base) var(--es-ease), opacity var(--es-duration-base) var(--es-ease);
+  border-radius: var(--es-radius-xs);
+  transition: color var(--es-duration-base) var(--es-ease),
+    background-color var(--es-duration-base) var(--es-ease);
   padding: 0;
 
   &:hover {
-    color: #cbd5e1;
-    background: rgba(255, 255, 255, 0.08);
+    color: var(--es-text-primary);
+    background: var(--es-fill);
   }
 }
 
@@ -494,48 +493,57 @@ body {
    这里再要 100vh - 60px 会把页脚顶到视口外（路线图 1.8）。 */
 .docs-page {
   display: flex;
+  align-items: flex-start;
 }
 
-/* 侧边栏 */
+/* 侧边栏（审计 P0-5 / §6.2-5）：此前是 position: fixed; top: 92px，
+   一旦说明条回到文档流，92 这个数是「顶栏 + 说明条」的硬编码，说明条滚走之后
+   侧栏与顶栏之间会多出一条 32px 的空隙。改成 sticky 后它跟着顶栏一起走：
+   自然位置在说明条下方，滚过说明条后钉在顶栏下沿。 */
 .side-nav {
+  position: sticky;
+  top: 60px;
+  flex: 0 0 var(--es-sidebar-width);
   width: var(--es-sidebar-width);
-  padding: 30px 0;
-  border-right: 1px solid #e6e6e6;
-  background: #fff;
-  position: fixed;
-  top: 92px;
-  bottom: 0;
+  height: calc(100vh - 60px);
+  padding: var(--es-space-5) 0;
+  border-right: 1px solid var(--es-border-lighter);
+  background: var(--es-bg);
   overflow-y: auto;
 
   .nav-group {
-    margin-bottom: 20px;
+    margin-bottom: var(--es-space-4);
 
     .nav-title {
-      padding: 10px 20px;
-      font-size: 14px;
-      color: #909399;
+      padding: var(--es-space-2) 20px;
+      font-size: var(--es-text-xs);
+      color: var(--es-text-secondary);
       font-weight: 600;
+      letter-spacing: 0.04em;
       text-transform: uppercase;
     }
 
     .nav-item {
       display: block;
-      padding: 10px 20px 10px 30px;
-      color: #606266;
+      padding: var(--es-space-2) 20px var(--es-space-2) 24px;
+      color: var(--es-text-regular);
       text-decoration: none;
-      font-size: 14px;
-      transition: color var(--es-duration-slow) var(--es-ease), background-color var(--es-duration-slow) var(--es-ease), border-color var(--es-duration-slow) var(--es-ease), box-shadow var(--es-duration-slow) var(--es-ease), transform var(--es-duration-slow) var(--es-ease), opacity var(--es-duration-slow) var(--es-ease);
+      font-size: var(--es-text-base);
+      line-height: var(--es-leading-snug);
+      transition: color var(--es-duration-base) var(--es-ease),
+        background-color var(--es-duration-base) var(--es-ease),
+        border-color var(--es-duration-base) var(--es-ease);
       border-right: 3px solid transparent;
 
       &:hover {
-        color: var(--es-brand-primary);
+        color: var(--es-brand-strong);
       }
 
       &.active,
       &.router-link-active {
-        color: var(--es-brand-primary);
-        border-right-color: var(--es-brand-primary);
-        background: #f5f7fa;
+        color: var(--es-brand-strong);
+        border-right-color: var(--es-brand-strong);
+        background: var(--es-brand-tint);
       }
     }
   }
@@ -543,10 +551,44 @@ body {
 
 /* 内容区 */
 .content {
-  flex: 1;
-  margin-left: var(--es-sidebar-width);
+  flex: 1 1 auto;
+  min-width: 0;
   padding: 30px 40px;
-  max-width: calc(100% - var(--es-sidebar-width));
+}
+
+/* 抽屉开关与遮罩只在窄屏存在（外观在这里，节点由 DocShell 渲染） */
+.side-nav-toggle {
+  display: none;
+  align-items: center;
+  gap: var(--es-space-2);
+  width: calc(100% - 32px);
+  margin: var(--es-space-3) var(--es-space-4) 0;
+  padding: 10px 14px;
+  border: 1px solid var(--es-border-light);
+  border-radius: var(--es-radius-sm);
+  background: var(--es-bg);
+  color: var(--es-text-regular);
+  font-size: var(--es-text-base);
+  font-weight: 500;
+  text-align: left;
+  cursor: pointer;
+
+  i {
+    font-size: 16px;
+    color: var(--es-brand-strong);
+  }
+
+  &:active {
+    background: var(--es-fill);
+  }
+}
+
+.side-nav-mask {
+  display: none;
+  position: fixed;
+  inset: 60px 0 0;
+  z-index: 94;
+  background: rgba(15, 23, 42, 0.42);
 }
 
 /* 正文度量不在壳层做：各页根节点都带自己的 max-width（1200/1400 不等），
@@ -556,25 +598,25 @@ body {
 /* 文档标题 */
 .content-title {
   font-size: var(--es-text-3xl);
-  font-weight: 400;
-  color: #1f2f3d;
-  margin-bottom: 20px;
-  padding-bottom: 15px;
-  border-bottom: 1px solid #eee;
+  font-weight: 600;
+  color: var(--es-text-primary);
+  margin-bottom: var(--es-space-5);
+  padding-bottom: var(--es-space-3);
+  border-bottom: 1px solid var(--es-border-lighter);
 }
 
 .content-subtitle {
-  font-size: 22px;
-  font-weight: 400;
-  color: #1f2f3d;
-  margin: 30px 0 15px;
+  font-size: var(--es-text-xl);
+  font-weight: 600;
+  color: var(--es-text-primary);
+  margin: var(--es-space-6) 0 var(--es-space-3);
 }
 
 /* 段落 */
 .content p {
-  line-height: 1.8;
-  color: #28292d;
-  margin-bottom: 15px;
+  line-height: var(--es-leading-relaxed);
+  color: var(--es-text-regular);
+  margin-bottom: var(--es-space-3);
 }
 
 /* 代码块 */
@@ -668,27 +710,28 @@ $border-color: #e2e8f0;
 $bg-light: #f7fafc;
 
 // Hero Section - 统一的首屏样式
+// 审计 P0-3：与 guide / component 各页的 .hero-section 用同一套浅色语言；
+// 徽章此前是 #3b82f6 实心底 + 白字（3.68:1，14px 正文不达标），改为白底品牌字。
 .modern-hero {
   text-align: center;
-  padding: 40px 20px;
-  background: var(--es-brand-primary-light);
-  border-radius: var(--es-radius-sm);
-  margin-bottom: 32px;
-  color: #1a1a2e;
-  position: relative;
-  overflow: hidden;
+  padding: var(--es-space-7) var(--es-space-4);
+  background: var(--es-brand-tint);
+  border: 1px solid var(--es-border-lighter);
+  border-radius: var(--es-radius-lg);
+  margin-bottom: var(--es-space-6);
 
   .hero-badge {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 18px;
-    background: var(--es-brand-primary);
-    color: #fff;
-    border-radius: 50px;
-    font-size: 14px;
-    margin-bottom: 16px;
-    position: relative;
+    padding: 6px 16px;
+    background: var(--es-bg);
+    border: 1px solid var(--es-border-light);
+    color: var(--es-brand-strong);
+    border-radius: var(--es-radius-full);
+    font-size: var(--es-text-sm);
+    font-weight: 600;
+    margin-bottom: var(--es-space-4);
 
     i {
       font-size: 16px;
@@ -696,20 +739,20 @@ $bg-light: #f7fafc;
   }
 
   .hero-title {
-    font-size: 32px;
+    font-size: var(--es-display-sm);
+    line-height: var(--es-leading-tight);
+    letter-spacing: -0.02em;
     font-weight: 700;
-    color: #1a1a2e;
-    margin: 0 0 12px;
-    position: relative;
+    color: var(--es-text-primary);
+    margin: 0 0 var(--es-space-3);
   }
 
   .hero-desc {
-    max-width: 550px;
+    max-width: 640px;
     margin: 0 auto;
-    font-size: 15px;
-    color: #606266;
-    line-height: 1.7;
-    position: relative;
+    font-size: var(--es-text-base);
+    color: var(--es-text-regular);
+    line-height: var(--es-leading-relaxed);
   }
 }
 
@@ -1214,35 +1257,24 @@ $bg-light: #f7fafc;
 
 // Responsive
 @media (max-width: 768px) {
-  /* 横幅在窄屏会换行成两三层，高度不再固定 —— 继续 fixed 就会压住正文顶部
-     （组件页的目录第一组被盖住）。改成随文档流排布，main 的顶部避让也归零。 */
-  .upgrade-banner {
-    position: static;
-    margin-top: 60px;
-    height: auto;
-    padding: 6px 0;
-  }
-
-  .main,
-  .main.banner-visible {
-    padding-top: 0;
-  }
-
+  /* 说明条本来就在文档流里，窄屏只需要允许换行 */
   .banner-inner {
     flex-wrap: wrap;
     gap: 6px;
     justify-content: center;
+    padding: 8px 40px 8px 12px;
   }
 
   .banner-text {
-    font-size: 12px;
+    font-size: var(--es-text-xs);
     white-space: normal;
     text-align: center;
     line-height: 1.5;
   }
 
   .banner-close {
-    position: static;
+    top: 50%;
+    transform: translateY(-50%);
   }
 
   /* 顶栏导航在窄屏收成下拉面板：10 个入口横排会把页面撑出横向滚动条（390px 时 892px 宽） */
@@ -1265,8 +1297,8 @@ $bg-light: #f7fafc;
       max-height: calc(100vh - 60px);
       overflow-y: auto;
       background: #fff;
-      border-bottom: 1px solid #e6e6e6;
-      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+      border-bottom: 1px solid var(--es-border-lighter);
+      box-shadow: var(--es-shadow-md);
 
       &.mobile-open {
         display: flex;
@@ -1289,32 +1321,55 @@ $bg-light: #f7fafc;
     }
   }
 
-  /* 文档页：260px 固定侧栏在 390px 下会把正文压成一条缝（正文只剩 130px）。
-     窄屏把侧栏放回文档流、限高内部滚动，链接一个不少，正文占满整行。 */
+  /* ── 文档侧栏：从「静态 375×380 把正文推到首屏外」改成抽屉 ──
+     静态侧栏在 390px 下既压掉整屏高度、又没法收起；固定 260px 宽则会把正文
+     挤成 130px 一条缝。抽屉是主流文档站（VuePress / VitePress / dumi）的做法：
+     默认不占位，点顶部的「文档目录」按钮滑出，选中条目或点遮罩即关闭。
+     开关由 DocShell 渲染（本文件只负责外观）。 */
   .docs-page {
     flex-direction: column;
   }
 
+  .side-nav-toggle {
+    display: inline-flex;
+  }
+
   .side-nav {
-    position: static;
-    width: 100%;
-    max-height: 45vh;
-    padding: 8px 0;
-    border-right: 0;
-    border-bottom: 1px solid #e6e6e6;
+    position: fixed;
+    top: 60px;
+    left: 0;
+    bottom: 0;
+    z-index: 95;
+    flex: none;
+    width: 280px;
+    max-width: 82vw;
+    height: auto;
+    padding: var(--es-space-3) 0;
+    border-right: 1px solid var(--es-border-lighter);
+    box-shadow: var(--es-shadow-lg);
+    overflow-y: auto;
+    transform: translateX(-100%);
+    transition: transform var(--es-duration-base) var(--es-ease);
+
+    &.is-open {
+      transform: none;
+    }
+  }
+
+  .side-nav-mask {
+    display: block;
   }
 
   .content {
-    margin-left: 0;
-    max-width: 100%;
+    width: 100%;
     padding: 20px 16px;
   }
 
   .modern-hero {
-    padding: 40px 20px;
+    padding: var(--es-space-6) var(--es-space-4);
 
     .hero-title {
-      font-size: 32px;
+      font-size: var(--es-text-3xl);
     }
   }
 

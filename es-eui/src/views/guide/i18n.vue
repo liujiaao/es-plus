@@ -721,32 +721,36 @@ export default {
 .hero-section {
   text-align: center;
   padding: 40px 0;
-  border-bottom: 1px solid #ebeef5;
+  border-bottom: 1px solid var(--es-border-lighter);
   margin-bottom: 40px;
 
   .hero-badge {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 16px;
-    background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
-    color: #fff;
-    border-radius: 20px;
-    font-size: 14px;
+    padding: 6px 16px;
+    background: var(--es-brand-tint);
+    border: 1px solid var(--es-border-light);
+    color: var(--es-brand-strong);
+    border-radius: var(--es-radius-full);
+    font-size: var(--es-text-sm);
+    font-weight: 600;
     margin-bottom: 20px;
   }
 
   .hero-title {
-    font-size: 40px;
+    font-size: var(--es-display-sm);
+    line-height: var(--es-leading-tight);
+    letter-spacing: -0.02em;
     font-weight: 700;
-    color: #1a1a1a;
+    color: var(--es-text-primary);
     margin-bottom: 16px;
   }
 
   .hero-desc {
-    font-size: 16px;
-    color: #606266;
-    line-height: 1.6;
+    font-size: var(--es-text-base);
+    color: var(--es-text-regular);
+    line-height: var(--es-leading-relaxed);
     max-width: 700px;
     margin: 0 auto;
   }

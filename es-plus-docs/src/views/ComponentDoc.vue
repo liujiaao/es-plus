@@ -98,7 +98,7 @@
         </section>
 
         <!-- API 文档 -->
-        <section class="doc-section" v-if="currentDoc.api">
+        <section class="doc-section is-wide" v-if="currentDoc.api">
           <h2 class="section-title" id="api">{{ t('componentDoc.api') }}</h2>
           <!-- 表里的 Since 列以 vue3 为基准：三端各自的版本在标题下方已经逐端写明，
                这里再重复一遍会让人以为某个 prop 是三端分叉的 -->
@@ -117,13 +117,15 @@
           <template v-for="(items, key) in currentDoc.api" :key="key">
             <div class="api-block" v-if="Array.isArray(items) && items.length">
               <h3 class="api-subtitle">{{ apiTitleMap[key as string] || key }}</h3>
+              <!-- 列宽契约（审计 P0-4）：固定列合计必须给「说明」留下 ≥ 280px。
+                   此前 220+220+120+200+96 = 856 > 760，说明列被挤到 104px。 -->
               <el-table :data="items" border>
-                <el-table-column prop="name" label="名称" width="220" />
-                <el-table-column prop="type" label="类型" width="220" />
-                <el-table-column v-if="(items as any[]).some((it: any) => it.default !== undefined)" prop="default" label="默认值" width="120" />
-                <el-table-column v-if="(items as any[]).some((it: any) => it.params !== undefined)" prop="params" label="参数" width="200" />
-                <el-table-column prop="desc" label="说明" />
-                <el-table-column v-if="currentDoc.since" label="Since" width="96">
+                <el-table-column prop="name" label="名称" width="190" />
+                <el-table-column prop="type" label="类型" width="160" />
+                <el-table-column v-if="(items as any[]).some((it: any) => it.default !== undefined)" prop="default" label="默认值" width="100" />
+                <el-table-column v-if="(items as any[]).some((it: any) => it.params !== undefined)" prop="params" label="参数" width="140" />
+                <el-table-column prop="desc" label="说明" min-width="280" />
+                <el-table-column v-if="currentDoc.since" label="Since" width="76">
                   <template #default="scope">v{{ scope.row.since || currentDoc.since.vue3 }}</template>
                 </el-table-column>
               </el-table>
@@ -426,6 +428,13 @@ onBeforeUnmount(() => {
 .doc-section {
   max-width: var(--es-content-width);
   padding: 0 0 32px;
+}
+
+/* API / 主题变量这类宽表可以突破正文度量到 960（--es-content-wide）：
+   760px 放不下「名称 + 类型 + 默认值 + 参数 + 说明 + 版本」六列，
+   硬塞只会把说明列压成一条竖线。突破的是表格，页面本身仍不横向滚动。 */
+.doc-section.is-wide {
+  max-width: var(--es-content-wide);
 }
 
 .section-title {

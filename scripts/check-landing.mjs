@@ -42,20 +42,13 @@ function read(rel) {
   return readFileSync(abs, 'utf8').replace(/\r\n/g, '\n')
 }
 
-/** 取模板里从 `<div class="hero-section">` 起、到配对闭合标签的那一段。
- *  不做完整解析 —— 只需要知道「首屏里有什么」，用缩进配对足够稳。 */
+/** 取模板里从 `<section class="hero-section">` 起、到配对闭合标签的那一段。
+ *  首屏没有嵌套 section（正文各屏是兄弟节点），所以第一个 `</section>` 就是边界。 */
 function sliceHero(source) {
-  const start = source.indexOf('<div class="hero-section">')
+  const start = source.indexOf('<section class="hero-section">')
   if (start < 0) return ''
-  let depth = 0
-  const re = /<\/?div\b[^>]*>/g
-  re.lastIndex = start
-  let match
-  while ((match = re.exec(source))) {
-    depth += match[0].startsWith('</') ? -1 : 1
-    if (depth === 0) return source.slice(start, match.index + match[0].length)
-  }
-  return source.slice(start)
+  const end = source.indexOf('</section>', start)
+  return end < 0 ? source.slice(start) : source.slice(start, end + '</section>'.length)
 }
 
 const home = read(HOME)
@@ -83,22 +76,44 @@ if (hero) {
 }
 
 /* ------------------------------------------------------------------ *
- * B. 证据位：可交互部件，而不是静态代码窗口
+ * B. 证据位：首屏 → 真实产品实拍；可交互生成器 → /cases
+ *
+ * 审计 §6.1 拍板：首屏右栏放旗舰页实拍（双栏时右栏只有 546px，图里的表格
+ * 读不清，所以改成文案下方通栏），「改 JSON → 三端变」的交互件移到 /cases。
+ * 因此证据位断言从「首屏必须是 HeroTriRender」改成两条：
+ *   B1 首屏必须有一张 ≥800px 宽的产品实拍（路径来自 /product/，由
+ *      check:product-assets 保证字节真实），不是插画、不是设计稿；
+ *   B2 HeroTriRender（真生成器现算）必须仍在 /cases —— 交互证据不能被删掉，
+ *      只是换了页面。
  * ------------------------------------------------------------------ */
+const CASES = 'es-plus-docs/src/views/Cases.vue'
 if (home) {
-  if (!hero.includes('HeroTriRender')) {
-    fail(`${HOME}：首屏没有 HeroTriRender —— 路线图 2.1 要求 1 屏内出现产品证据`)
+  const shot = hero.match(/<img\s[^>]*src="\/product\/[^"]+"[^>]*width="(\d+)"/)
+  if (!shot) {
+    fail(`${HOME}：首屏没有产品实拍（<img src="/product/…">）—— 路线图 2.1 要求 1 屏内出现产品证据`)
+  } else if (Number(shot[1]) < 800) {
+    fail(`${HOME}：首屏产品实拍声明宽度 ${shot[1]}px < 800px —— 缩到读不清的图证明不了产品形态`)
   }
-  if (!/import HeroTriRender from '@\/components\/home\/HeroTriRender\.vue'/.test(home)) {
-    fail(`${HOME}：HeroTriRender 未 import（模板里有标签但组件没接上，Vue 会静默渲染成空）`)
+  if (!/<img[\s\S]{0,200}:alt="t\('home\./.test(hero)) {
+    fail(`${HOME}：首屏产品实拍缺少 i18n alt（中英各一份）—— 图片是首屏的主要信息承载者`)
   }
   for (const dead of ['code-window', 'hero-code']) {
     if (home.includes(dead)) {
-      fail(`${HOME}：首屏仍在用静态代码窗口 ${dead} —— 证据必须是可交互的（2.3），一张写死的代码片段证明不了「三端」`)
+      fail(`${HOME}：首屏仍在用静态代码窗口 ${dead} —— 证据必须是真的（实拍或真生成器）`)
     }
   }
   if (!hero.includes('<!-- 首屏证据')) {
     fail(`${HOME}：首屏证据位缺少说明注释 —— 下一次「优化」很容易把它当装饰删掉`)
+  }
+
+  const cases = read(CASES)
+  if (cases) {
+    if (!cases.includes('<HeroTriRender')) {
+      fail(`${CASES}：/cases 没有 HeroTriRender —— 首屏换成实拍后，可交互的「改 JSON → 三端变」不能跟着消失`)
+    }
+    if (!/import HeroTriRender from '@\/components\/home\/HeroTriRender\.vue'/.test(cases)) {
+      fail(`${CASES}：HeroTriRender 未 import（模板里有标签但组件没接上，Vue 会静默渲染成空）`)
+    }
   }
 }
 
@@ -262,6 +277,68 @@ for (const site of LANDINGS) {
 }
 
 /* ------------------------------------------------------------------ *
+ * E. 首页结构（审计 §6.4-4：把这次审计的核心问题钉死）
+ *
+ * 三条断言，对应审计里最能说明「首页不像产品页」的三个事实：
+ *   1. 主站首屏 H1 说的是价值主张，不是品牌名（品牌名在顶栏）；
+ *   2. 首页 section ≤ 6（8,935px / 11 屏的旧版就是被这条拦住的）；
+ *   3. 三站首页的 H1 都不是 `{{ brand.name }}` 直接插值。
+ * 高度（≤5,000px @1440）只能实测，交给 runtime-e2e；这里守结构。
+ * ------------------------------------------------------------------ */
+function stripComments(src) {
+  return src.replace(/<!--[\s\S]*?-->/g, '')
+}
+if (home) {
+  const raw = stripComments(home)
+  const sections = raw.match(/<section class="[^"]*-section"/g) || []
+  if (sections.length > 6) {
+    fail(`${HOME}：首页有 ${sections.length} 个 section（上限 6）—— 每加一屏都在稀释首屏的价值主张`)
+  }
+
+  // H1 不许直接是品牌名：取 H1 里的 i18n key，落到中文文案上看它是不是「ES-Plus」
+  const h1 = (raw.match(/<h1[^>]*>([\s\S]*?)<\/h1>/) || [])[1] || ''
+  if (!h1) fail(`${HOME}：找不到 H1 —— 首页必须有一句说明「这是什么」的标题`)
+  if (/brand\.name/.test(h1)) fail(`${HOME}：H1 直接渲染品牌名 —— 品牌名归顶栏，H1 说价值主张`)
+  const h1Keys = [...h1.matchAll(/t\('(home\.[A-Za-z0-9.]+)'\)/g)].map((m) => m[1])
+  if (home && !h1Keys.length) {
+    fail(`${HOME}：H1 没有走 i18n —— 中英两版会分叉`)
+  }
+  if (h1Keys.length) {
+    let zh
+    try {
+      zh = JSON.parse(read('es-plus-docs/src/locales/zh-CN.json'))
+    } catch {
+      zh = null
+    }
+    if (zh) {
+      const text = h1Keys
+        .map((k) => k.split('.').reduce((o, p) => (o == null ? o : o[p]), zh))
+        .filter((v) => typeof v === 'string')
+        .join('')
+      if (text.replace(/\s/g, '') === 'ES-Plus') {
+        fail(`${HOME}：H1 文案解析出来就是品牌名「ES-Plus」—— 首屏要回答「它能替我做什么」`)
+      }
+    }
+  }
+}
+
+for (const [rel, h1Re] of [
+  ['es-pc/src/views/Home.vue', /<h1[^>]*class="hero-title"[^>]*>([\s\S]*?)<\/h1>/],
+  ['es-eui/src/views/home/index.vue', /<h1[^>]*class="hero-title"[^>]*>([\s\S]*?)<\/h1>/],
+]) {
+  const src = read(rel)
+  if (!src) continue
+  const m = src.match(h1Re)
+  if (!m) {
+    fail(`${rel}：找不到 <h1 class="hero-title"> —— 三站首页骨架必须一致（hero → 证明 → 能力 → 开始）`)
+    continue
+  }
+  if (/brand\.name/.test(m[1])) {
+    fail(`${rel}：H1 直接渲染品牌名 —— 品牌名归顶栏，H1 说价值主张`)
+  }
+}
+
+/* ------------------------------------------------------------------ *
  * 汇总
  * ------------------------------------------------------------------ */
 if (failures.length) {
@@ -272,5 +349,5 @@ if (failures.length) {
 }
 
 console.log(
-  `✅ Landing 首屏：两个主 CTA + 文字链接；证据位是 HeroTriRender（真生成器 · 三端现算 · ${used.size} 条文案齐备）`
+  `✅ Landing 首屏：两个主 CTA + 文字链接；证据位是 ≥800px 产品实拍，交互生成器在 /cases（${used.size} 条文案齐备）；首页 section ≤ 6、H1 不是品牌名`
 )

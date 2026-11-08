@@ -698,43 +698,49 @@ usePageMeta('ai-crud')
 
 <style lang="scss" scoped>
 .ai-crud-page {
-  padding: 24px;
+  padding: var(--es-space-5);
   max-width: 1600px;
   margin: 80px auto;
 }
 
+/* 页头收进一块浅色卡：此前标题 + 说明 + 工具条直接铺在页面底色上，
+   与下面两块面板之间只有一条头发丝线，整页读起来像「一堆控件」。
+   现在顶部一角有品牌色雾面，工具条落了地，下面两块面板才是主角。 */
 .ai-crud-header {
-  margin-bottom: 16px;
-  padding-bottom: 16px;
-  border-bottom: 1px solid var(--border-color-lighter);
+  position: relative;
+  margin-bottom: var(--es-space-4);
+  padding: var(--es-space-5) var(--es-space-6);
+  border: 1px solid var(--es-border-lighter);
+  border-radius: var(--es-radius-lg);
+  background:
+    radial-gradient(720px 220px at 0% 0%, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0) 70%),
+    var(--es-bg);
 }
 
 .ai-crud-title {
-  font-size: 28px;
+  margin: 0 0 var(--es-space-1);
+  font-size: var(--es-text-3xl);
+  line-height: var(--es-leading-tight);
   font-weight: 700;
-  color: var(--text-color-primary);
-  margin-bottom: 8px;
-  /* 品牌主色 → 强调色。此前这里是并入前旧产品的紫色渐变（#667eea → #764ba2），
-     是全站品牌色改造的最后一处漏网 —— 与首页 hero、顶栏标记都不是一套。 */
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--brand-accent) 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  letter-spacing: -0.02em;
+  /* 此前是品牌蓝 → 强调色渐变字：28px 字号下渐变端点的对比度不稳定，
+     而且首页与三站标题都是纯色 —— 这里改回纯色。 */
+  color: var(--es-text-primary);
 }
 
 .ai-crud-banner {
-  font-size: 13px;
-  color: var(--text-color-secondary);
-  line-height: 1.6;
-  margin-bottom: 12px;
+  margin: 0 0 var(--es-space-3);
   max-width: 900px;
+  font-size: var(--es-text-sm);
+  color: var(--es-text-secondary);
+  line-height: var(--es-leading-relaxed);
 }
 
 .ai-crud-toolbar {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: var(--es-space-3);
 }
 
 .engine-tag {

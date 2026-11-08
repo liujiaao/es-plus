@@ -117,8 +117,8 @@
                   </tr>
                 </thead>
                 <tbody>
-                  <tr v-for="i in 2" :key="i">
-                    <td v-for="col in config.columns" :key="col.prop">—</td>
+                  <tr v-for="i in 3" :key="i">
+                    <td v-for="col in config.columns" :key="col.prop">{{ sampleCell(col, i) }}</td>
                   </tr>
                 </tbody>
               </table>
@@ -141,7 +141,9 @@
     </div>
 
     <div class="ai-live-cta">
-      <el-button type="success" size="large" @click="goFull">
+      <!-- 主行动按钮回到品牌蓝：绿色在这里不是语义色，只是「AI 看起来像绿色」的
+           惯性，和全站唯一的强调色打架。 -->
+      <el-button type="primary" size="large" @click="goFull">
         <el-icon class="btn-icon"><MagicStick /></el-icon>
         {{ t('aiLive.ctaFull') }}
       </el-button>
@@ -177,6 +179,32 @@ const jsonString = computed(() =>
   config.value ? JSON.stringify(config.value, null, 2) : ''
 )
 
+/**
+ * 预览表里的示例行。
+ *
+ * 此前三行全是「—」—— 一张空表证明不了「生成出来能用」，只会让人以为
+ * 组件还没接上数据。这里按列名给一组稳定的示例值（纯前端展示，不发请求）：
+ * 读者看到的是一张「生成完就能填数」的表，而不是占位符矩阵。
+ */
+const SAMPLE_BY_LABEL = [
+  [/金额|价格|费用|金额/, ['¥ 12,800', '¥ 3,260', '¥ 48,900']],
+  [/日期|时间/, ['2026-10-12', '2026-10-15', '2026-11-02']],
+  [/状态/, ['已启用', '待审核', '已归档']],
+  [/部门|组织/, ['研发中心', '财务部', '华东大区']],
+  [/类型|类别/, ['标准', '加急', '框架']],
+  [/名称|姓名|用户/, ['张伟', '李娜', '王强']],
+  [/编号|单号|ID/i, ['SO-20261012-01', 'SO-20261012-02', 'SO-20261012-03']],
+]
+
+function sampleCell(col, row) {
+  const label = String(col.label || col.prop || '')
+  for (const [re, values] of SAMPLE_BY_LABEL) {
+    if (re.test(label)) return values[(row - 1) % values.length]
+  }
+  // 没有语义线索的列：给「第 N 行」而不是「—」，至少读得出这是一张表
+  return `${row}`
+}
+
 function usePreset(p) {
   prompt.value = p.prompt
   currentPreset.value = p.label
@@ -204,16 +232,17 @@ generate()
 
 <style lang="scss" scoped>
 .ai-live-demo {
-  margin: 60px 0;
-  padding: 48px 32px;
-  background: linear-gradient(135deg, rgba(64, 158, 255, 0.06) 0%, rgba(103, 194, 58, 0.06) 100%);
-  border-radius: 16px;
-  border: 1px solid var(--border-color-lighter);
+  margin: 0;
+  padding: var(--es-space-6);
+  background: var(--es-bg);
+  border-radius: var(--es-radius-md);
+  border: 1px solid var(--es-border-lighter);
+  box-shadow: var(--es-shadow-sm);
 }
 
 .ai-live-header {
   text-align: center;
-  margin-bottom: 36px;
+  margin-bottom: 24px;
 }
 
 .ai-live-tag {
@@ -221,8 +250,8 @@ generate()
   align-items: center;
   gap: 6px;
   padding: 6px 14px;
-  background: rgba(103, 194, 58, 0.12);
-  color: var(--es-success);
+  background: var(--es-info-tint);
+  color: var(--es-accent-text);
   border-radius: 20px;
   font-size: 13px;
   font-weight: 500;
@@ -468,13 +497,13 @@ generate()
 
 .ai-live-cta {
   text-align: center;
-  margin-top: 32px;
+  margin-top: 20px;
 }
 
 @media (max-width: 768px) {
   .ai-live-demo {
-    padding: 32px 16px;
-    margin: 36px 0;
+    padding: var(--es-space-5) var(--es-space-4);
+    margin: 0;
   }
 
   .ai-live-title {

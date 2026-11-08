@@ -110,3 +110,28 @@ a:hover {
   background: transparent;
   border-radius: 0;
 }
+
+/* ──────────────────────────────────────────────────────────────────────────
+ * 移动端组件表格降级（审计 P0-5）
+ *
+ * 390px 视口下 antd 表格会按容器宽度强行压缩：8 列的演示表每列只剩 277px/8
+ * ≈ 34px，「地址」列一行一个字、「邮箱」每 4 个字符换行 —— 内容还在，但读不了。
+ * 做法是给表格一个内容下限、把滚动交给外层：内容宽度不够时横向滚动，
+ * 而不是把每个单元格压成竖排。
+ *
+ * 只作用于演示区（.es-doc-content）内的表格；正文 markdown 表格由
+ * docs-content.css 的 `> table { display:block; overflow-x:auto }` 兜底。
+ * ────────────────────────────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* 只处理「非纵向滚动」表格：antd 为它渲染单个 .ant-table-content > table。
+     带纵向滚动的表格（scroll.y）会拆成 header/body 两个 <table>，各自强制宽度
+     会让表头与表体横向滚动不同步 —— 那种表交给 antd 自己的 scroll.x。 */
+  .es-doc-content .ant-table-content {
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .es-doc-content .ant-table-content > table {
+    min-width: 620px;
+  }
+}

@@ -143,6 +143,60 @@
       </p>
     </section>
 
+    <!-- 可交互证据（原首页首屏组件）：改三个字段，三端产物同时变。真跑生成器，
+         不是截图。放在图廊之前 —— 先动手改一次，再看三端真实页面。 -->
+    <section class="interactive-block">
+      <HeroTriRender />
+    </section>
+
+    <!-- 产品实拍图廊（原在首页）：无头浏览器对着真实页面拍摄，浅/深各一套。
+         首页只留首屏一张 + 三端并排三张，完整图廊在这里展开。 -->
+    <ProductShots />
+
+    <!-- 逐字段配对的完整证据（原在首页）：Schema 源码 + 三端同名示例的
+         中位差 + 差异最小的一对逐行 diff。首页只留三张实拍并排，这里给
+         「凭什么说三端只有个位数行差异」的原始材料。 -->
+    <section class="parity-block">
+      <TriRenderTabs />
+    </section>
+
+    <!-- 三段真实录屏（原在首页）：这里本来就是「看它真的跑起来」的页面，
+         和上面几个可点进去的案例放在一起才有上下文。全部由无头浏览器对着
+         运行中的页面录下（只裁掉加载等待），封面是每段最后一帧。 -->
+    <section class="recordings">
+      <div class="recordings-header">
+        <span class="recordings-eyebrow">30 秒</span>
+        <h2>看它怎么工作</h2>
+        <p>
+          三段都由无头浏览器对着真实页面录下来（只裁掉加载等待），无配音、无补帧。
+          封面是每段结束时的画面 —— 先看到结果，再点播放看过程。
+        </p>
+      </div>
+      <div class="recordings-grid">
+        <figure v-for="video in demoVideos" :key="video.id" class="recording-card">
+          <video
+            :src="videoUrl(video.file)"
+            :poster="videoUrl(video.poster)"
+            :width="video.width"
+            :height="video.height"
+            preload="none"
+            muted
+            loop
+            playsinline
+            controls
+            :aria-label="`${video.title}：${video.caption}`"
+          ></video>
+          <figcaption>
+            <strong>{{ video.title }}</strong>
+            <span class="recording-caption">{{ video.caption }}</span>
+            <span class="recording-meta">
+              {{ Math.round(video.durationMs / 1000) }} 秒 · {{ video.width }}×{{ video.height }} · WebM
+            </span>
+          </figcaption>
+        </figure>
+      </div>
+    </section>
+
     <section v-for="level in levels" :key="level.id" class="level">
       <div class="level-header">
         <span class="level-badge" :class="level.id.toLowerCase()">{{ level.title }}</span>
@@ -183,10 +237,23 @@ import cases from '@/cases/cases.json'
 import metrics from '@/cases/cases-metrics.json'
 // 跨端互链：与顶栏切换器共用同一份三站清单（受 check:site-nav 守护）
 import { SITES, SITE_KEY, crossSiteUrl } from '@/utils/sites'
+// 产品实拍图廊（原首页组件）：浅/深两套真实页面截图，清单来自 docs/product/shots.json
+import ProductShots from '@/components/product/ProductShots.vue'
+// 可交互「改三个字段 → 三端同时变」（原首页组件）：真跑生成器，不是截图
+import HeroTriRender from '@/components/home/HeroTriRender.vue'
+// 三端逐字段配对的完整证据（原首页组件，现在只在这一页展开）
+import TriRenderTabs from '@/components/home/TriRenderTabs.vue'
+// 录屏清单（单源 docs/product/videos.json，由 scripts/sync-product.mjs 分发）
+import videosManifest from '@/product/videos.json'
 
 const levels = cases.levels
 /** 另两端（本端用站内路由，不走绝对地址） */
 const otherSites = SITES.filter((s) => s.key !== SITE_KEY)
+
+// 录屏与产品截图同一套分发规则：单源 docs/product/videos.json，站点里读副本
+const demoVideos = videosManifest.videos
+/** docs/product/x → 站点 public 下的 /product/x */
+const videoUrl = (p: string) => `/${p.replace(/^docs\//, '')}`
 
 const circled = (n: number) => '①②③④⑤⑥⑦⑧⑨⑩⑪⑫⑬⑭⑮'[n - 1]
 
@@ -323,6 +390,100 @@ usePageMeta('cases')
 
   .compare-plus {
     color: var(--warning-color, var(--es-warning));
+  }
+}
+
+/* 可交互证据：组件自带卡片，这里只负责与页面节奏对齐 */
+.interactive-block {
+  margin: 0 0 40px;
+}
+
+/* 逐字段配对证据：组件自带卡片与间距，这里只负责和页面的节奏对齐 */
+.parity-block {
+  margin: 0 0 40px;
+}
+
+/* 录屏：三栏，封面即结果；窄屏单列（视频宽度小于 320px 时表头就读不清了） */
+.recordings {
+  margin: 0 0 40px;
+}
+
+.recordings-header {
+  margin-bottom: 16px;
+
+  h2 {
+    margin: 0 0 8px;
+    font-size: 20px;
+    color: var(--text-color-primary);
+  }
+
+  p {
+    max-width: 760px;
+    margin: 0;
+    font-size: 13px;
+    line-height: 1.8;
+    color: var(--text-color-secondary);
+  }
+}
+
+.recordings-eyebrow {
+  display: inline-block;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--es-accent-text);
+}
+
+.recordings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.recording-card {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  border: 1px solid var(--border-color-lighter);
+  border-radius: 10px;
+  overflow: hidden;
+  background: var(--bg-color);
+
+  video {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: var(--bg-color-page, var(--es-bg-subtle));
+  }
+
+  figcaption {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    padding: 12px 14px 14px;
+    border-top: 1px solid var(--border-color-lighter);
+    font-size: 13px;
+    line-height: 1.6;
+    color: var(--text-color-secondary);
+  }
+
+  strong {
+    font-size: 14px;
+    color: var(--text-color-primary);
+  }
+}
+
+.recording-meta {
+  font-size: 12px;
+  color: var(--text-color-placeholder, var(--text-color-secondary));
+  font-variant-numeric: tabular-nums;
+}
+
+@media (max-width: 900px) {
+  .recordings-grid {
+    grid-template-columns: minmax(0, 1fr);
   }
 }
 

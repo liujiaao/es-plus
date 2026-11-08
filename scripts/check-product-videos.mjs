@@ -184,12 +184,16 @@ check('源码里出现的每个产品录屏引用都是清单条目', () => {
   }
 })
 
-// 主站首屏的录屏区走清单驱动（与产品实拍画廊同一套路）：页面 import 清单、逐条渲染，
-// 因此源码里没有字面的 /product/video/x.webm。这条断言就是「它真的走的是清单」的凭据 ——
+// 录屏区走清单驱动：页面 import 清单、逐条渲染，因此源码里没有字面的
+// /product/video/x.webm。这条断言就是「它真的走的是清单」的凭据 ——
 // 没有它，「清单里的每段都被引用」会变成自证。
-const VIDEO_PAGE = 'es-plus-docs/src/views/Home.vue'
+//
+// 位置：2026-11 审计重做首页时，录屏按 §6.1-5 的建议从首页并入 /cases
+// （首页那一屏已有可操作的生成器，两段「动起来」的证据并排会互相稀释）。
+// 判据跟着页面走，但仍是**同一份清单 + 同一个逐条渲染结构**，不是换成手写样例。
+const VIDEO_PAGE = 'es-plus-docs/src/views/Cases.vue'
 
-check('主站首屏的录屏区由清单驱动（import videos.json 并逐条渲染 <video>）', () => {
+check('录屏区由清单驱动（import videos.json 并逐条渲染 <video>）', () => {
   const text = read(VIDEO_PAGE)
   assert.match(text, /@\/product\/videos\.json/, `${VIDEO_PAGE} 没有读清单 src/product/videos.json`)
   assert.match(text, /v-for="video in demoVideos"/, `${VIDEO_PAGE} 没有逐条渲染清单里的录屏`)

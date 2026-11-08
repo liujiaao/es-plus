@@ -203,6 +203,8 @@ export const GUARD_GROUPS = Object.freeze([
       'check:component-api',
       'check:motion',
       'check:mobile',
+      'check:design-tokens',
+      'check:header-parity',
       'check:flagship-case',
       'check:generated-case',
     ],

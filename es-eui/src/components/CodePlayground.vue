@@ -41,11 +41,14 @@ export default {
   props: {
     title: { type: String, default: '' },
     description: { type: String, default: '' },
-    code: { type: String, default: '' }
+    code: { type: String, default: '' },
+    // 审计 P0-4：示例页拆页后，每页头两个示例的代码默认展开 ——
+    // 读者第一眼看到的是「配置长什么样」，而不是再点一次「展开代码」。
+    defaultExpanded: { type: Boolean, default: false }
   },
   data() {
     return {
-      expanded: false
+      expanded: this.defaultExpanded
     }
   },
   computed: {

@@ -521,6 +521,32 @@
   background: var(--es-doc-code-tint);
 }
 
+/* ── 列宽契约（审计 P0-4）──
+ * 组件 API 表在 760px 正文里曾把「说明」列压到 104px（正文宽的 13.7%）：
+ * 中文每行只能放 3–6 个字，一张 Props 表因此被撑到 3000px 以上，整页 18,000px。
+ * 判据用「结构位置」而不是表头文字：文档里的 API / 事件 / 插槽表都是
+ *   第一列=名称、第二列=说明，
+ * 这条约定由 markdown 模板统一维护。给这两列一个下限，浏览器在自动布局下
+ * 会把多余的宽度让给说明列，而不是让名称/类型列按内容无限膨胀。
+ * 移动端表格已整体变成横向滚动容器（见文件末尾），下限不会顶破页面。
+ * 说明列取 320px：审计 §6.2-1 的验收口径是「描述列 ≥ 320px」，280px 下中文
+ * 仍只能放 8 个字，一张 Props 表动辄两千多像素。 */
+.es-doc-content > table th:first-child,
+.es-doc-content > table td:first-child {
+  min-width: 120px;
+}
+
+.es-doc-content > table th:nth-child(2),
+.es-doc-content > table td:nth-child(2) {
+  min-width: 320px;
+}
+
+/* 说明列允许换行，且长标识符（toolbarBtns / operationColumn）在窄列里断词 */
+.es-doc-content > table td {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 /* ── 提示框（tip / warning / info / danger）── */
 .es-doc-content .tip,
 .es-doc-content .info,
@@ -672,5 +698,16 @@
     display: block;
     max-width: 100%;
     overflow-x: auto;
+  }
+
+  /* 组件演示表格（el-table / ant-table）：三端默认都按容器压列宽，窄屏会把
+     「操作」「状态」这类列挤到只剩两三个字。给内层 table 一个下限，让各自的
+     body-wrapper 出现横向滚动 —— 与正文表格同一套降级方式。
+     不动 fixed 列（绝对定位，另有一套宽度同步逻辑），只约束主表。 */
+  .es-doc-content .el-table__body,
+  .es-doc-content .el-table__header,
+  .doc-content .el-table__body,
+  .doc-content .el-table__header {
+    min-width: 560px;
   }
 }

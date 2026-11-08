@@ -2,18 +2,13 @@
   <div class="home-page">
     <div class="hero">
       <div class="hero-copy">
-        <!-- H1 = 品牌 + 定位语，与主文档站 / Vue2 站同构。
-             此前 H1 只有定位语，英文口号另起一行 —— 中文页面混排英文主张。 -->
-        <h1 class="hero-title">
-          {{ brand.name }}
-          <span class="hero-title-sub">{{ brand.positioning }}</span>
-        </h1>
+        <!-- 审计 P0-1：H1 此前是 40px 渐变裁切的品牌名，定位语缩成 20px 蓝字。
+             现在 H1 只说「这是什么」，品牌名交给顶栏（另两站同构）。
+             渐变字同时是 WCAG 问题：青端在白底只有 2.43:1。 -->
+        <span class="hero-eyebrow">{{ brand.name }} · 配置层</span>
+        <h1 class="hero-title">{{ brand.positioning }}</h1>
+        <p class="hero-lead">{{ brand.slogan.subtitle }}</p>
         <p class="hero-desc">
-          {{ brand.slogan.subtitle }}
-          <br />
-          <!-- 此前写「跨 Element Plus / Ant Design Vue / Vue 2 / Vue 3 复用」—— 把
-               两个 UI 库与两个 Vue 版本并列成四件事，容易被读成「四个框架」。实际是
-               三个渲染端：Vue 2 + Element UI、Vue 3 + Element Plus、Vue 3 + Ant Design Vue。 -->
           同一份 Schema 在 Vue 2 + Element UI / Vue 3 + Element Plus / Vue 3 + Ant Design Vue 三端复用。
         </p>
         <div class="hero-renderer">
@@ -210,7 +205,8 @@ const openAiCrud = () => {
 }
 
 const features = [
-  { title: 'JSON 配置驱动', desc: '通过 formItemList / columns / schema 即可生成完整页面；同一页面的模板与事件胶水代码实测减少 77%（口径与源码见主文档站「一份配置」一节）', icon: DeploymentUnitOutlined },
+  // 数字不手写：直接引用品牌单源的 claim（此前这里写的是 77%，与主站 76.5% 冲突）
+  { title: 'JSON 配置驱动', desc: `通过 formItemList / columns / schema 即可生成完整页面；${brand.promises.find((p) => p.key === 'one-config')?.claim ?? '模板与事件胶水代码减少 76.5%'}（口径与源码见主文档站「一份配置」一节）`, icon: DeploymentUnitOutlined },
   { title: '跨框架复用', desc: '同一份 Schema 可在 Element Plus / Ant Design Vue 之间复用，降低迁移成本', icon: InteractionOutlined },
   { title: 'AI 代码生成', desc: '配套 CLI 与 MCP Server（详见主文档站），支持从自然语言或配置直接生成可编译页面', icon: RobotOutlined },
   { title: '表单表格联动', desc: 'triggerEvent 自动联动查询/重置/分页，无需手写事件回调', icon: FileSearchOutlined },
@@ -258,11 +254,11 @@ const techs = [
 
 .hero-shot {
   margin: 0;
-  border: 1px solid #e5e7eb;
+  border: 1px solid var(--es-border-light);
   border-radius: 12px;
   overflow: hidden;
-  background: #fff;
-  box-shadow: 0 18px 42px rgba(15, 23, 42, 0.12);
+  background: var(--es-bg);
+  box-shadow: var(--es-shadow-md);
 }
 
 .hero-shot img {
@@ -273,9 +269,9 @@ const techs = [
 
 .hero-shot figcaption {
   padding: 10px 14px;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--es-border-lighter);
   font-size: 13px;
-  color: #666;
+  color: var(--es-text-secondary);
 }
 
 .hero-shot figcaption a {
@@ -300,28 +296,30 @@ const techs = [
   }
 }
 
-.hero-title {
-  font-size: 40px;
-  font-weight: 700;
-  color: #1a1a2e;
+.hero-eyebrow {
+  display: inline-block;
   margin-bottom: 12px;
-  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
+  font-size: var(--es-text-sm);
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--es-accent-text);
 }
 
-/* H1 内的定位语：.hero-title 是渐变裁切（text-fill transparent），
-   子元素必须显式恢复填充色，否则整行只剩渐变块而没有字。 */
-.hero-title-sub {
-  display: block;
-  margin-top: 12px;
-  font-size: 20px;
-  font-weight: 600;
-  letter-spacing: 0;
-  background: none;
-  -webkit-text-fill-color: currentColor;
-  color: var(--es-brand-primary);
+.hero-title {
+  margin: 0 0 12px;
+  font-size: var(--es-text-4xl);
+  line-height: var(--es-leading-tight);
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  color: var(--es-text-primary);
+}
+
+.hero-lead {
+  margin: 0 0 8px;
+  font-size: var(--es-text-lg);
+  font-weight: 500;
+  color: var(--es-text-regular);
 }
 
 .hero-renderer {
@@ -335,13 +333,13 @@ const techs = [
   font-weight: 500;
   color: var(--es-brand-primary);
   background: var(--es-brand-primary-light);
-  border: 1px solid rgba(59, 130, 246, 0.3);
+  border: 1px solid var(--es-border-light);
   border-radius: 20px;
 }
 
 .hero-desc {
   font-size: 17px;
-  color: #666;
+  color: var(--es-text-secondary);
   margin-bottom: 32px;
   max-width: 640px;
   line-height: 1.8;
@@ -356,14 +354,14 @@ const techs = [
   text-align: center;
   border-radius: 12px;
   height: 100%;
-  border: 1px solid #f0f0f0;
+  border: 1px solid var(--es-border-lighter);
 }
 
 .promise-title {
   margin: 0 0 8px;
   font-size: 20px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--es-text-primary);
 }
 
 .promise-claim {
@@ -372,14 +370,14 @@ const techs = [
   padding: 4px 14px;
   font-size: 13px;
   font-weight: 600;
-  color: var(--es-brand-accent);
-  background: rgba(6, 182, 212, 0.08);
+  color: var(--es-accent-text);
+  background: var(--es-info-tint);
   border-radius: 20px;
 }
 
 .promise-desc {
   margin: 0;
-  color: #666;
+  color: var(--es-text-secondary);
   font-size: 14px;
   line-height: 1.7;
 }
@@ -400,10 +398,18 @@ const techs = [
 }
 
 .ai-entry-card {
-  border-radius: 12px;
-  background: linear-gradient(135deg, #f0f9eb 0%, #ecf5ff 100%);
-  border: 1px solid #e6f4d8;
+  border-radius: var(--es-radius-md);
+  background: var(--es-brand-tint);
+  border: 1px solid var(--es-border-lighter);
   cursor: pointer;
+  transition:
+    border-color var(--es-duration-base) var(--es-ease),
+    transform var(--es-duration-base) var(--es-ease);
+}
+
+.ai-entry-card:hover {
+  border-color: var(--es-brand-primary);
+  transform: translateY(-2px);
 }
 
 .ai-entry-content {
@@ -415,12 +421,12 @@ const techs = [
   margin: 0 0 8px;
   font-size: 20px;
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--es-text-primary);
 }
 
 .ai-entry-content p {
   margin: 0;
-  color: #666;
+  color: var(--es-text-secondary);
   font-size: 14px;
 }
 
@@ -428,18 +434,18 @@ const techs = [
   font-size: 24px;
   font-weight: 600;
   margin-bottom: 24px;
-  color: #1a1a2e;
+  color: var(--es-text-primary);
 }
 
 .section-desc {
-  color: #666;
+  color: var(--es-text-secondary);
   font-size: 14px;
   margin-bottom: 20px;
   line-height: 1.8;
 }
 
 .section-desc code {
-  background: #f0f5ff;
+  background: var(--es-brand-tint);
   color: var(--es-brand-primary);
   padding: 2px 6px;
   border-radius: 4px;
@@ -450,16 +456,16 @@ const techs = [
 .l2-note {
   margin-top: 16px;
   padding: 12px 16px;
-  background: #fafafa;
+  background: var(--es-bg-page);
   border-left: 3px solid var(--es-brand-primary);
   border-radius: 4px;
-  color: #666;
+  color: var(--es-text-secondary);
   font-size: 13px;
   line-height: 1.8;
 }
 
 .l2-note code {
-  background: #f0f5ff;
+  background: var(--es-brand-tint);
   color: var(--es-brand-primary);
   padding: 2px 6px;
   border-radius: 4px;
@@ -477,7 +483,7 @@ const techs = [
 }
 
 .feature-card p {
-  color: #666;
+  color: var(--es-text-secondary);
   font-size: 14px;
   margin: 0;
 }
@@ -502,7 +508,7 @@ const techs = [
 .esplus-comp-card:hover {
   border-color: var(--es-brand-primary);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(22, 119, 255, 0.15);
+  box-shadow: var(--es-shadow-md);
 }
 
 .esplus-comp-name {
@@ -514,7 +520,7 @@ const techs = [
 
 .esplus-comp-desc {
   font-size: 13px;
-  color: #999;
+  color: var(--es-text-secondary);
 }
 
 .tech-card {
@@ -525,12 +531,12 @@ const techs = [
 .tech-name {
   font-size: 14px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--es-text-primary);
 }
 
 .tech-ver {
   font-size: 13px;
-  color: #999;
+  color: var(--es-text-secondary);
   margin-top: 4px;
 }
 

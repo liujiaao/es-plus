@@ -1,39 +1,51 @@
 <template>
   <div class="home">
-    <!-- Hero 区域 -->
+    <!-- Hero 区域（审计 P0-1 / §6.3-3）：
+         此前是整屏高饱和蓝青渐变 + 光斑 + 浮动 logo + 渐变字，属 2018 年的营销落地页形态。
+         现在与另两站同构 —— 白底、实心黑标题、价值主张先行、右侧本站真实渲染的产品实拍。 -->
     <div class="hero">
-      <!-- 动态背景 -->
-      <div class="hero-bg">
-        <div class="gradient-orb orb-1"></div>
-        <div class="gradient-orb orb-2"></div>
-        <div class="gradient-orb orb-3"></div>
-      </div>
-      
       <div class="container">
         <div class="hero-content">
           <div class="hero-copy">
-            <!-- Logo 动画 -->
-            <div class="hero-logo">
-              <div class="logo-icon">
-                <span class="logo-text">ES</span>
-              </div>
-            </div>
+            <!-- 品牌名降级为胶囊标签：H1 留给「这是什么」，读屏大纲与 SEO 的标题权重
+                 才落在产品定位而不是品牌名上（三站同一条规则）。 -->
+            <span class="hero-eyebrow">{{ brand.name }} · 配置层</span>
 
-            <!-- 主标题：品牌 + 定位语，与主文档站 / AntDV 站同构 -->
             <h1 class="hero-title">
-              <span class="gradient-text">{{ brand.name }}</span>
-              <span class="hero-title-sub">{{ brand.positioning }}</span>
+              {{ brand.positioning }}
             </h1>
 
-            <!-- 副标题写本站身份：三站 H1 一致，差异在渲染端 -->
-            <p class="hero-desc">
-              <span class="typing-text">Vue 2 + Element UI 渲染端</span>
+            <p class="hero-lead">
+              {{ brand.slogan.subtitle }}
             </p>
 
-            <!-- 描述 -->
-            <p class="hero-subdesc">
-              一份 JSON 配置，Vue 2 / Vue 3 / Ant Design Vue 三端通用，AI 生成即编译
+            <!-- 本站身份写在这句里：H1 三站一致，差异在渲染端 -->
+            <p class="hero-desc">
+              本站是 <strong>Vue 2 + Element UI</strong> 渲染端：同一份 JSON Schema 在 Vue 2 / Vue 3 / Ant Design Vue 三端渲染出一致界面，换一行 import 即切换。
             </p>
+
+            <div class="hero-renderer">
+              <span class="renderer-badge">本站渲染器：Vue 2 + Element UI</span>
+            </div>
+
+            <!-- 操作按钮 -->
+            <div class="hero-actions">
+              <router-link
+                to="/guide"
+                class="btn btn-primary"
+                data-track="cta-start"
+              >
+                <span>开始使用</span>
+                <i class="el-icon-right"></i>
+              </router-link>
+              <router-link
+                to="/component/installation"
+                class="btn btn-default"
+              >
+                <span>查看组件</span>
+                <i class="el-icon-arrow-right"></i>
+              </router-link>
+            </div>
 
             <!-- 统计信息 —— 三个数字都是可核对的事实：
                  渲染端数取自三站切换器的 SITES 数组；表单控件数取自 core 的 VALID_FORM_TYPES；
@@ -58,29 +70,10 @@
               <div class="stat-item">
                 <span
                   class="stat-number"
-                  data-count="77"
+                  data-count="76.5"
                 >0</span>%
                 <span class="stat-label">模板与事件胶水代码减少</span>
               </div>
-            </div>
-
-            <!-- 操作按钮 -->
-            <div class="hero-actions">
-              <router-link
-                to="/guide"
-                class="btn btn-primary"
-                data-track="cta-start"
-              >
-                <span>开始使用</span>
-                <i class="el-icon-right"></i>
-              </router-link>
-              <router-link
-                to="/component/installation"
-                class="btn btn-default"
-              >
-                <span>查看组件</span>
-                <i class="el-icon-arrow-right"></i>
-              </router-link>
             </div>
           </div>
 
@@ -100,14 +93,6 @@
               —— 一份纯 JSON，0 个函数
             </figcaption>
           </figure>
-        </div>
-
-        <!-- 滚动提示 -->
-        <div class="scroll-hint">
-          <div class="mouse">
-            <div class="wheel"></div>
-          </div>
-          <span>向下滚动</span>
         </div>
       </div>
     </div>
@@ -150,6 +135,13 @@
           :left-code="oneConfig.code.native.text"
           :right-code="oneConfig.code.esplus.text"
         />
+        <!-- 口径说明：本站是 Vue 2 渲染端，而品牌单源的对比样例用的是 Vue 3 + Element Plus
+             语法。不写这句，读者会照着 `<script setup>` 抄到 Vue 2 页面里。 -->
+        <p class="l2-note">
+          两段样例都用 Element Plus 语法，比较的是「同一页面、同一功能范围」的代码量（品牌单源实测）。
+          本站是 <strong>Vue 2 + Element UI 渲染端</strong>：同一份配置只需把 import 换成
+          <code>@es-plus/vue2</code>，字段 / 列 / 按钮配置一字不改 —— 三端实际渲染效果见下方「三端通用」。
+        </p>
       </div>
     </div>
 
@@ -182,16 +174,15 @@
       </div>
     </div>
 
-    <!-- 特性展示 -->
+    <!-- 组件能力（能力层）：承诺讲「是什么」，这里讲「拿什么做」 -->
     <div class="features">
       <div class="container">
         <div class="section-header">
-          <span class="section-badge">核心特性</span>
           <h2 class="section-title">
-            为什么选择 ES-Plus
+            四个组件，覆盖 CRUD 全流程
           </h2>
           <p class="section-desc">
-            精心设计的组件，让中后台开发更简单高效
+            表格、表单、弹窗与它们的联动 —— 每一层都由 JSON 配置驱动，不需要写模板与事件胶水。
           </p>
         </div>
         
@@ -286,175 +277,6 @@
           </div>
         </div>
 
-        <!-- 代码对比展示 -->
-        <div class="code-compare-section">
-          <h3 class="compare-title">
-            <span class="compare-badge traditional">传统方式 300+ 行</span>
-            <span class="vs-text">VS</span>
-            <span class="compare-badge eseui">ES-Plus 50+ 行</span>
-          </h3>
-          <div class="code-compare-grid">
-            <!-- 传统方式代码 -->
-            <div class="code-block-wrapper">
-              <div class="code-window traditional">
-                <div class="code-header">
-                  <div class="window-dots">
-                    <span class="dot red"></span>
-                    <span class="dot yellow"></span>
-                    <span class="dot green"></span>
-                  </div>
-                  <span class="code-title">Traditional.vue（片段）</span>
-                </div>
-                <div class="code-body">
-                  <pre><code class="language-vue">&lt;!-- 模板代码冗长 --&gt;
-&lt;div class="search-form"&gt;
-  &lt;el-form :model="queryForm"&gt;
-    &lt;el-form-item label="用户名"&gt;
-      &lt;el-input v-model="queryForm.name" /&gt;
-    &lt;/el-form-item&gt;
-    &lt;el-form-item label="状态"&gt;
-      &lt;el-select v-model="queryForm.status"&gt;
-        &lt;el-option 
-          v-for="item in statusOptions" 
-          :key="item.value"
-          :label="item.label"
-          :value="item.value" /&gt;
-      &lt;/el-select&gt;
-    &lt;/el-form-item&gt;
-    &lt;!-- 更多表单项... --&gt;
-  &lt;/el-form&gt;
-&lt;/div&gt;
-
-&lt;el-table :data="tableData"&gt;
-  &lt;el-table-column 
-    v-for="col in columns" 
-    :key="col.prop"
-    :prop="col.prop"
-    :label="col.label" /&gt;
-&lt;/el-table&gt;
-
-&lt;el-pagination 
-  @current-change="handlePageChange"
-  @size-change="handleSizeChange"
-  :current-page="page"
-  :page-size="pageSize"
-  :total="total" /&gt;
-
-&lt;script&gt;
-// data 中大量状态管理
-data() {
-  return {
-    queryForm: { name: '', status: '' },
-    tableData: [],
-    page: 1,
-    pageSize: 10,
-    total: 0,
-    loading: false,
-    // ... 更多状态
-  }
-},
-methods: {
-  // 手动处理请求、分页、联动
-  async fetchData() {
-    this.loading = true
-    const res = await axios.get('/api/list', {
-      params: { ...this.queryForm, 
-        page: this.page, 
-        pageSize: this.pageSize 
-      }
-    })
-    this.tableData = res.data.data
-    this.total = res.data.total
-    this.loading = false
-  },
-  handleSearch() {
-    this.page = 1
-    this.fetchData()
-  },
-  // ... 更多方法
-}
-&lt;/script&gt;</code></pre>
-                </div>
-              </div>
-            </div>
-
-            <!-- ES-Plus 方式代码 -->
-            <div class="code-block-wrapper">
-              <div class="code-window eseui">
-                <div class="code-header">
-                  <div class="window-dots">
-                    <span class="dot red"></span>
-                    <span class="dot yellow"></span>
-                    <span class="dot green"></span>
-                  </div>
-                  <span class="code-title">ES-Plus.vue（完整）</span>
-                </div>
-                <div class="code-body">
-                  <pre><code class="language-vue">&lt;template&gt;
-  &lt;!-- 配置化声明，模板与事件胶水代码减少 77% --&gt;
-  &lt;es-table
-    :columns="columns"
-    :options="tableOptions"
-  &gt;
-    &lt;es-form
-      :form-item-list="searchItems"
-      :model="searchForm"
-      :config-btn="[
-        { name: '查询', key: 'query', triggerEvent: true },
-        { name: '重置', key: 'rest', triggerEvent: true }
-      ]"
-    /&gt;
-  &lt;/es-table&gt;
-&lt;/template&gt;
-
-&lt;script&gt;
-export default {
-  data() {
-    return {
-      // JSON 配置替代模板代码
-      columns: [
-        { prop: 'name', label: '用户名' },
-        { prop: 'status', label: '状态' }
-      ],
-      searchItems: [
-        {
-          prop: 'name',
-          label: '用户名',
-          formtype: 'Input',
-          span: 8
-        },
-        {
-          prop: 'status',
-          label: '状态',
-          formtype: 'Select',
-          span: 8,
-          dataOptions: [
-            { label: '全部', value: '' },
-            { label: '启用', value: '1' },
-            { label: '禁用', value: '0' }
-          ]
-        }
-      ],
-      // 自动处理请求、分页、联动
-      tableOptions: {
-        apiParams: { 
-          url: '/api/users',
-          method: 'POST'
-        },
-        configTableOut: {
-          total: 'total',
-          tableData: 'data'
-        }
-      }
-    }
-  }
-}
-&lt;/script&gt;</code></pre>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
         <!-- 核心优势总结 -->
         <div class="advantage-summary">
@@ -530,33 +352,6 @@ export default {
         </div>
       </div>
     </div>
-
-    <!-- CTA 区域 -->
-    <div class="cta-section">
-      <div class="container">
-        <div class="cta-content">
-          <h2>准备好开始了吗？</h2>
-          <p>加入使用 ES-Plus 的开发者行列，让中后台开发更高效</p>
-          <div class="cta-actions">
-            <router-link
-              to="/guide"
-              class="btn btn-primary btn-lg"
-            >
-              <i class="el-icon-rocket"></i>
-              立即开始
-            </router-link>
-            <a
-              href="https://github.com/liujiaao/es-plus"
-              target="_blank"
-              class="btn btn-outline btn-lg"
-            >
-              <i class="el-icon-link"></i>
-              GitHub
-            </a>
-          </div>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
 
@@ -607,7 +402,7 @@ export default {
         {
           icon: 'el-icon-document-checked',
           title: '配置化开发',
-          desc: 'JSON 配置替代模板代码：模板与事件胶水代码实测减少 77%，所有配置集中管理，修改一目了然'
+          desc: 'JSON 配置替代模板代码：模板与事件胶水代码实测减少 76.5%，所有配置集中管理，修改一目了然'
         },
         {
           icon: 'el-icon-magic-stick',
@@ -627,8 +422,9 @@ export default {
       ],
       // 优势数据 —— 全部是可核对的事实，不写无法验证的「3x 维护速度」这类数字。
       // 由 scripts/check-site-claims.mjs 逐项校验（口径见该脚本头部注释）。
+      // 降幅写 76.5% 而不是取整的 77%：三站必须显示同一组数字（审计 P0-3）。
       advantages: [
-        { number: '77%', label: '模板与事件胶水代码减少', desc: '查询 / 重置 / 翻页 / 取数全部由配置接管' },
+        { number: '76.5%', label: '模板与事件胶水代码减少', desc: '查询 / 重置 / 翻页 / 取数全部由配置接管' },
         { number: '14', label: '表单控件', desc: '与 Vue 3 / Ant Design Vue 端共用同一份配置与同一套字段' },
         { number: '3', label: '渲染端共用一份配置', desc: 'Vue 2 + Element UI、Vue 3 + Element Plus、Vue 3 + Ant Design Vue' },
         { number: '0', label: '联动链路事件代码', desc: 'triggerEvent 自动接管，只剩编辑 / 删除两个业务动作需要手写' }
@@ -718,18 +514,22 @@ export default {
     animateNumbers() {
       const numbers = document.querySelectorAll('.stat-number')
       numbers.forEach(num => {
-        const target = parseInt(num.getAttribute('data-count'))
+        // data-count 允许小数（76.5）：取整会让本站显示 77%，而主站与 slogan.json 是 76.5%，
+        // 三站同一组数字是这次审计的硬要求（P0-3）。小数位数由字面量本身决定。
+        const raw = num.getAttribute('data-count')
+        const target = parseFloat(raw)
+        const decimals = String(raw).includes('.') ? 1 : 0
         const duration = 2000
         const step = target / (duration / 16)
         let current = 0
-        
+
         const timer = setInterval(() => {
           current += step
           if (current >= target) {
-            num.textContent = target
+            num.textContent = target.toFixed(decimals)
             clearInterval(timer)
           } else {
-            num.textContent = Math.floor(current)
+            num.textContent = current.toFixed(decimals)
           }
         }, 16)
       })
@@ -739,108 +539,177 @@ export default {
 </script>
 
 <style lang="scss" scoped>
-// 变量定义
-$primary: var(--es-brand-primary);
-$primary-dark: #324157;
-$text-primary: #1a1a1a;
-$text-secondary: #4a5568;
-$text-tertiary: #718096;
-$bg-light: #f7fafc;
+// 变量：颜色一律走 design-tokens（scripts/check-design-tokens 会把新增 hex 标红）。
+// 这里不再定义 $text-primary / $text-secondary 之类的近似色 —— 它们此前是
+// #1a1a1a / #4a5568 两个令牌外的自造值，与 --es-text-primary / -secondary 只差一点，
+// 结果同一页出现两种「主文字色」。
 
-// Hero 区域
+// Hero 区域（审计 P0-1 / §6.3-3）
+// 白底 + 双栏（价值主张 / 本站产品实拍），与主站、AntDV 站同构。
+// 删掉的：整屏蓝青渐变、三颗模糊光斑、浮动 logo、渐变裁切标题、假打字机光标、滚动提示鼠标 ——
+// 这些是 2018 年营销落地页的语汇，也是「三站三张脸」里最不认得出是同一个产品的一张。
 .hero {
-  position: relative;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
-  overflow: hidden;
-  color: #fff;
-  
-  // 动态背景
-  .hero-bg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    overflow: hidden;
-  }
-  
-  /* 光斑原来是 20s 无限漂移的背景动效（路线图 2.8：动效只用于状态变化，
-     不做无限循环的装饰）。留着形状与模糊，去掉动画 —— 画面照样有层次，
-     但不再吃 GPU、也不再和「克制」这条对打。 */
-  .gradient-orb {
-    position: absolute;
-    border-radius: 50%;
-    filter: blur(80px);
-    opacity: 0.5;
-  }
+  background: var(--es-bg);
+  border-bottom: 1px solid var(--es-border-lighter);
 
-  .orb-1 {
-    width: 500px;
-    height: 500px;
-    background: var(--es-brand-accent);
-    top: -10%;
-    left: -10%;
-  }
-
-  .orb-2 {
-    width: 400px;
-    height: 400px;
-    background: var(--es-brand-accent);
-    bottom: -10%;
-    right: -10%;
-  }
-  
-  .orb-3 {
-    width: 300px;
-    height: 300px;
-    background: var(--es-brand-primary-light);
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-  }
-
-  
   .hero-content {
-    position: relative;
-    z-index: 1;
     display: grid;
-    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
     align-items: center;
-    gap: 48px;
-    padding: 72px 20px 40px;
+    gap: var(--es-space-7);
+    padding: var(--es-space-8) 0 var(--es-space-7);
 
-    /* 窄屏：一列，文案居中，图仍然留在首屏内（路线图 2.1 要求 1 屏内出现证据） */
+    /* 窄屏：一列，文案居中，图仍然紧跟在首屏（路线图 2.1 要求 1 屏内出现证据） */
     @media (max-width: 1023px) {
       grid-template-columns: 1fr;
-      gap: 32px;
+      gap: var(--es-space-6);
       text-align: center;
-      padding: 40px 20px;
+      padding: var(--es-space-6) 0;
     }
   }
 
   .hero-copy {
     min-width: 0;
-    text-align: left;
-    color: #fff;
+  }
 
-    @media (max-width: 1023px) {
-      text-align: center;
+  /* 品牌名从 72px 渐变字降级成 13px 胶囊标签：H1 留给「这是什么」 */
+  .hero-eyebrow {
+    display: inline-block;
+    margin-bottom: var(--es-space-3);
+    font-size: var(--es-text-sm);
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--es-accent-text);
+  }
+
+  .hero-title {
+    margin: 0 0 var(--es-space-3);
+    /* 40px = --es-display-sm：子站 H1 比主站（56px）小一档，三站读起来是同一套阶梯 */
+    font-size: var(--es-display-sm);
+    line-height: var(--es-leading-tight);
+    letter-spacing: -0.02em;
+    font-weight: 800;
+    color: var(--es-text-primary);
+    /* 390px 下这行标题会断成「…的配置」+ 孤零零一个「层」；
+       平衡断行让两行长度接近（不支持的浏览器自然忽略） */
+    text-wrap: balance;
+
+    @media (max-width: 767px) {
+      font-size: var(--es-text-4xl);
     }
   }
 
-  /* 产品实拍：白底卡片 + 圆角 + 阴影，让浏览器截图读起来像「产品窗口」而不是一张图。 */
+  .hero-lead {
+    margin: 0 0 var(--es-space-3);
+    font-size: var(--es-text-xl);
+    font-weight: 500;
+    line-height: var(--es-leading-snug);
+    color: var(--es-text-regular);
+
+    @media (max-width: 767px) {
+      font-size: var(--es-text-lg);
+    }
+  }
+
+  .hero-desc {
+    margin: 0 0 var(--es-space-4);
+    max-width: 620px;
+    font-size: var(--es-text-md);
+    line-height: var(--es-leading-relaxed);
+    color: var(--es-text-secondary);
+
+    strong {
+      color: var(--es-text-primary);
+      font-weight: 600;
+    }
+  }
+
+  .hero-renderer {
+    margin-bottom: var(--es-space-5);
+  }
+
+  .renderer-badge {
+    display: inline-block;
+    padding: 4px 14px;
+    font-size: var(--es-text-sm);
+    font-weight: 500;
+    color: var(--es-brand-strong);
+    background: var(--es-brand-tint);
+    border: 1px solid var(--es-border-lighter);
+    border-radius: var(--es-radius-full);
+  }
+
+  .hero-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--es-space-3);
+    margin-bottom: var(--es-space-6);
+
+    @media (max-width: 1023px) {
+      justify-content: center;
+    }
+  }
+
+  .hero-stats {
+    display: flex;
+    gap: var(--es-space-7);
+    margin: 0;
+    padding-top: var(--es-space-5);
+    border-top: 1px solid var(--es-border-lighter);
+
+    @media (max-width: 1023px) {
+      justify-content: center;
+      text-align: center;
+      gap: var(--es-space-6);
+    }
+
+    /* 390px 下三项并排：数字缩一号，读得清也不把产品实拍挤出首屏 */
+    @media (max-width: 767px) {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: var(--es-space-3);
+      text-align: left;
+    }
+
+    .stat-item {
+      min-width: 0;
+    }
+
+    .stat-number {
+      font-size: var(--es-text-4xl);
+      font-weight: 700;
+      line-height: 1.1;
+      color: var(--es-text-primary);
+      font-variant-numeric: tabular-nums;
+
+      @media (max-width: 767px) {
+        font-size: var(--es-text-2xl);
+      }
+    }
+
+    .stat-label {
+      display: block;
+      margin-top: var(--es-space-1);
+      font-size: var(--es-text-sm);
+      line-height: 1.45;
+      color: var(--es-text-secondary);
+
+      @media (max-width: 767px) {
+        font-size: var(--es-text-xs);
+      }
+    }
+  }
+
+  /* 产品实拍：白底卡片 + 圆角 + 阴影，让浏览器截图读起来像「产品窗口」而不是一张图 */
   .hero-shot {
     margin: 0;
     min-width: 0;
-    border-radius: 12px;
+    border-radius: var(--es-radius-md);
     overflow: hidden;
-    background: #fff;
-    box-shadow: 0 24px 60px rgba(0, 0, 0, 0.28);
-    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: var(--es-bg);
+    border: 1px solid var(--es-border-light);
+    box-shadow: var(--es-shadow-lg);
 
     img {
       display: block;
@@ -849,1031 +718,629 @@ $bg-light: #f7fafc;
     }
 
     figcaption {
-      padding: 10px 14px;
-      border-top: 1px solid #ebeef5;
-      font-size: 13px;
-      color: #606266;
+      padding: var(--es-space-3) var(--es-space-4);
+      border-top: 1px solid var(--es-border-lighter);
+      font-size: var(--es-text-sm);
+      color: var(--es-text-secondary);
       text-align: left;
 
       a {
-        color: var(--es-brand-primary);
+        color: var(--es-brand-strong);
         text-decoration: none;
 
         &:hover { text-decoration: underline; }
       }
     }
   }
-
-  .hero-logo {
-    margin-bottom: 30px;
-
-    .logo-icon {
-      width: 80px;
-      height: 80px;
-      margin: 0;
-
-      @media (max-width: 1023px) {
-        margin: 0 auto;
-      }
-      background: rgba(255,255,255,0.2);
-      backdrop-filter: blur(10px);
-      border-radius: 20px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      border: 1px solid rgba(255,255,255,0.3);
-      
-      .logo-text {
-        font-size: 32px;
-        font-weight: 700;
-        background: linear-gradient(to right, #fff, var(--es-brand-primary-light));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-      }
-    }
-  }
-  
-  .hero-title {
-    /* 56px = 设计 token 的 --es-display（Landing H1）；72px 是阶梯外的自造字号 */
-    font-size: 56px;
-    font-weight: 700;
-    margin-bottom: 16px;
-    letter-spacing: -1.5px;
-    
-    .gradient-text {
-      background: linear-gradient(135deg, #fff 0%, var(--es-brand-primary-light) 50%, var(--es-brand-primary-light) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-
-    /* 定位语：.gradient-text 是渐变裁切，兄弟节点不继承也能正常显示；
-       这里显式给字号/字重，避免跟着 72px 的主标题一起放大。 */
-    .hero-title-sub {
-      display: block;
-      margin-top: 12px;
-      font-size: 22px;
-      font-weight: 400;
-      letter-spacing: 0;
-      color: rgba(255, 255, 255, 0.92);
-    }
-  }
-  
-  .hero-desc {
-    font-size: 24px;
-    font-weight: 300;
-    margin-bottom: 10px;
-    opacity: 0.95;
-    
-    .typing-text {
-      /* 原来是个假打字机光标（0.8s 闪烁）：文案是静态的，闪的只是装饰 */
-      color: rgba(255,255,255,0.92);
-    }
-  }
-  
-  .hero-subdesc {
-    font-size: 16px;
-    opacity: 0.8;
-    margin-bottom: 30px;
-    max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
-    line-height: 1.6;
-  }
-  
-  .hero-stats {
-    display: flex;
-    justify-content: flex-start;
-    gap: 48px;
-    margin-bottom: 36px;
-
-    /* 窄屏仍是居中单列（两列的左对齐会把统计挤到左边与文案错位） */
-    @media (max-width: 1023px) {
-      justify-content: center;
-      gap: 60px;
-      margin-bottom: 40px;
-    }
-
-    .stat-item {
-      text-align: center;
-      
-      .stat-number {
-        font-size: 48px;
-        font-weight: 700;
-        color: #fff;
-        line-height: 1;
-      }
-      
-      .stat-label {
-        display: block;
-        font-size: 14px;
-        opacity: 0.8;
-        margin-top: 5px;
-      }
-    }
-  }
-  
-  .hero-actions {
-    display: flex;
-    justify-content: flex-start;
-    gap: 20px;
-    margin-bottom: 0;
-
-    @media (max-width: 1023px) {
-      justify-content: center;
-      margin-bottom: 60px;
-    }
-
-    .btn {
-      display: inline-flex;
-      align-items: center;
-      gap: 8px;
-      padding: 14px 32px;
-      border-radius: 50px;
-      text-decoration: none;
-      font-size: 16px;
-      font-weight: 500;
-      transition: color var(--es-duration-base) var(--es-ease),
-        background-color var(--es-duration-base) var(--es-ease),
-        border-color var(--es-duration-base) var(--es-ease),
-        box-shadow var(--es-duration-slow) var(--es-ease),
-        transform var(--es-duration-slow) var(--es-ease);
-      
-      &.btn-primary {
-        background: #fff;
-        color: var(--es-brand-primary);
-        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
-        
-        &:hover {
-          transform: translateY(-3px);
-          box-shadow: 0 8px 25px rgba(0,0,0,0.3);
-          
-          i {
-            transform: translateX(4px);
-          }
-        }
-        
-        i {
-          transition: transform var(--es-duration-slow) var(--es-ease);
-        }
-      }
-      
-      &.btn-default {
-        background: rgba(255,255,255,0.1);
-        border: 2px solid rgba(255,255,255,0.3);
-        color: #fff;
-        backdrop-filter: blur(10px);
-        
-        &:hover {
-          background: rgba(255,255,255,0.2);
-          border-color: #fff;
-          transform: translateY(-3px);
-        }
-      }
-    }
-  }
-  
-  .scroll-hint {
-    position: absolute;
-    bottom: 40px;
-    left: 50%;
-    transform: translateX(-50%);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 10px;
-    opacity: 0.7;
-    /* 滚动提示不再上下弹（2s 无限）：它是个静态提示，不是状态 */
-    
-    .mouse {
-      width: 26px;
-      height: 40px;
-      border: 2px solid #fff;
-      border-radius: 13px;
-      position: relative;
-      
-      .wheel {
-        width: 4px;
-        height: 8px;
-        background: #fff;
-        border-radius: 2px;
-        position: absolute;
-        top: 8px;
-        left: 50%;
-        transform: translateX(-50%);
-      }
-    }
-    
-    span {
-      font-size: 12px;
-    }
-  }
 }
 
 // 三承诺（品牌单一真源）
 .promises {
-  padding: 48px 0 0;
-  background: #fff;
+  padding: var(--es-space-7) 0 0;
+  background: var(--es-bg);
 
   .promises-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 24px;
+    gap: var(--es-space-5);
+
+    @media (max-width: 767px) {
+      grid-template-columns: 1fr;
+    }
   }
 
   .promise-card {
-    padding: 32px 28px;
-    border: 1px solid #e2e8f0;
-    border-radius: 16px;
-    text-align: center;
-    transition: color var(--es-duration-base) var(--es-ease),
-      background-color var(--es-duration-base) var(--es-ease),
+    padding: var(--es-space-6) var(--es-space-5);
+    border: 1px solid var(--es-border-lighter);
+    border-radius: var(--es-radius-md);
+    background: var(--es-bg);
+    text-align: left;
+    transition:
       border-color var(--es-duration-base) var(--es-ease),
-      box-shadow var(--es-duration-slow) var(--es-ease),
-      transform var(--es-duration-slow) var(--es-ease);
+      box-shadow var(--es-duration-base) var(--es-ease),
+      transform var(--es-duration-base) var(--es-ease);
 
     &:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 16px 40px rgba(102, 126, 234, 0.12);
+      transform: translateY(-2px);
       border-color: var(--es-brand-primary);
+      box-shadow: var(--es-shadow-md);
     }
   }
 
   .promise-title {
-    font-size: 22px;
+    margin: 0 0 var(--es-space-2);
+    font-size: var(--es-text-xl);
     font-weight: 700;
-    color: $text-primary;
-    margin-bottom: 10px;
+    color: var(--es-text-primary);
   }
 
   .promise-claim {
     display: inline-block;
-    padding: 4px 14px;
-    margin-bottom: 14px;
-    font-size: 13px;
+    padding: 3px 12px;
+    margin-bottom: var(--es-space-3);
+    font-size: var(--es-text-sm);
     font-weight: 600;
     color: var(--es-brand-strong);
     background: var(--es-brand-tint);
-    border-radius: 20px;
+    border-radius: var(--es-radius-full);
   }
 
   .promise-desc {
-    font-size: 14px;
-    color: $text-secondary;
-    line-height: 1.7;
     margin: 0;
+    font-size: var(--es-text-base);
+    line-height: var(--es-leading-relaxed);
+    color: var(--es-text-secondary);
   }
 }
 
 // L2 头号案例
 .l2-case {
-  padding: 48px 0;
-  background: #f7fafc;
-
-  .section-header {
-    text-align: center;
-    margin-bottom: 32px;
-
-    .section-title {
-      font-size: 36px;
-      font-weight: 700;
-      color: $text-primary;
-      margin-bottom: 12px;
-    }
-
-    .section-desc {
-      font-size: 16px;
-      color: $text-secondary;
-      line-height: 1.7;
-      max-width: 720px;
-      margin: 0 auto;
-
-      code {
-        padding: 2px 6px;
-        background: #e2e8f0;
-        color: $primary;
-        border-radius: 4px;
-        font-family: 'Consolas', monospace;
-        font-size: 14px;
-      }
-    }
-  }
+  padding: var(--es-space-7) 0;
+  background: var(--es-bg-page);
 }
 
 // 三端通用
 .tri-section {
-  padding: 48px 0;
-  background: #fff;
+  padding: var(--es-space-7) 0;
+  background: var(--es-bg);
+}
 
+// 分节标题（三处共用同一套度量，此前 32/36/40 三种字号各写一遍）
+.l2-case,
+.tri-section,
+.features,
+.pain-points-section,
+.quick-start {
   .section-header {
     text-align: center;
-    margin-bottom: 32px;
+    margin-bottom: var(--es-space-6);
+
+    .section-badge {
+      display: inline-block;
+      margin-bottom: var(--es-space-3);
+      padding: 3px 12px;
+      font-size: var(--es-text-xs);
+      font-weight: 600;
+      color: var(--es-brand-strong);
+      background: var(--es-brand-tint);
+      border-radius: var(--es-radius-full);
+    }
 
     .section-title {
-      font-size: 36px;
+      margin: 0 0 var(--es-space-3);
+      font-size: var(--es-text-2xl);
       font-weight: 700;
-      color: $text-primary;
-      margin-bottom: 12px;
+      line-height: var(--es-leading-tight);
+      color: var(--es-text-primary);
     }
 
     .section-desc {
-      font-size: 16px;
-      color: $text-secondary;
-      line-height: 1.7;
       max-width: 720px;
       margin: 0 auto;
+      font-size: var(--es-text-md);
+      line-height: var(--es-leading-relaxed);
+      color: var(--es-text-secondary);
     }
+  }
+}
+
+// 「一份配置」的口径说明：本站是 Vue 2 渲染端，样例源码是 Element Plus 语法
+.l2-note {
+  margin: var(--es-space-4) 0 0;
+  padding: var(--es-space-3) var(--es-space-4);
+  background: var(--es-bg);
+  border-left: 3px solid var(--es-brand-primary);
+  border-radius: var(--es-radius-xs);
+  color: var(--es-text-secondary);
+  font-size: var(--es-text-sm);
+  line-height: var(--es-leading-relaxed);
+
+  code {
+    padding: 2px 6px;
+    background: var(--es-brand-tint);
+    color: var(--es-brand-strong);
+    border-radius: var(--es-radius-xs);
+    font-family: var(--es-font-mono);
+    font-size: var(--es-text-xs);
   }
 }
 
 // AI 一句话生成 CRUD 入口
 .ai-entry {
-  padding: 40px 0;
-  background: #fff;
+  padding: var(--es-space-6) 0;
+  background: var(--es-bg);
 }
 
 .ai-entry-card {
   display: block;
-  padding: 32px;
-  background: linear-gradient(135deg, #f0f9eb 0%, #ecf5ff 100%);
-  border: 1px solid #e6f4d8;
-  border-radius: 16px;
+  padding: var(--es-space-6);
+  background: var(--es-brand-tint);
+  border: 1px solid var(--es-border-lighter);
+  border-radius: var(--es-radius-md);
   text-align: center;
   text-decoration: none;
-  transition: color var(--es-duration-base) var(--es-ease),
-    background-color var(--es-duration-base) var(--es-ease),
+  transition:
     border-color var(--es-duration-base) var(--es-ease),
-    box-shadow var(--es-duration-slow) var(--es-ease),
-    transform var(--es-duration-slow) var(--es-ease);
+    box-shadow var(--es-duration-base) var(--es-ease),
+    transform var(--es-duration-base) var(--es-ease);
 
   &:hover {
-    transform: translateY(-3px);
-    box-shadow: 0 12px 28px rgba(102, 126, 234, 0.15);
+    transform: translateY(-2px);
+    border-color: var(--es-brand-primary);
+    box-shadow: var(--es-shadow-md);
   }
 
   h3 {
-    margin: 0 0 8px;
-    font-size: 20px;
+    margin: 0 0 var(--es-space-2);
+    font-size: var(--es-text-xl);
     font-weight: 700;
-    color: $text-primary;
+    color: var(--es-text-primary);
   }
 
   p {
     margin: 0;
-    color: $text-secondary;
-    font-size: 14px;
+    color: var(--es-text-secondary);
+    font-size: var(--es-text-base);
+    line-height: var(--es-leading-relaxed);
   }
 }
 
-// 特性展示
+// 组件能力
 .features {
-  padding: 80px 0;
-  background: #fff;
-  
-  .section-header {
-    text-align: center;
-    margin-bottom: 60px;
-   
-    
-    .section-badge {
-      display: inline-block;
-      padding: 6px 16px;
-      background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
-      color: #fff;
-      border-radius: 20px;
-      font-size: 12px;
-      font-weight: 500;
-      margin-bottom: 16px;
-    }
-    
-    .section-title {
-      font-size: 40px;
-      font-weight: 700;
-      color: $text-primary;
-      margin-bottom: 16px;
-    }
-    
-    .section-desc {
-      font-size: 18px;
-      color: $text-secondary;
-    }
-  }
-  
+  padding: var(--es-space-7) 0;
+  background: var(--es-bg);
+
   .feature-list {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 30px;
+    gap: var(--es-space-5);
+
+    @media (max-width: 992px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (max-width: 767px) {
+      grid-template-columns: 1fr;
+    }
   }
-  
+
   .feature-item {
     position: relative;
-    text-align: center;
-    padding: 40px 24px;
-    border-radius: 20px;
-    background: #fff;
-    border: 1px solid #e2e8f0;
-    transition: color var(--es-duration-base) var(--es-ease),
-      background-color var(--es-duration-base) var(--es-ease),
+    padding: var(--es-space-6) var(--es-space-5);
+    border-radius: var(--es-radius-md);
+    background: var(--es-bg);
+    border: 1px solid var(--es-border-lighter);
+    transition:
       border-color var(--es-duration-base) var(--es-ease),
-      box-shadow var(--es-duration-slow) var(--es-ease),
-      transform var(--es-duration-slow) var(--es-ease);
+      box-shadow var(--es-duration-base) var(--es-ease),
+      transform var(--es-duration-base) var(--es-ease);
     overflow: hidden;
     /* 入场 240ms 一次性：卡片滚进视口时不该再无限动 */
     animation: fadeInUp var(--es-duration-slow) var(--es-ease) forwards;
     opacity: 0;
-    
+
     &:hover {
-      transform: translateY(-10px);
-      box-shadow: 0 20px 40px rgba(102, 126, 234, 0.15);
-      border-color: transparent;
-      
-      .feature-hover {
-        opacity: 1;
-      }
-      
+      transform: translateY(-3px);
+      box-shadow: var(--es-shadow-md);
+      border-color: var(--es-brand-primary);
+
       .feature-icon {
-        transform: scale(1.1);
+        transform: scale(1.06);
       }
     }
-    
+
     .feature-hover {
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: linear-gradient(135deg, rgba(102, 126, 234, 0.03) 0%, rgba(118, 75, 162, 0.03) 100%);
-      opacity: 0;
-      transition: opacity var(--es-duration-base) var(--es-ease);
-      pointer-events: none;
+      display: none;
     }
-    
+
+    /* 图标原来四种颜色各配一种渐变（蓝 / 紫 / 绿 / 橙），同一类东西被分成了四种。
+       审计 §6.6：一个页面最多一个强调色 —— 统一为品牌色浅底 + 品牌色图标。 */
     .feature-icon {
-      width: 80px;
-      height: 80px;
-      margin: 0 auto 24px;
-      border-radius: 24px;
+      width: 44px;
+      height: 44px;
+      margin: 0 0 var(--es-space-4);
+      border-radius: var(--es-radius-sm);
       display: flex;
       align-items: center;
       justify-content: center;
-      transition: transform var(--es-duration-slow) var(--es-ease);
-      
-      &.blue {
-        background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
-      }
-      
-      &.purple {
-        background: linear-gradient(135deg, var(--es-brand-primary-light) 0%, var(--es-brand-accent) 100%);
-      }
-      
-      &.green {
-        background: linear-gradient(135deg, var(--es-success) 0%, var(--es-brand-accent) 100%);
-      }
-      
+      background: var(--es-brand-tint);
+      transition: transform var(--es-duration-base) var(--es-ease);
+
+      &.blue,
+      &.purple,
+      &.green,
       &.orange {
-        background: linear-gradient(135deg, var(--es-warning) 0%, var(--es-danger) 100%);
+        background: var(--es-brand-tint);
       }
-      
+
       i {
-        font-size: 36px;
-        color: #fff;
+        font-size: 22px;
+        color: var(--es-brand-strong);
       }
     }
-    
+
     h3 {
-      font-size: 20px;
-      color: $text-primary;
-      margin-bottom: 12px;
+      margin: 0 0 var(--es-space-2);
+      font-size: var(--es-text-md);
       font-weight: 600;
+      color: var(--es-text-primary);
     }
-    
+
     p {
-      font-size: 14px;
-      color: $text-secondary;
-      line-height: 1.7;
+      margin: 0;
+      font-size: var(--es-text-base);
+      line-height: var(--es-leading-relaxed);
+      color: var(--es-text-secondary);
     }
   }
 }
 
 // 痛点与解决方案
+// 红 / 绿两张对比卡是这次审计点名的「2018 年营销语汇」：问题与方案不该用两种
+// 高饱和语义色喊出来。现在两边都是中性卡片，差别只体现在图标语义与文字上，
+// 底色统一回到页面灰 —— 视线先落在「痛点 → 方案」的对应关系，而不是颜色。
 .pain-points-section {
-   padding: 0px 0 120px 0;
-  background: linear-gradient(180deg, #f7fafc 0%, #fff 100%);
-  
-  .section-header {
-    text-align: center;
-    margin-bottom: 60px;
-       padding-top: 60px;
-    .section-badge {
-      display: inline-block;
-      padding: 8px 20px;
-      background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
-      color: #fff;
-      border-radius: 20px;
-      font-size: 13px;
-      font-weight: 500;
-      margin-bottom: 16px;
-    }
-    
-    .section-title {
-      font-size: 40px;
-      font-weight: 700;
-      color: $text-primary;
-      margin-bottom: 16px;
-    }
-    
-    .section-desc {
-      font-size: 18px;
-      color: $text-secondary;
-    }
-  }
-  
+  padding: var(--es-space-7) 0;
+  background: var(--es-bg-page);
+
   // 痛点与解决方案对比网格
   .pain-solution-grid {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
-    gap: 40px;
-    margin-bottom: 80px;
+    gap: var(--es-space-6);
+    margin-bottom: var(--es-space-7);
     align-items: center;
   }
-  
+
   .subsection-title {
-    font-size: 20px;
-    font-weight: 600;
-    margin-bottom: 24px;
     display: flex;
     align-items: center;
-    gap: 10px;
-    
+    gap: var(--es-space-2);
+    margin: 0 0 var(--es-space-4);
+    font-size: var(--es-text-md);
+    font-weight: 600;
+    color: var(--es-text-regular);
+
     i {
-      font-size: 24px;
+      font-size: 18px;
     }
-    
+
     &.pain-title {
-      color: #f56c6c;
-      i { color: #f56c6c; }
+      color: var(--es-text-regular);
+      i { color: var(--es-text-secondary); }
     }
-    
+
     &.solution-title {
-      color: #67c23a;
-      i { color: #67c23a; }
+      color: var(--es-text-primary);
+      i { color: var(--es-brand-strong); }
     }
   }
-  
+
   .pain-cards, .solution-cards {
     .pain-card, .solution-card {
       display: flex;
-      gap: 16px;
-      padding: 20px;
-      border-radius: 12px;
-      margin-bottom: 16px;
-      transition: color var(--es-duration-base) var(--es-ease),
-        background-color var(--es-duration-base) var(--es-ease),
+      gap: var(--es-space-3);
+      padding: var(--es-space-4);
+      border-radius: var(--es-radius-md);
+      margin-bottom: var(--es-space-3);
+      background: var(--es-bg);
+      border: 1px solid var(--es-border-lighter);
+      transition:
         border-color var(--es-duration-base) var(--es-ease),
-        box-shadow var(--es-duration-slow) var(--es-ease),
-        transform var(--es-duration-slow) var(--es-ease);
-      
-      &:hover {
-        transform: translateX(5px);
+        box-shadow var(--es-duration-base) var(--es-ease);
+    }
+
+    .pain-card:hover {
+      border-color: var(--es-border);
+    }
+
+    .solution-card:hover {
+      border-color: var(--es-brand-primary);
+      box-shadow: var(--es-shadow-sm);
+    }
+
+    .pain-icon,
+    .solution-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: var(--es-radius-sm);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+
+      i {
+        font-size: 18px;
       }
     }
-    
-    .pain-card {
-      background: #fff;
-      border-left: 4px solid #f56c6c;
-      box-shadow: 0 2px 12px rgba(245, 108, 108, 0.1);
-      
-      &:hover {
-        box-shadow: 0 8px 24px rgba(245, 108, 108, 0.15);
-      }
-      
-      .pain-icon {
-        width: 44px;
-        height: 44px;
-        background: rgba(245, 108, 108, 0.1);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        
-        i {
-          font-size: 20px;
-          color: #f56c6c;
-        }
-      }
+
+    .pain-icon {
+      background: var(--es-fill);
+      i { color: var(--es-text-secondary); }
     }
-    
-    .solution-card {
-      background: #fff;
-      border-left: 4px solid #67c23a;
-      box-shadow: 0 2px 12px rgba(103, 194, 58, 0.1);
-      
-      &:hover {
-        box-shadow: 0 8px 24px rgba(103, 194, 58, 0.15);
-      }
-      
-      .solution-icon {
-        width: 44px;
-        height: 44px;
-        background: rgba(103, 194, 58, 0.1);
-        border-radius: 10px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        flex-shrink: 0;
-        
-        i {
-          font-size: 20px;
-          color: #67c23a;
-        }
-      }
+
+    .solution-icon {
+      background: var(--es-brand-tint);
+      i { color: var(--es-brand-strong); }
     }
-    
+
     .pain-content, .solution-content {
+      min-width: 0;
+
       h4 {
-        font-size: 16px;
+        margin: 0 0 var(--es-space-1);
+        font-size: var(--es-text-base);
         font-weight: 600;
-        color: $text-primary;
-        margin-bottom: 6px;
+        color: var(--es-text-primary);
       }
-      
+
       p {
-        font-size: 14px;
-        color: $text-secondary;
-        line-height: 1.6;
         margin: 0;
+        font-size: var(--es-text-sm);
+        line-height: var(--es-leading-normal);
+        color: var(--es-text-secondary);
       }
     }
   }
-  
+
   // 中间箭头
   .solution-arrow {
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding-top: 60px;
-    
+
     .arrow-line {
-      width: 60px;
-      height: 60px;
-      background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
-      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      background: var(--es-bg);
+      border: 1px solid var(--es-border-light);
+      border-radius: var(--es-radius-full);
       display: flex;
       align-items: center;
       justify-content: center;
-      margin-bottom: 12px;
-      box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-      
+      margin-bottom: var(--es-space-2);
+
       i {
-        font-size: 28px;
-        color: #fff;
+        font-size: 18px;
+        color: var(--es-brand-strong);
       }
     }
-    
+
     .arrow-text {
-      font-size: 14px;
+      font-size: var(--es-text-xs);
       font-weight: 600;
-      color: var(--es-brand-primary);
+      color: var(--es-text-secondary);
       white-space: nowrap;
     }
   }
-  
-  // 代码对比区域
-  .code-compare-section {
-    margin-bottom: 60px;
-    
-    .compare-title {
-      text-align: center;
-      margin-bottom: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 20px;
-      
-      .compare-badge {
-        padding: 8px 20px;
-        border-radius: 20px;
-        font-size: 14px;
-        font-weight: 600;
-        
-        &.traditional {
-          background: #fef0f0;
-          color: #f56c6c;
-          margin-left: -55px;
-        }
-        
-        &.eseui {
-          background: #f0f9eb;
-          color: #67c23a;
-        }
-      }
-      
-      .vs-text {
-        font-size: 18px;
-        font-weight: 700;
-        color: $text-tertiary;
-      }
-    }
-    
-    .code-compare-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 30px;
-    }
-  }
-  
-  // 代码窗口样式
-  .code-block-wrapper {
-    .code-window {
-      background: #1e1e1e;
-      border-radius: 16px;
-      overflow: hidden;
-      box-shadow: 0 20px 40px rgba(0,0,0,0.15);
-      height: 100%;
-      
-      &.traditional {
-        border: 2px solid #fde2e2;
-      }
-      
-      &.eseui {
-        border: 2px solid #e1f3d8;
-      }
-      
-      .code-header {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-        padding: 14px 18px;
-        background: #2d2d2d;
-        
-        .window-dots {
-          display: flex;
-          gap: 8px;
-          
-          .dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            
-            &.red { background: #ff5f56; }
-            &.yellow { background: #ffbd2e; }
-            &.green { background: #27c93f; }
-          }
-        }
-        
-        .code-title {
-          color: #999;
-          font-size: 13px;
-          margin-left: 10px;
-          font-family: 'Consolas', monospace;
-        }
-      }
-      
-      .code-body {
-        padding: 16px;
-        overflow-x: auto;
-        max-height: 450px;
-        overflow-y: auto;
-        
-        pre {
-          margin: 0;
-          
-          code {
-            font-family: 'Fira Code', 'Consolas', monospace;
-            font-size: 12px;
-            line-height: 1.5;
-            color: #d4d4d4;
-          }
-        }
-      }
-    }
-  }
-  
-  // 优势总结
+
+  // 优势总结：此前是整块蓝青渐变 + 渐变裁切数字，现在是页面上的一个统计条
   .advantage-summary {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: 30px;
-    margin-top: 60px;
-    padding: 40px;
-    background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
-    border-radius: 20px;
-    
+    gap: var(--es-space-6);
+    padding: var(--es-space-6);
+    background: var(--es-bg);
+    border: 1px solid var(--es-border-lighter);
+    border-radius: var(--es-radius-md);
+
+    @media (max-width: 992px) {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    @media (max-width: 767px) {
+      grid-template-columns: 1fr;
+      gap: var(--es-space-5);
+    }
+
     .advantage-item {
-      text-align: center;
-      color: #fff;
-      
-      .advantage-number {
-        font-size: 48px;
-        font-weight: 700;
-        margin-bottom: 8px;
-        background: linear-gradient(to right, #fff, var(--es-brand-primary-light));
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-      }
-      
-      .advantage-label {
-        font-size: 16px;
-        font-weight: 600;
-        margin-bottom: 6px;
-      }
-      
-      .advantage-desc {
-        font-size: 13px;
-        opacity: 0.85;
-      }
+      min-width: 0;
+    }
+
+    .advantage-number {
+      font-size: var(--es-text-3xl);
+      font-weight: 700;
+      line-height: 1.1;
+      margin-bottom: var(--es-space-2);
+      color: var(--es-text-primary);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .advantage-label {
+      margin-bottom: var(--es-space-1);
+      font-size: var(--es-text-base);
+      font-weight: 600;
+      color: var(--es-text-primary);
+    }
+
+    .advantage-desc {
+      font-size: var(--es-text-sm);
+      line-height: var(--es-leading-normal);
+      color: var(--es-text-secondary);
     }
   }
 }
 
 // 快速开始
+// 此前是第二块整屏蓝青渐变（hero 一块、这里一块），把「三步上手」压成了营销收尾。
+// 现在回到白底：步骤编号用品牌色浅底，代码块用深色，与文档页的代码块同一种观感。
 .quick-start {
-  padding: 120px 0;
-  background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
-  color: #fff;
-  
-  .section-header {
-    text-align: center;
-    margin-bottom: 60px;
-    
-    &.light {
-      .section-badge {
-        background: rgba(255,255,255,0.2);
-            border-radius: 20px;
-            display: inline-block;
-            padding: 02px 20px;
-      }
-      
-      .section-title {
-        padding: 20px 0px;
-        color: #fff;
-        
-        
-      }
-      
-      .section-desc {
-        color: rgba(255,255,255,0.8);
-      }
-    }
-  }
-  
+  padding: var(--es-space-7) 0 var(--es-space-8);
+  background: var(--es-bg);
+
   .install-steps {
     max-width: 800px;
-    margin: 0 auto 50px;
-    
-    .step {
-      position: relative;
-      padding-left: 60px;
-      padding-bottom: 40px;
-      cursor: pointer;
-      
-      &:last-child {
-        padding-bottom: 0;
-      }
-      
-      &.active {
-        .step-number {
-          background: #fff;
-          color: var(--es-brand-primary);
-          transform: scale(1.1);
-        }
-        
-        .step-content h4 {
-          color: #fff;
-        }
-      }
-      
+    margin: 0 auto var(--es-space-6);
+  }
+
+  .step {
+    position: relative;
+    padding-left: 56px;
+    padding-bottom: var(--es-space-6);
+    cursor: pointer;
+
+    &:last-child {
+      padding-bottom: 0;
+    }
+
+    &.active {
       .step-number {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 40px;
-        height: 40px;
-        background: rgba(255,255,255,0.2);
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 16px;
+        background: var(--es-brand-strong);
+        color: #fff;
+      }
+
+      .step-content h4 {
+        color: var(--es-text-primary);
+      }
+    }
+
+    .step-number {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 36px;
+      height: 36px;
+      background: var(--es-brand-tint);
+      color: var(--es-brand-strong);
+      border-radius: var(--es-radius-full);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: var(--es-text-base);
+      font-weight: 600;
+      transition:
+        background-color var(--es-duration-base) var(--es-ease),
+        color var(--es-duration-base) var(--es-ease);
+    }
+
+    .step-line {
+      position: absolute;
+      left: 17px;
+      top: 36px;
+      bottom: 0;
+      width: 2px;
+      background: var(--es-border-lighter);
+    }
+
+    .step-content {
+      h4 {
+        margin: 0 0 var(--es-space-3);
+        font-size: var(--es-text-md);
         font-weight: 600;
-        transition: background-color var(--es-duration-base) var(--es-ease), color var(--es-duration-base) var(--es-ease);
+        line-height: 36px;
+        color: var(--es-text-secondary);
+        transition: color var(--es-duration-base) var(--es-ease);
       }
-      
-      .step-line {
-        position: absolute;
-        left: 20px;
-        top: 40px;
-        bottom: 0;
-        width: 2px;
-        background: rgba(255,255,255,0.2);
-      }
-      
-      .step-content {
-        h4 {
-          font-size: 18px;
-          margin-bottom: 12px;
-          color: rgba(255,255,255,0.7);
-          transition: color var(--es-duration-base) var(--es-ease);
-        }
-        
-        .step-detail {
-          pre {
-            background: rgba(0,0,0,0.3);
-            border-radius: 12px;
-            padding: 20px;
-            overflow-x: auto;
-            
-            code {
-              color: #fff;
-              font-family: 'Fira Code', Consolas, monospace;
-              font-size: 14px;
-              line-height: 1.6;
-            }
+
+      .step-detail {
+        pre {
+          background: #1e1e1e;
+          border-radius: var(--es-radius-md);
+          padding: var(--es-space-4);
+          overflow-x: auto;
+          margin: 0;
+
+          code {
+            color: #dcdfe4;
+            font-family: var(--es-font-mono);
+            font-size: var(--es-text-sm);
+            line-height: var(--es-leading-normal);
           }
         }
       }
     }
   }
-  
+
   .quick-actions {
     text-align: center;
   }
 }
 
-// CTA 区域
-.cta-section {
-  padding: 100px 0;
-  background: #fff;
-  
-  .cta-content {
-    text-align: center;
-    max-width: 600px;
-    margin: 0 auto;
-    
-    h2 {
-      font-size: 36px;
-      font-weight: 700;
-      color: $text-primary;
-      margin-bottom: 16px;
-    }
-    
-    p {
-      font-size: 18px;
-      color: $text-secondary;
-      margin-bottom: 40px;
-    }
-    
-    .cta-actions {
-      display: flex;
-      justify-content: center;
-      gap: 20px;
-    }
-  }
-}
-
 // 按钮样式
+// 圆角 50px（胶囊）与渐变填充是 2018 年落地页的形态；现在是 8px 圆角 + 实心品牌蓝。
+// 填充色用 --es-brand-strong（白字 5.17:1，AA）而不是 --es-brand-primary（3.68:1）：
+// #3b82f6 只做填充装饰可以，承载 16px 白字不够。
 .btn {
   display: inline-flex;
   align-items: center;
-  gap: 8px;
-  padding: 12px 28px;
-  border-radius: 50px;
+  gap: var(--es-space-2);
+  padding: 10px 20px;
+  border-radius: var(--es-radius-sm);
   text-decoration: none;
-  font-size: 15px;
+  font-size: var(--es-text-base);
   font-weight: 500;
-  transition: color var(--es-duration-base) var(--es-ease),
+  transition:
     background-color var(--es-duration-base) var(--es-ease),
     border-color var(--es-duration-base) var(--es-ease),
-    box-shadow var(--es-duration-slow) var(--es-ease),
-    transform var(--es-duration-slow) var(--es-ease);
+    color var(--es-duration-base) var(--es-ease),
+    box-shadow var(--es-duration-base) var(--es-ease),
+    transform var(--es-duration-base) var(--es-ease);
   cursor: pointer;
-  border: none;
-  
-  &.btn-lg {
-    padding: 16px 32px;
-    font-size: 16px;
+  border: 1px solid transparent;
+
+  i {
+    transition: transform var(--es-duration-base) var(--es-ease);
   }
-  
+
+  &:hover i {
+    transform: translateX(3px);
+  }
+
+  &.btn-lg {
+    padding: 12px 24px;
+    font-size: var(--es-text-md);
+  }
+
   &.btn-primary {
-    background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
+    background: var(--es-brand-strong);
     color: #fff;
-    box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
-    
+
     &:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 8px 25px rgba(102, 126, 234, 0.4);
+      background: #1d4ed8;
+      box-shadow: var(--es-shadow-sm);
     }
   }
-  
+
+  &.btn-default {
+    background: var(--es-bg);
+    border-color: var(--es-border);
+    color: var(--es-text-regular);
+
+    &:hover {
+      border-color: var(--es-brand-primary);
+      color: var(--es-brand-strong);
+    }
+  }
+
   &.btn-outline {
     background: transparent;
-    border: 2px solid var(--es-brand-primary);
-    color: var(--es-brand-primary);
-    
+    border-color: var(--es-border);
+    color: var(--es-text-regular);
+
     &:hover {
-      background: var(--es-brand-primary);
-      color: #fff;
+      border-color: var(--es-brand-primary);
+      color: var(--es-brand-strong);
     }
   }
 }
@@ -1900,132 +1367,34 @@ $bg-light: #f7fafc;
   }
 }
 
-// 响应式
+// 响应式：各段自己的断点写在各段里（hero 两列、卡片网格），这里只留跨组件的两处
 @media (max-width: 992px) {
-  .hero {
-    .hero-title {
-      font-size: 52px;
-
-      .hero-title-sub {
-        font-size: 19px;
-      }
-    }
-    
-    .hero-stats {
-      gap: 40px;
-    }
-  }
-  
-  .features {
-    .feature-list {
-      grid-template-columns: repeat(2, 1fr);
-    }
-  }
-  
   .pain-points-section {
     .pain-solution-grid {
       grid-template-columns: 1fr;
-      gap: 30px;
+      gap: var(--es-space-4);
     }
-    
+
+    /* 竖排时中间那枚箭头从上指变成下指 */
     .solution-arrow {
-      padding-top: 0;
       transform: rotate(90deg);
-      
+
       .arrow-text {
         transform: rotate(-90deg);
       }
     }
-    
-    /* minmax(0, 1fr) + min-width:0：代码窗口里的 <pre> 有 min-content 宽度，
-       单列 1fr 会被它顶到 892px，整页因此出现横向滚动条。 */
-    .code-compare-grid {
-      grid-template-columns: minmax(0, 1fr);
-    }
-
-    .code-block-wrapper {
-      min-width: 0;
-    }
-    
-    .advantage-summary {
-      grid-template-columns: repeat(2, 1fr);
-    }
   }
 }
 
-@media (max-width: 768px) {
-  .hero {
-    .hero-title {
-      font-size: 40px;
-
-      .hero-title-sub {
-        font-size: 17px;
-      }
-    }
-    
-    .hero-desc {
-      font-size: 18px;
-    }
-    
-    /* 三个统计竖着排会吃掉 200+ px，把产品实拍推到第二屏之外 —— T1 要求首屏就能
-       看到产品。改成一行三项、数字缩一号：读得清，也不挡住下面的实拍。 */
-    .hero-stats {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 12px;
-
-      .stat-item {
-        min-width: 0;
-
-        .stat-number {
-          font-size: 30px;
-        }
-
-        .stat-label {
-          font-size: 12px;
-          line-height: 1.35;
-        }
-      }
-    }
-    
-    /* 两个 CTA 竖排会多占 70px，产品实拍就被推到第二屏；这两个按钮的文案都不长，
-       390 宽度下一行放得下 */
-    .hero-actions {
-      flex-direction: row;
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 12px;
-
-      .btn {
-        padding: 12px 24px;
-        font-size: 15px;
-      }
-    }
-  }
-  
-  .features {
-    padding: 80px 0;
-
-    .feature-list {
-      grid-template-columns: 1fr;
-    }
-
-    .section-title {
-      font-size: 28px;
-    }
+@media (max-width: 767px) {
+  .container {
+    padding: 0 var(--es-space-4);
   }
 
-  .promises {
-    .promises-grid {
-      grid-template-columns: 1fr;
-    }
-  }
-  
-  .cta-section {
-    .cta-actions {
-      flex-direction: column;
-      align-items: center;
-    }
+  /* 390px 下两个 CTA 并排会挤成两行窄条，铺满更利落 */
+  .hero .hero-actions .btn {
+    flex: 1 1 auto;
+    justify-content: center;
   }
 }
 

@@ -227,12 +227,15 @@ function checkFormTypeClaims() {
 function checkSiteHomeFigures() {
   const formTypes = validFormTypes()
   const renderers = rendererCount()
-  const glueReduction = diff ? Math.round(diff.metrics.markupPlusGlue.reduction) : null
+  // 降幅取**原始值**（76.5）而不是四舍五入后的整数：三站必须显示同一组数字，
+  // es-eui 的计数动画此前取整成 77%，与主站 / slogan.json 的 76.5% 对不上
+  // （审计 P0-3「三站品牌数字口径冲突」）。动画可以动，数字不能变。
+  const glueReduction = diff ? diff.metrics.markupPlusGlue.reduction : null
 
   // ── es-eui 首页：计数动画的三个 data-count ──
   const euiHome = read('es-eui/src/views/home/index.vue')
   if (euiHome) {
-    const items = [...euiHome.matchAll(/data-count="(\d+)"[\s\S]{0,120}?<span class="stat-label">([^<]+)<\/span>/g)]
+    const items = [...euiHome.matchAll(/data-count="(\d+(?:\.\d+)?)"[\s\S]{0,120}?<span class="stat-label">([^<]+)<\/span>/g)]
     if (!items.length) {
       fail('未能从 es-eui 首页解析出 hero 统计项（结构变了请同步本脚本，否则这里会静默失效）')
     }

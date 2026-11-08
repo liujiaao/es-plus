@@ -21,6 +21,11 @@
   --es-brand-primary-light: #dbeafe;  /* 品牌主色浅底 */
   --es-brand-accent: #06b6d4;         /* 品牌强调色（青绿，配置/数据） */
 
+  /* 强调色的「可读版本」：--es-brand-accent 在白底只有 2.43:1，
+   * 只能做装饰（渐变、色块、非文本图形），不能承载文字。
+   * 需要青绿文字时用这个（白底 5.36:1，页面底 5.06:1）。 */
+  --es-accent-text: #0e7490;
+
   /* ── 中性色：文字 ── */
   --es-text-primary: #1f2329;         /* 主文字 / 标题 */
   --es-text-regular: #4b5563;         /* 正文 */
@@ -121,6 +126,7 @@
  */
 .dark {
   --es-brand-primary-light: #1e3a5f;
+  --es-accent-text: #22d3ee;          /* 暗底 12.6:1 */
 
   --es-text-primary: #e5eaf3;
   --es-text-regular: #cfd3dc;
@@ -249,6 +255,17 @@
   --es-content-wide: 960px;   /* 表格 / API 表可突破到这里 */
   --es-toc-width: 220px;
   --es-gutter: 32px;
+
+  /* ── Landing（三站首页共用的同一张网格）──
+   * 审计 §3.3/§3.7：主站此前在 1200 / 1440 / 800 三种宽度间切换，左边缘
+   * 在 168px 与 288px 之间来回跳。首页所有 section 统一到 1200 + 48px 内边距，
+   * 只有「满宽色带」可以例外，且色带内部仍套同一个 1200 容器。
+   * 竖向节奏只留三档：64（大节）/ 40（节内）/ 48（小节），不再手写 100/72/56。
+   * 80 而非 96：两节相邻时 96 会让中间空白到 192px，首页总高多出 300+。 */
+  --es-landing-max: 1200px;
+  --es-landing-pad: 48px;
+  --es-landing-gap: 64px;
+  --es-landing-gap-sm: 40px;
 
   /* ── 断点 ──
    * CSS 变量不能用在 @media 的媒体特性里；这四个名字是给文档、脚本与各站

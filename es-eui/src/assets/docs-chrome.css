@@ -196,3 +196,175 @@
 
   .es-doc-meta-date { margin-left: 0; }
 }
+
+/* ── 站内搜索（es-pc / es-eui 顶栏入口）──────────────────────────────
+ * 审计 P1-4：三站 header 应当都具备搜索。主站有全量索引与独立的搜索面板，
+ * 这两站此前连入口都没有。这里的口径是「站内页面检索」而不是全文检索：
+ *   · 词表来自各自路由表的 meta.title（不需要再维护第二份清单，新增页面自动可搜）；
+ *   · 排序按标题命中优先，其次是路径命中；
+ *   · 键盘完整（Ctrl/⌘+K 打开、↑↓ 选择、Enter 跳转、Esc 关闭）。
+ * 全文检索要另建索引（主站 scripts/check-search-index.mjs 那套），
+ * 属于 S4「共享 chrome」的后续批次；这里先保证「有、能用、键盘可达」。
+ *
+ * 样式放共享主题而不是各组件 scoped：两站必须长得一样，且设计令牌守卫
+ * （check:design-tokens）只扫站点源码 —— 共享主题是令牌的唯一合法落点。 */
+.es-search {
+  display: inline-flex;
+}
+
+.es-search-trigger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--es-space-2);
+  height: 32px;
+  padding: 0 var(--es-space-3);
+  border: 1px solid var(--es-border-light);
+  border-radius: var(--es-radius-full);
+  background: var(--es-bg);
+  color: var(--es-text-secondary);
+  font-size: var(--es-text-sm);
+  cursor: pointer;
+  transition:
+    border-color var(--es-duration-base) var(--es-ease),
+    color var(--es-duration-base) var(--es-ease),
+    background-color var(--es-duration-base) var(--es-ease);
+}
+
+.es-search-trigger:hover {
+  border-color: var(--es-brand-primary);
+  color: var(--es-brand-strong);
+  background: var(--es-brand-tint);
+}
+
+.es-search-trigger:focus-visible {
+  outline: 2px solid var(--es-brand-strong);
+  outline-offset: 2px;
+}
+
+.es-search-trigger kbd {
+  padding: 0 var(--es-space-1);
+  border: 1px solid var(--es-border-lighter);
+  border-radius: var(--es-radius-xs);
+  background: var(--es-fill);
+  color: var(--es-text-secondary);
+  font-family: var(--es-font-mono);
+  font-size: var(--es-text-xs);
+  line-height: 1.6;
+}
+
+.es-search-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 4000;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: 12vh var(--es-space-4) var(--es-space-4);
+  background: rgba(15, 23, 42, 0.45);
+}
+
+.es-search-panel {
+  width: 100%;
+  max-width: 560px;
+  overflow: hidden;
+  background: var(--es-bg);
+  border: 1px solid var(--es-border);
+  border-radius: var(--es-radius-md);
+  box-shadow: var(--es-shadow-lg);
+}
+
+.es-search-input {
+  width: 100%;
+  padding: var(--es-space-4) var(--es-space-4);
+  border: none;
+  border-bottom: 1px solid var(--es-border-lighter);
+  background: transparent;
+  color: var(--es-text-primary);
+  font-size: var(--es-text-base);
+  outline: none;
+}
+
+.es-search-input::placeholder {
+  color: var(--es-text-secondary);
+}
+
+.es-search-results {
+  max-height: 52vh;
+  margin: 0;
+  padding: var(--es-space-1);
+  overflow-y: auto;
+  list-style: none;
+}
+
+.es-search-item {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--es-space-3);
+  padding: var(--es-space-2) var(--es-space-3);
+  border-radius: var(--es-radius-sm);
+  color: var(--es-text-primary);
+  cursor: pointer;
+}
+
+.es-search-item.is-active {
+  background: var(--es-brand-tint);
+  color: var(--es-brand-strong);
+}
+
+.es-search-item .es-search-item-title {
+  font-size: var(--es-text-sm);
+  font-weight: 600;
+}
+
+.es-search-item .es-search-item-path {
+  flex-shrink: 0;
+  color: var(--es-text-secondary);
+  font-family: var(--es-font-mono);
+  font-size: var(--es-text-xs);
+}
+
+.es-search-empty {
+  margin: 0;
+  padding: var(--es-space-6) var(--es-space-4);
+  color: var(--es-text-secondary);
+  font-size: var(--es-text-sm);
+  text-align: center;
+}
+
+.es-search-foot {
+  display: flex;
+  gap: var(--es-space-4);
+  padding: var(--es-space-2) var(--es-space-4);
+  border-top: 1px solid var(--es-border-lighter);
+  color: var(--es-text-secondary);
+  font-size: var(--es-text-xs);
+}
+
+.es-search-foot kbd {
+  padding: 0 var(--es-space-1);
+  border: 1px solid var(--es-border-lighter);
+  border-radius: var(--es-radius-xs);
+  background: var(--es-fill);
+  color: var(--es-text-secondary);
+  font-family: var(--es-font-mono);
+}
+
+@media (max-width: 768px) {
+  .es-search-overlay {
+    padding: 8vh var(--es-space-3) var(--es-space-3);
+  }
+
+  .es-search-foot {
+    display: none;
+  }
+
+  .es-search-trigger kbd,
+  .es-search-trigger .es-search-trigger-text {
+    display: none;
+  }
+
+  .es-search-trigger {
+    padding: 0 var(--es-space-2);
+  }
+}

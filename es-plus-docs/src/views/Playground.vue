@@ -459,23 +459,33 @@ usePageMeta('playground')
   margin: 80px auto;
 }
 
+/* 与 AiCrud 页头同一套语言：浅色卡 + 顶部品牌雾面 + 圆角描边。
+   此前是一条居中的大字 + 一条分隔线，和下面的工作区没有「页头 / 工具」之分。 */
 .playground-header {
+  position: relative;
+  margin-bottom: var(--es-space-6);
+  padding: var(--es-space-6);
+  border: 1px solid var(--es-border-lighter);
+  border-radius: var(--es-radius-lg);
   text-align: center;
-  margin-bottom: 32px;
-  padding-bottom: 24px;
-  border-bottom: 1px solid var(--border-color-lighter);
+  background:
+    radial-gradient(720px 220px at 50% 0%, rgba(59, 130, 246, 0.12), rgba(59, 130, 246, 0) 70%),
+    var(--es-bg);
 }
 
 .playground-title {
-  font-size: 36px;
+  margin: 0 0 var(--es-space-2);
+  font-size: var(--es-text-4xl);
+  line-height: var(--es-leading-tight);
   font-weight: 700;
-  color: var(--text-color-primary);
-  margin-bottom: 12px;
+  letter-spacing: -0.02em;
+  color: var(--es-text-primary);
 }
 
 .playground-desc {
-  font-size: 16px;
-  color: var(--text-color-secondary);
+  margin: 0;
+  font-size: var(--es-text-md);
+  color: var(--es-text-secondary);
 }
 
 .playground-toolbar {

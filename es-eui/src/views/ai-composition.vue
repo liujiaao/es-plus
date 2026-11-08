@@ -315,7 +315,7 @@ export default {
   border-radius: 10px;
   font-size: 12px;
   color: #fff;
-  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
+  background: var(--es-brand-strong);
 }
 .cg-claim {
   font-size: 13px;
@@ -327,7 +327,7 @@ export default {
   border-radius: 8px;
   font-size: 12px;
   color: #fff;
-  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
+  background: var(--es-brand-strong);
 }
 
 .cg-controls {

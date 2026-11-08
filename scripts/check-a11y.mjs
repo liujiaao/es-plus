@@ -231,6 +231,10 @@ function checkContrast() {
   assertContrast('浅色 text-secondary/白', color(lightVars, '--es-text-secondary'), WHITE, 4.5)
   assertContrast('浅色 text-secondary/页面底', color(lightVars, '--es-text-secondary'), PAGE_LIGHT, 4.5)
   assertContrast('浅色 text-secondary/填充底', color(lightVars, '--es-text-secondary'), FILL_LIGHT, 4.5)
+  // 品牌强调色只能做装饰：白底 2.43:1 / 页面底 2.30:1，远低于正文门槛。
+  // 需要青绿文字时必须走这个「可读版本」（白底 5.36 / 页面底 5.06）。
+  assertContrast('浅色 accent-text/白', color(lightVars, '--es-accent-text'), WHITE, 4.5)
+  assertContrast('浅色 accent-text/页面底', color(lightVars, '--es-accent-text'), PAGE_LIGHT, 4.5)
 
   // 深色
   assertContrast('深色 正文/暗底', color(darkVars, '--es-doc-text'), DARK_BASE, 4.5)
@@ -239,6 +243,7 @@ function checkContrast() {
   assertContrast('深色 链接/暗底', color(darkVars, '--es-link'), DARK_BASE, 4.5)
   assertContrast('深色 正文/卡片底', color(darkVars, '--es-doc-text'), DARK_BG, 4.5)
   assertContrast('深色 text-secondary/暗底', color(darkVars, '--es-text-secondary'), DARK_BASE, 4.5)
+  assertContrast('深色 accent-text/暗底', color(darkVars, '--es-accent-text'), DARK_BASE, 4.5)
 
   // 提示框标题：底色是 CSS 里的字面量，先确认它们还在，否则这条断言就失去意义
   const callouts = [
@@ -266,7 +271,7 @@ function checkContrast() {
   if (!skipBg) fail('对比度：skip link 的底色不是字面色，无法校验')
   else assertContrast('skip link 白字/深蓝底', WHITE, parseColor(skipBg[1]), 4.5)
 
-  if (!failed) ok(`对比度：${callouts.length + 21} 组配对全部达标（正文 4.5 / 非文本 3.0）`)
+  if (!failed) ok(`对比度：${callouts.length + 24} 组配对全部达标（正文 4.5 / 非文本 3.0）`)
 }
 
 // ── E. 裸 outline:none ─────────────────────────────────────────────────────

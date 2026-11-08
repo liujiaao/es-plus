@@ -21,13 +21,30 @@
         </div>
         <h2 class="section-title">使用示例</h2>
       </div>
+      <!-- 审计 P0-4：24 个完整示例曾全在这一个路由里（20,492px）。拆成四页后，
+           本页只留「基础与数据 + 列渲染」，其余三组走下面的子页入口。 -->
+      <div class="demo-group-links">
+        <router-link to="/component/estable">
+          基础与数据
+        </router-link>
+        <router-link to="/component/estable-columns">
+          列配置与合并
+        </router-link>
+        <router-link to="/component/estable-editing">
+          编辑与交互
+        </router-link>
+        <router-link to="/component/estable-business">
+          业务闭环
+        </router-link>
+      </div>
       <CodePlayground
-        v-for="ex in tableExamples"
+        v-for="(ex, i) in tableExamples"
         :key="ex.key"
         :id="'demo-' + ex.key"
         :title="ex.title"
         :description="ex.description"
         :code="getRawCode('table', ex.key)"
+        :default-expanded="i < 2"
       >
         <template #preview>
           <component :is="getComponent('table', ex.key)" v-if="getComponent('table', ex.key)" />
@@ -708,12 +725,18 @@
 import CodePlayground from '@/components/CodePlayground.vue'
 import { tableExamples, getComponent, getRawCode } from '@/examples'
 
+// 本页的示例子集：基础 / 数据请求 / 列渲染。其余示例在三个子页里
+// （EsTableSubDocs.vue），清单仍只有 examples/index.js 一份。
+// 这几个 key 同时被案例目录的深链引用（#demo-Basic / #demo-CustomHttp /
+// #demo-RenderColumn / #demo-MultiSelect），挪页会让深链失效 —— 它们留在本页。
+const PAGE_KEYS = ['Basic', 'AutoRequest', 'CustomHttp', 'Linkage', 'RenderColumn', 'MultiSelect']
+
 export default {
   name: 'EsTableDocs',
   components: { CodePlayground },
   data() {
     return {
-      tableExamples
+      tableExamples: tableExamples.filter((ex) => PAGE_KEYS.includes(ex.key))
     }
   },
   methods: {
@@ -762,6 +785,37 @@ export default {
     padding-bottom: 10px;
     border-bottom: 2px solid var(--es-brand-primary);
     color: #303133;
+  }
+
+  // 示例子页入口：拆页后靠它（与侧栏）互通，一个强调色，当前页高亮
+  .demo-group-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 20px;
+
+    a {
+      padding: 5px 14px;
+      border: 1px solid var(--es-border-light);
+      border-radius: var(--es-radius-full);
+      color: var(--es-text-regular);
+      font-size: 13px;
+      text-decoration: none;
+      transition: color var(--es-duration-fast) var(--es-ease),
+        border-color var(--es-duration-fast) var(--es-ease),
+        background-color var(--es-duration-fast) var(--es-ease);
+
+      &:hover {
+        color: var(--es-brand-strong);
+        border-color: var(--es-brand-primary);
+      }
+
+      &.router-link-exact-active {
+        color: var(--es-brand-strong);
+        background: var(--es-brand-tint);
+        border-color: var(--es-brand-primary);
+      }
+    }
   }
 
   h3 {

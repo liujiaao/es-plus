@@ -75,6 +75,10 @@ export const DOC_SOURCES = {
     // 组件站的「快速开始」复用指南页的组件（路由就是这么接的），日期也就同源
     '/component/quickstart': 'es-eui/src/views/guide/quickstart.vue',
     '/component/estable': 'es-eui/src/views/docs/EsTableDocs.vue',
+    // 示例子页共用一份组件，日期同源（审计 P0-4 拆页）
+    '/component/estable-columns': 'es-eui/src/views/docs/EsTableSubDocs.vue',
+    '/component/estable-editing': 'es-eui/src/views/docs/EsTableSubDocs.vue',
+    '/component/estable-business': 'es-eui/src/views/docs/EsTableSubDocs.vue',
     '/component/vxetable': 'es-eui/src/views/docs/VxeTableDocs.vue',
     '/component/esform': 'es-eui/src/views/docs/EsFormDocs.vue',
     '/component/esdialog': 'es-eui/src/views/docs/EsDialogDocs.vue',

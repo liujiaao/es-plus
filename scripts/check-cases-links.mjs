@@ -243,13 +243,23 @@ function examplesIndexKeys(arrayName) {
 /**
  * es-eui 文档页若用 `:id="'demo-' + ex.key"` 批量渲染示例，
  * 返回该页可用锚点后缀（示例 key）集合；否则返回 null（说明是静态 id 页面）。
+ *
+ * 审计 P0-4 之后表格页拆成四页：主页只渲染一个子集（`const PAGE_KEYS = [...]`
+ * 后 filter），v-for 也带上了下标（`(ex, i) in tableExamples`）。这里优先读
+ * 页面自己的子集常量 —— 直接拿 examples/index.js 的全量 key 会「过度放行」：
+ * 某个示例其实已经挪到子页，主页锚点却仍被判为存在。
  */
 function euiDemoKeys(viewSrc, viewFile) {
   if (!/:id="'demo-'\s*\+\s*ex\.key"/.test(viewSrc)) return null
-  const arr = /v-for="ex in (\w+)"/.exec(viewSrc)
+  const arr = /v-for="(?:\([^)]*\)|\w+) in (\w+)"/.exec(viewSrc)
   if (!arr) {
     fail(`${viewFile} 用了 demo- 动态锚点，但找不到 \`v-for="ex in <示例数组>"\` —— 锚点无法核对`)
     return null
+  }
+  const subset = /const\s+[A-Z_]*KEYS[A-Z_]*\s*=\s*\[([^\]]*)\]/.exec(viewSrc)
+  if (subset) {
+    const keys = [...subset[1].matchAll(/'([^']+)'|"([^"]+)"/g)].map((m) => m[1] || m[2])
+    if (keys.length) return new Set(keys)
   }
   const keys = examplesIndexKeys(arr[1])
   if (!keys) fail(`es-eui/src/examples/index.js 中找不到示例数组 ${arr[1]}（${viewFile} 依赖它）`)

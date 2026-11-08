@@ -26,6 +26,8 @@
       </div>
       <div class="header-right">
         <a-space :size="16">
+          <!-- 站内搜索（审计 P1-4）：词表取自路由 meta.title，样式见 docs-chrome.css -->
+          <DocSearch />
           <a-dropdown :trigger="['click']">
             <a-button type="link" class="site-switcher-btn" aria-label="切换站点">
               <template #icon><SwapOutlined /></template>
@@ -42,7 +44,9 @@
           <a-button type="link" class="github-btn" href="https://github.com/liujiaao/es-plus" target="_blank">
             <GithubOutlined /><span class="github-text"> GitHub</span>
           </a-button>
-          <a-button type="primary" size="small" class="version-btn">v{{ adapterVersion }}</a-button>
+          <!-- 版本号是元信息，不是主行动：此前它被渲染成 ant-btn-primary，
+               和「快速上手」抢同一视觉层级（审计 P1-7）。改成中性胶囊 + 等宽数字。 -->
+          <span class="version-chip" :title="`@es-plus/adapter-antdv v${adapterVersion}`">v{{ adapterVersion }}</span>
         </a-space>
       </div>
     </a-layout-header>
@@ -224,6 +228,7 @@ import { ADAPTER_ANTDV_VERSION } from '@/utils/versions'
 import { SITES, SITE_KEY } from '@/utils/sites'
 import DocMeta from '@/components/doc/DocMeta.vue'
 import DocFooter from '@/components/doc/DocFooter.vue'
+import DocSearch from '@/components/doc/DocSearch.vue'
 // 目录行为（标题发号 + 滚动高亮）与另两站共用同一份实现
 import { bindSkipLink, collectHeadings, createScrollSpy, scrollToHeading as scrollToHeadingImpl, lastUpdatedFor } from '@/utils/doc-chrome.js'
 import { docEntryForRouteName, docNeighbors } from '@/utils/doc-nav'
@@ -417,6 +422,22 @@ const onTocClick = (id) => {
   color: #1677ff;
 }
 
+/* 版本胶囊：中性灰底、等宽数字，和 header 里的图标同一条水平线 */
+.version-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 22px;
+  padding: 0 8px;
+  border-radius: 11px;
+  background: var(--es-fill, #f5f5f5);
+  color: var(--es-text-secondary, #666);
+  font-family: var(--es-font-mono);
+  font-size: 12px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  cursor: default;
+}
+
 /* 正文段吃满剩余高度：页脚贴底的前提。
    min-height: 0 是必需的 —— a-layout 默认 min-height: auto，子元素撑高后
    flex 收缩失效，页脚又会被顶出视口。 */
@@ -513,7 +534,7 @@ const onTocClick = (id) => {
   /* 顶栏右键组在 390px 下原本超出视口 37px（页面因此横向滚动）：
      切站只留图标（完整名称在下拉里），版本号让位。 */
   .site-label-text,
-  .version-btn {
+  .version-chip {
     display: none;
   }
 }

@@ -4,11 +4,11 @@
     <section class="hero-section">
       <div class="hero-badge">
         <i class="el-icon-s-promotion" />
-        <span>Vue 2.0 + Element UI</span>
+        <span>ES-Plus · Vue 2.0 + Element UI</span>
       </div>
       <h1 class="hero-title">
-        <span class="gradient-text">ES-Plus</span>
-        <span class="title-sub">中后台 CRUD 的配置层</span>
+        <span class="title-main">中后台 CRUD 的配置层</span>
+        <span class="title-sub">ES-Plus</span>
       </h1>
       <p class="hero-desc">
         一套基于 Vue 2.0 和 Element UI 的中后台 CRUD 配置层，帮助开发者快速构建中后台管理系统。
@@ -545,96 +545,87 @@ $gradient-brand: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-br
 }
 
 // Hero Section
+// 审计 P0-3：灰蓝渐变底 + 渐变裁切字（青端白底 2.43:1）改为与首页一致的浅色语言。
 .hero-section {
   text-align: center;
-  padding: 60px 20px;
-  background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-  border-radius: 20px;
-  margin-bottom: 60px;
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -20%;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(255,255,255,0.4) 0%, transparent 70%);
-    pointer-events: none;
-  }
+  padding: var(--es-space-7) var(--es-space-4);
+  background: var(--es-brand-tint);
+  border: 1px solid var(--es-border-lighter);
+  border-radius: var(--es-radius-lg);
+  margin-bottom: var(--es-space-6);
 
   .hero-badge {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 20px;
-    background: rgba(255,255,255,0.8);
-    border-radius: 50px;
-    font-size: 14px;
-    color: $text-secondary;
-    margin-bottom: 24px;
-    backdrop-filter: blur(10px);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.05);
+    padding: 6px 16px;
+    background: var(--es-bg);
+    border: 1px solid var(--es-border-light);
+    border-radius: var(--es-radius-full);
+    font-size: var(--es-text-sm);
+    font-weight: 600;
+    color: var(--es-brand-strong);
+    margin-bottom: var(--es-space-4);
 
     i {
-      color: $primary-color;
+      color: var(--es-brand-primary);
     }
   }
 
   .hero-title {
-    margin: 0 0 20px;
-    font-size: 48px;
-    font-weight: 700;
+    margin: 0 0 var(--es-space-4);
     display: flex;
     flex-direction: column;
     align-items: center;
     gap: 8px;
 
-    .gradient-text {
-      background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 50%, var(--es-brand-accent) 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      background-clip: text;
-      letter-spacing: -2px;
+    .title-main {
+      font-size: var(--es-display-sm);
+      line-height: var(--es-leading-tight);
+      letter-spacing: -0.02em;
+      font-weight: 700;
+      color: var(--es-text-primary);
+      text-wrap: balance;
     }
 
     .title-sub {
-      font-size: 24px;
-      font-weight: 400;
-      color: $text-secondary;
+      font-size: var(--es-text-lg);
+      font-weight: 500;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--es-accent-text);
     }
   }
 
   .hero-desc {
-    max-width: 550px;
+    max-width: 640px;
     margin: 0 auto;
-    font-size: 16px;
-    opacity: 0.9;
-    line-height: 1.7;
+    font-size: var(--es-text-base);
+    color: var(--es-text-regular);
+    line-height: var(--es-leading-relaxed);
   }
 
   .hero-stats {
     display: flex;
     justify-content: center;
     gap: 60px;
+    margin-top: var(--es-space-6);
+    padding-top: var(--es-space-5);
+    border-top: 1px solid var(--es-border-light);
 
     .stat-item {
       text-align: center;
 
       .stat-num {
-        font-size: 36px;
+        font-size: 32px;
         font-weight: 700;
-        background: $gradient-brand;
-        -webkit-background-clip: text;
-        -webkit-text-fill-color: transparent;
-        background-clip: text;
+        font-variant-numeric: tabular-nums;
+        color: var(--es-text-primary);
       }
 
       .stat-label {
-        font-size: 14px;
-        color: $text-tertiary;
+        font-size: var(--es-text-sm);
+        color: var(--es-text-secondary);
         margin-top: 4px;
       }
     }
@@ -1312,13 +1303,15 @@ $gradient-brand: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-br
   }
 
   .hero-section {
-    padding: 40px 20px;
+    padding: var(--es-space-6) var(--es-space-4);
 
     .hero-title {
-      font-size: 36px;
+      .title-main {
+        font-size: var(--es-text-3xl);
+      }
 
       .title-sub {
-        font-size: 18px;
+        font-size: var(--es-text-base);
       }
     }
 

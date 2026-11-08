@@ -39,6 +39,10 @@ export const DOC_NAV = [
 
   // ── 组件 ──
   { key: '/component/estable', route: 'EsTableDocs', title: 'EsTable 表格', group: '组件', source: 'es-eui/src/views/docs/EsTableDocs.vue' },
+  // 示例子页：拆页后仍需登记，否则没有面包屑 / 上下篇 / 最后更新（审计 P0-4）
+  { key: '/component/estable-columns', route: 'EsTableColumnsDocs', title: 'EsTable 列配置', group: '组件', source: 'es-eui/src/views/docs/EsTableSubDocs.vue' },
+  { key: '/component/estable-editing', route: 'EsTableEditingDocs', title: 'EsTable 编辑与交互', group: '组件', source: 'es-eui/src/views/docs/EsTableSubDocs.vue' },
+  { key: '/component/estable-business', route: 'EsTableBusinessDocs', title: 'EsTable 业务闭环', group: '组件', source: 'es-eui/src/views/docs/EsTableSubDocs.vue' },
   { key: '/component/vxetable', route: 'VxeTableDocs', title: 'vxe-table 高性能表格', group: '组件', source: 'es-eui/src/views/docs/VxeTableDocs.vue' },
   { key: '/component/esform', route: 'EsFormDocs', title: 'EsForm 表单', group: '组件', source: 'es-eui/src/views/docs/EsFormDocs.vue' },
   { key: '/component/esdialog', route: 'EsDialogDocs', title: 'EsDialog 弹窗', group: '组件', source: 'es-eui/src/views/docs/EsDialogDocs.vue' },

@@ -12,6 +12,10 @@ import { defineConfig, devices } from '@playwright/test'
 //   3. `mobile-docs` —— 同一站点、真 390×844：窄屏的可达性与无横向溢出
 //      （断言见 tests/mobile.spec.ts；源码侧的对应守卫是 scripts/check-mobile.mjs）。
 //      与 2 共用 webServer，不增加启动成本。
+//   4. `layout` —— 版式回归（tests/layout.spec.ts）：首页 section 数/总高/H1/首屏实拍、
+//      390 下无横向溢出、演示表格可横滑。也跑在 `es-plus-docs` 那条 webServer 上；
+//      它自己 setViewportSize，所以只挂了一个 project，不随 `mobile-docs` 再跑一遍。
+//      为什么不挂 `vue2`：那个 fixture 只服务片段/CRUD，没有文档站。
 const PORT = 51730
 const DOCS_PORT = 51731
 
@@ -30,12 +34,12 @@ export default defineConfig({
       name: 'vue2',
       // 窄屏腿（mobile.spec.ts）打的是主站，不属于 vue2 fixture —— 两个都要排除，
       // 否则 vue2 那条 dev server 会去跑一个它根本不服务的站点。
-      testIgnore: /(ai-gallery|ai-crud|mobile)\.spec\.ts/,
+      testIgnore: /(ai-gallery|ai-crud|mobile|layout)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${PORT}` },
     },
     {
       name: 'ai-gallery-docs',
-      testMatch: /(ai-gallery|ai-crud)\.spec\.ts/,
+      testMatch: /(ai-gallery|ai-crud|layout)\.spec\.ts/,
       use: { ...devices['Desktop Chrome'], baseURL: `http://localhost:${DOCS_PORT}` },
     },
     {

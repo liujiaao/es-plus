@@ -178,7 +178,7 @@ export default {
   border-radius: 10px;
   font-size: 12px;
   color: #fff;
-  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
+  background: var(--es-brand-strong);
 }
 
 .ai-gallery-legend {
@@ -208,7 +208,7 @@ export default {
     border-radius: 8px;
     font-size: 12px;
     color: #fff;
-    background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
+    background: var(--es-brand-strong);
   }
 
   strong {

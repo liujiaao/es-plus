@@ -96,6 +96,29 @@ const routes = [
         meta: { title: 'EsTable 表格' },
         component: () => import('../views/docs/EsTableDocs.vue')
       },
+      // 审计 P0-4：24 个示例曾挤在一个路由（桌面 20,492px）。按主题拆三个子页，
+      // 共用 EsTableSubDocs.vue，靠 props.group 取子集。
+      {
+        path: 'estable-columns',
+        name: 'EsTableColumnsDocs',
+        meta: { title: 'EsTable 列配置' },
+        props: { group: 'columns' },
+        component: () => import('../views/docs/EsTableSubDocs.vue')
+      },
+      {
+        path: 'estable-editing',
+        name: 'EsTableEditingDocs',
+        meta: { title: 'EsTable 编辑与交互' },
+        props: { group: 'editing' },
+        component: () => import('../views/docs/EsTableSubDocs.vue')
+      },
+      {
+        path: 'estable-business',
+        name: 'EsTableBusinessDocs',
+        meta: { title: 'EsTable 业务闭环' },
+        props: { group: 'business' },
+        component: () => import('../views/docs/EsTableSubDocs.vue')
+      },
       {
         path: 'vxetable',
         name: 'VxeTableDocs',

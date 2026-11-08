@@ -453,36 +453,28 @@ $bg-light: #f7fafc;
 }
 
 // Hero Section
+// 审计 P0-3：此前是整块品牌渐变 + 白色正文，青端(#06b6d4)白字只有 2.43:1。
+// 现在与首页/另两站同一套浅色语言：品牌浅底 + 实色标题，圆角/间距/字号走 token。
 .hero-section {
   text-align: center;
-  padding: 60px 20px;
-  background: linear-gradient(135deg, var(--es-brand-primary) 0%, var(--es-brand-accent) 100%);
-  border-radius: 20px;
-  margin-bottom: 50px;
-  color: white;
-  position: relative;
-  overflow: hidden;
-
-  &::before {
-    content: '';
-    position: absolute;
-    top: -50%;
-    right: -20%;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(255,255,255,0.1) 0%, transparent 70%);
-  }
+  padding: var(--es-space-7) var(--es-space-4);
+  background: var(--es-brand-tint);
+  border: 1px solid var(--es-border-lighter);
+  border-radius: var(--es-radius-lg);
+  margin-bottom: var(--es-space-6);
 
   .hero-badge {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 20px;
-    background: rgba(255,255,255,0.15);
-    border-radius: 50px;
-    font-size: 14px;
-    margin-bottom: 20px;
-    backdrop-filter: blur(10px);
+    padding: 6px 16px;
+    background: var(--es-bg);
+    border: 1px solid var(--es-border-light);
+    color: var(--es-brand-strong);
+    border-radius: var(--es-radius-full);
+    font-size: var(--es-text-sm);
+    font-weight: 600;
+    margin-bottom: var(--es-space-4);
 
     i {
       font-size: 16px;
@@ -490,19 +482,20 @@ $bg-light: #f7fafc;
   }
 
   .hero-title {
-    font-size: 42px;
+    font-size: var(--es-display-sm);
     font-weight: 700;
-    margin: 0 0 16px;
-    position: relative;
+    line-height: var(--es-leading-tight);
+    letter-spacing: -0.02em;
+    margin: 0 0 var(--es-space-3);
+    color: var(--es-text-primary);
   }
 
   .hero-desc {
-    max-width: 500px;
+    max-width: 640px;
     margin: 0 auto;
-    font-size: 16px;
-    opacity: 0.9;
-    line-height: 1.7;
-    position: relative;
+    font-size: var(--es-text-base);
+    color: var(--es-text-regular);
+    line-height: var(--es-leading-relaxed);
   }
 }
 

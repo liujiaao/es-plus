@@ -146,7 +146,7 @@ export default {
   border-radius: 10px;
   font-size: 12px;
   color: #fff;
-  background: linear-gradient(135deg, var(--es-brand-primary), var(--es-brand-accent));
+  background: var(--es-brand-strong);
 }
 
 .fd-nl {

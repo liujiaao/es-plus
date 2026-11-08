@@ -17,7 +17,8 @@
  *   「每张图都真的有人用」            → 反过来：清单里的每张图至少被一处源码引用
  *                                      （否则就是拍了没人用的死资产）；
  *   「截图可达」                      → 每个 <img> 引用 /product/ 的标签都有非空 alt；
- *   「三站首屏都有产品实拍」          → docs 首屏走清单驱动的画廊，pc/eui 首屏是字面引用。
+ *   「三站首屏都有产品实拍」          → docs 首屏是一张旗舰页字面实拍，pc/eui 首屏也是字面引用；
+ *                                      清单驱动的完整图廊仍在（/cases 挂载 ProductShots）。
  *
  * 用法：node scripts/check-product-assets.mjs
  * 退出码：0 = 全部成立；1 = 任一断言失败。
@@ -46,11 +47,20 @@ const DOCS_CORE_ROUTES = [
   '/playground',
 ]
 
-/** 每站首屏：产品实拍必须出现在第一屏的 DOM 里（T1 规则）。 */
+/** 每站首屏：产品实拍必须出现在第一屏的 DOM 里（T1 规则）。
+ *
+ *  docs 首屏在 2026-11 审计重做后改成「文案下方一张旗舰页字面实拍」（双栏右栏只有
+ *  546px，图里的表格读不清）。**完整图廊没有删**，而是按审计 §6.1-5 的建议并入
+ *  /cases —— 所以清单驱动的三条断言改指图廊组件，并额外断言它仍被 /cases 挂载：
+ *  只查组件不查挂载，「移到子页」会悄悄变成「从站点上消失」。 */
 const LANDINGS = {
-  'es-plus-docs': { file: 'es-plus-docs/src/views/Home.vue', gallery: true },
-  'es-pc': { file: 'es-pc/src/views/Home.vue', gallery: false },
-  'es-eui': { file: 'es-eui/src/views/home/index.vue', gallery: false },
+  'es-plus-docs': {
+    file: 'es-plus-docs/src/views/Home.vue',
+    gallery: 'es-plus-docs/src/components/product/ProductShots.vue',
+    galleryHost: 'es-plus-docs/src/views/Cases.vue',
+  },
+  'es-pc': { file: 'es-pc/src/views/Home.vue', gallery: null },
+  'es-eui': { file: 'es-eui/src/views/home/index.vue', gallery: null },
 }
 
 const ROUTERS = {
@@ -290,12 +300,17 @@ check('三站首屏都出现产品实拍（T1：首屏内要看到产品）', ()
   for (const [site, landing] of Object.entries(LANDINGS)) {
     const text = read(landing.file)
     if (landing.gallery) {
-      // docs 首屏的画廊不写字面文件名，而是读分发的清单 —— 断言它真的读清单
-      assert.match(text, /@\/product\/shots\.json/, `${landing.file} 没有读清单 src/product/shots.json`)
-      assert.match(text, /currentShot/, `${landing.file} 没有渲染当前选中的截图`)
+      // 图廊（现在挂在 /cases）不写字面文件名，而是读分发的清单 —— 断言它真的读清单
+      const gallery = read(landing.gallery)
+      assert.match(gallery, /@\/product\/shots\.json/, `${landing.gallery} 没有读清单 src/product/shots.json`)
+      assert.match(gallery, /currentShot/, `${landing.gallery} 没有渲染当前选中的截图`)
       // 清单里的 file 是可选的（默认 docs/product/<id>.png）：页面直接读 .file
       // 会在绝大多数条目上拿到 undefined（首屏直接白屏，踩过一次）
-      assert.match(text, /\.file \|\| /, `${landing.file} 假设清单里每条都写了 file（它其实是可选的）`)
+      assert.match(gallery, /\.file \|\| /, `${landing.gallery} 假设清单里每条都写了 file（它其实是可选的）`)
+      // 图廊必须仍被站点挂载 —— 否则「移到子页」等于删掉
+      const host = read(landing.galleryHost)
+      assert.match(host, /import ProductShots from '@\/components\/product\/ProductShots\.vue'/, `${landing.galleryHost} 没有 import 图廊组件`)
+      assert.match(host, /<ProductShots\s*\/>/, `${landing.galleryHost} 没有渲染 <ProductShots> —— 图廊在站点上已经不可达`)
     }
     assert.match(
       text,
