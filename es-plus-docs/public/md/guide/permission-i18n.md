@@ -100,7 +100,9 @@ permissions.add('user:edit')
 
 ### 未配置时的行为
 
-如果安装时未传入 `permission` 函数，所有按钮默认显示（向后兼容）。`permissionValue` 字段会被忽略。
+如果安装时未传入 `permission` 函数，**声明了 `permissionValue` 的元素会被拒绝**（按钮隐藏、字段/列不渲染），并在开发期按权限码打印一次告警。这是刻意的 fail-closed 语义：声明了门却没有判定函数时，不能把“配了门”变成“谁都能看见”。
+
+没有 `permissionValue` 的元素不受影响。确实需要全部放行时，请显式传入 `permission: () => true`。
 
 ---
 

@@ -126,7 +126,7 @@ export default {
 | 组件 | 说明 | 与 vue3 版本兼容 |
 |------|------|------------------|
 | `EsForm` | 动态表单，14 种控件 | ✅ 100% |
-| `EsTable` | 动态表格，虚拟滚动 | ✅ 兼容 |
+| `EsTable` | 动态表格（无虚拟滚动，大数据请用 vxe） | ✅ 兼容 |
 | `EsDialog` | 动态弹窗 | ✅ 兼容 |
 | `EsCrudPage` | CRUD 编排组件 | ✅ 兼容 |
 | `useDialog` | 命令式弹窗 | ✅ 100% |
@@ -143,7 +143,7 @@ EsForm 的 `formItemList`、EsTable 的 `columns` / `options`、EsCrudPage 的 `
 |------|--------------------|------------------------|
 | 表格组件 | `<el-table>` | `<a-table>` |
 | 弹窗组件 | `<el-dialog>` | `<a-modal>` |
-| 虚拟滚动 | `engine: 'virtual'` → `<el-table-v2>` | `virtual: true` → ADV 原生虚拟滚动 |
+| 虚拟滚动 | `engine: 'virtual'` → `<el-table-v2>` | **不支持**：a-table 无虚拟滚动，`virtual` / `engine:'virtual'` 会告警并降级；大数据请用 `engine: 'vxe'` |
 | 加载状态 | `v-loading` 指令 | `<a-spin>` 包裹 |
 | 确认弹窗 | `ElMessageBox.confirm()` | `Modal.confirm()` |
 | ColorPicker | `<ElColorPicker>` | `input[type=color]`（降级，ADV 4.x 无内置） |
@@ -198,6 +198,6 @@ Ant Design Vue 4.x 早期版本没有独立的 ColorPicker 组件，故降级为
 ## 下一步
 
 - [EsForm 高级表单](#/components/es-form) — 14 种控件、联动、异步选项
-- [EsTable 高级表格](#/components/es-table) — 虚拟滚动、跨页选择、远程数据
+- [EsTable 高级表格](#/components/es-table) — 跨页选择、远程数据（大数据请用 vxe 引擎）
 - [EsCrudPage 高级 CRUD](#/components/es-crud-page) — Schema 驱动的一站式 CRUD
 - [权限与国际化](#/guide/permission-i18n) — `permissionValue` + `labelKey`

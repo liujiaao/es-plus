@@ -177,7 +177,7 @@ type: 'component'
 | clearActived | - | vxe 行内编辑：清除当前激活（编辑中）单元格 |
 | clearValidate | - | vxe 行内编辑：清除校验状态 |
 | validate | (rows?) | vxe 行内编辑：校验表格（可指定行），返回 Promise |
-| exportData | (opts?) | vxe 导出：导出当前数据（xlsx/csv/xml/html，opts 即 vxe exportData 配置） |
+| exportData | (opts?) | 导出当前数据：engine: "vxe" 走 vxe 原生导出（xlsx/csv/xml/html）；默认引擎走内置 CSV 兜底，非 csv 的 type 会明确抛错 |
 | print | (opts?) | vxe 打印：调用 vxe 打印；可传 { html } 打印 getPrintHtml 修正过的 HTML |
 | getPrintHtml | (opts?) | vxe 打印：取表格 HTML 字符串（vxe 打印不执行 spanMethod，合并区需配合 patchHtmlRowSpans 修正） |
 | vxeInstance | - | vxe 原始实例，访问 vxe-table 全部方法/事件（engine: "vxe" 时有效） |

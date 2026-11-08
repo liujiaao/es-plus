@@ -103,7 +103,7 @@ type: 'advanced'
 | getUpdateRecords() | () => any[] | 获取已修改行列表（与 keepSource 记录的原始数据比对差异） |
 | getRemoveRecords() | () => any[] | 获取已标记删除的行列表 |
 | revertData(rows?) | (rows?: any \| any[]) => Promise<void> | 还原到编辑前状态：不传参还原所有行，传入指定行对象仅还原对应行 |
-| exportData(opts?) | (opts?: VxeExportConfig) => Promise<void> | 触发数据导出，参数覆盖 options.exportConfig；可指定 filename/type/columns 等 |
+| exportData(opts?) | (opts?: VxeExportConfig) => Promise<void> \| boolean | 触发数据导出：vxe 引擎走 vxe-table 原生 exportData（xlsx/csv/xml/html）；默认引擎走内置 CSV 兜底（返回是否触发下载），非 csv 的 type 会明确抛错 |
 | print() | () => Promise<void> | 触发 vxe 内置打印窗口，需先在 options 中设置 printConfig:true；动态 spanMethod 合并场景请改用 vxeInstance().print({ html: patchHtmlRowSpans(...) }) |
 
 ### 打印工具函数
