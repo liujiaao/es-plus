@@ -99,6 +99,7 @@ export const GUARD_GROUPS = Object.freeze([
     title: '三端能力 / 契约 / 工具面',
     steps: [
       'check:capability-parity',
+      'check:capability-witnesses',
       'check:legacy-stub',
       'check:parity',
       'check:api',

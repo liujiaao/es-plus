@@ -130,8 +130,8 @@
           "note": "Element UI 没有 el-table-v2，运行时降级普通 el-table 并在控制台告警。大表请用 server 分页，或改 engine: 'vxe'（vue2 有完整 vxe 适配器）"
         },
         "antdv": {
-          "level": "full",
-          "note": "透传 <a-table :virtual>（Ant Design Vue 4 原生虚拟滚动）"
+          "level": "none",
+          "note": "a-table 从未实现虚拟滚动，运行时告警并降级为默认引擎全量渲染。antdv 的大数据路径是 engine: 'vxe'"
         }
       }
     },
@@ -194,8 +194,8 @@
           "note": "default / vxe（无 virtual，见 tableOptions.virtual 一格）"
         },
         "antdv": {
-          "level": "full",
-          "note": "default / vxe（virtual 由 tableOptions.virtual 透传）"
+          "level": "partial",
+          "note": "default / vxe；engine: 'virtual' 在该端被忽略（见 tableOptions.virtual 一格），运行时降级默认引擎"
         }
       }
     },

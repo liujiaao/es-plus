@@ -104,7 +104,9 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       vue2: none(
         'Element UI 没有 el-table-v2，运行时降级普通 el-table 并在控制台告警。大表请用 server 分页，或改 engine: \'vxe\'（vue2 有完整 vxe 适配器）'
       ),
-      antdv: full('透传 <a-table :virtual>（Ant Design Vue 4 原生虚拟滚动）'),
+      antdv: none(
+        'a-table 从未实现虚拟滚动，运行时告警并降级为默认引擎全量渲染。antdv 的大数据路径是 engine: \'vxe\''
+      ),
     },
     equivalents: [{ key: 'engine', value: 'virtual' }],
   },
@@ -139,7 +141,9 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
     targets: {
       vue3: full('default / virtual / vxe 三引擎'),
       vue2: full('default / vxe（无 virtual，见 tableOptions.virtual 一格）'),
-      antdv: full('default / vxe（virtual 由 tableOptions.virtual 透传）'),
+      antdv: partial(
+        'default / vxe；engine: \'virtual\' 在该端被忽略（见 tableOptions.virtual 一格），运行时降级默认引擎'
+      ),
     },
   },
   {

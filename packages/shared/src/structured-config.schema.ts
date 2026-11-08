@@ -585,13 +585,13 @@ export const StructuredCrudConfigSchema = z.object({
       .boolean()
       .optional()
       .describe(
-        'Enable virtual scrolling for large datasets. The engine is target-specific: vue3 renders the el-table-v2 engine; antdv forwards `virtual` to <a-table> (Ant Design Vue 4 has native virtual scroll); vue2 + Element UI has no equivalent and degrades to a plain el-table with a console warning — the vue2 large-data path is `engine: \'vxe\'` instead. Safe to set on any target — only the rendering engine differs.'
+        'Enable virtual scrolling for large datasets. vue3 renders the el-table-v2 engine. antdv and vue2 have NO virtual scrolling: a-table never implemented it and Element UI has no el-table-v2 — both targets warn and render a plain table. For large data on antdv/vue2 use `engine: \'vxe\'` instead.'
       ),
     engine: z
       .enum(['default', 'virtual', 'vxe'])
       .optional()
       .describe(
-        "Table rendering engine, an alternative to `virtual: true`. 'default' = el-table / a-table / el-table, 'virtual' = the target's virtual engine (vue3 el-table-v2; antdv <a-table :virtual>; vue2 has no equivalent and degrades to a plain el-table with a warning), 'vxe' = vxe-table, available on ALL THREE targets — vue3 and antdv through their own vxe adapters, and vue2 through @es-plus/vue2's vxe engine (vxe-table itself supports Vue 2). 'vxe' is therefore the large-data path for vue2, where 'virtual' is not available."
+        "Table rendering engine, an alternative to `virtual: true`. 'default' = el-table / a-table / el-table. 'virtual' = vue3 el-table-v2 only; antdv and vue2 have no virtual engine and degrade to a plain table with a warning. 'vxe' = vxe-table, available on ALL THREE targets — vue3 and antdv through their own vxe adapters, and vue2 through @es-plus/vue2's vxe engine. Use 'vxe' for large data on antdv/vue2, where 'virtual' is not available."
       ),
     rowHeight: z
       .number()
