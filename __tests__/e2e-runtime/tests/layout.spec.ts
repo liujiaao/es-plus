@@ -145,6 +145,19 @@ test('组件文档页：示例分组把 es-form 压到 ≤10,000px，深链自�
   expect(top).toBeLessThan(900)
 })
 
+test('组件文档页：es-table 默认分组高度 ≤10,000px', async ({ page }) => {
+  await page.setViewportSize(DESKTOP)
+
+  // 与 es-form 同一条验收线：默认组决定落地高度，其余组是用户主动点开的。
+  // 分组只保证「不同屏」，不保证高度 —— 默认组里多放一个 500px 的示例就会顶出去
+  // （es-table 曾因默认组 4 例 = 10,092px）。分组的平衡靠数据，这条守住结果。
+  await gotoApp(page, '/#/components/es-table')
+  await page.locator('.examples-groups').first().waitFor({ state: 'visible' })
+
+  const height = await page.evaluate(() => document.body.scrollHeight)
+  expect(height, 'es-table 默认分组高度超过 10,000px（把某个示例移到别的分组，或缩小组内示例）').toBeLessThanOrEqual(10000)
+})
+
 // 「只有表单页分组」曾经是一次真实回归：es-form 做完分组后，es-table / es-crud-page /
 // 三个高级指南仍是 20+ 个演示一条长列表（es-table 单页 24k+ px）。这条守卫把
 // 「哪些页必须分组」写成清单 —— 新增长页时在这里补一行，而不是靠人记得。

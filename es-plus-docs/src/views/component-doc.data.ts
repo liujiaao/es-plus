@@ -216,7 +216,9 @@ export const docsData: Record<string, any> = {
       { group: '基础与列', key: 'basic', title: '配置化基础表格', description: '一份 columns JSON 渲染整张表格，不写模板、不写插槽。', component: getComponent('table/01-basic'), code: code('table/01-basic') },
       { group: '基础与列', key: 'toolbar', title: '表格工具栏', description: '表格顶部操作区，支持 configBtn、leftText 配置和 default slot 自定义内容。', component: getComponent('table/02-toolbar'), code: code('table/02-toolbar') },
       { group: '基础与列', key: 'custom', title: '自定义列渲染', description: 'render 函数、scopedSlots、formatter 多种自定义列渲染方式。', component: getComponent('table/03-custom'), code: code('table/03-custom') },
-      { group: '基础与列', key: 'selection', title: '多选与跨页记忆', description: 'multiSelect + cachePageSelection + rowKey，分页后切换页码仍能保持跨页勾选状态。', component: getComponent('table/04-selection'), code: code('table/04-selection') },
+      // 分组按「实测高度」平衡：默认组（第一组）决定落地页高度，须 ≤10,000px。
+      // 多选/跨页记忆归交互组 —— 它整块 496px，留在默认组会把首屏顶到 10,092px。
+      { group: '交互与数据', key: 'selection', title: '多选与跨页记忆', description: 'multiSelect + cachePageSelection + rowKey，分页后切换页码仍能保持跨页勾选状态。', component: getComponent('table/04-selection'), code: code('table/04-selection') },
       { group: '交互与数据', key: 'edit', title: '点击单元格即编辑', description: '表格即编辑器，点击单元格进入编辑模式，支持批量保存/取消。', component: getComponent('table/05-edit'), code: code('table/05-edit') },
       { group: '交互与数据', key: 'sort', title: '前端 / 后端排序', description: '前端排序与后端排序两种模式。', component: getComponent('table/06-sort'), code: code('table/06-sort') },
       { group: '结构与展示', key: 'group', title: '分组表头', description: 'groups 嵌套列配置实现多级分组表头。', component: getComponent('table/07-group'), code: code('table/07-group') },
@@ -230,7 +232,9 @@ export const docsData: Record<string, any> = {
       { group: '结构与展示', key: 'dynamic-columns', title: '动态列与汇总行', description: 'hidCol 动态列显隐 + show-summary/summary-method 配置化汇总行。', component: getComponent('table/15-dynamic-columns'), code: code('table/15-dynamic-columns') },
       { group: '交互与数据', key: 'callback-pipeline', title: '请求回调管线', description: 'listenToCallBack brcb/qrcb 请求响应拦截 + configTableOut 字段映射 + entryQuery 默认参数。', component: getComponent('table/16-callback-pipeline'), code: code('table/16-callback-pipeline') },
       { group: '查询与行操作', key: 'current-row', title: '当前行与主从联动', description: 'highlightCurrentRow 行高亮 + @current-change 事件驱动从表 + 汇总统计。', component: getComponent('table/17-current-row'), code: code('table/17-current-row') },
-      { group: '交互与数据', key: 'table-height', title: '自适应容器高度', description: 'heightType: height 继承父容器高度 + ResizeObserver 自动计算，容器变表格自适应。', component: getComponent('table/18-table-height'), code: code('table/18-table-height') },
+      // 高度自适应该归「结构与展示」：它讲的是容器度量（ResizeObserver/heightType），
+      // 不是交互；700px 也是交互组里最重的一块。
+      { group: '结构与展示', key: 'table-height', title: '自适应容器高度', description: 'heightType: height 继承父容器高度 + ResizeObserver 自动计算，容器变表格自适应。', component: getComponent('table/18-table-height'), code: code('table/18-table-height') },
       { group: '结构与展示', key: 'code-label', title: '码值列：零 render 出标签', description: '状态是 0/1/2 这样的码值，列上写一份 dataOptions 就得到中文标签与语义色 —— 三端各自渲染原生标签（ElTag / el-tag / a-tag），没有一个 render 函数。未命中显示原值，空值走 emptyPlaceholder。', component: getComponent('table/19-code-label'), code: code('table/19-code-label') }
     ],
     api: {
