@@ -80,6 +80,12 @@ const SAMPLE = {
   expandConfig: { fields: [{ prop: 'name' }] },
   treeConfig: { childrenField: 'children' },
   mergeConfig: { rowsBy: ['dept'] },
+  'tableOptions.showFooter': true,
+  'tableOptions.footerData': [['合计', 1000]],
+  'tableOptions.exportConfig': { type: 'csv' },
+  'tableOptions.toolbarConfig': true,
+  'tableOptions.columnConfig': { resizable: true },
+  'tableOptions.keepSource': true,
 }
 
 /** 文件名 → 覆盖文本（注入用；正向跑为空）。 */

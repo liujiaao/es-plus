@@ -728,6 +728,45 @@ export const StructuredCrudConfigSchema = z.object({
       .describe(
         "vxe-only row-expand switch (paired with `expand: true` / an expand column). Distinct from the top-level `expandConfig` (declarative read-only field list honored by all three renderers)."
       ),
+    // ── vxe 一等公民（JSON 安全子集，AI-31）─────────────────────────────
+    // 这六个键在 core `TableOptions` / vxe-engine `build-grid-config.ts` 已有并真消费，
+    // 但两处 AI Zod 长期零声明 —— 经 AI 入口传入被静默 strip。只收 JSON 可承载形态：
+    // `footerMethod` / `proxyConfig.ajax` / `exportConfig.download` 等函数仍走 vxeConfig 逃生舱。
+    // 运行时只在 engine:'vxe' 生效；默认 / 虚拟引擎忽略。
+    showFooter: z
+      .boolean()
+      .optional()
+      .describe("Show the vxe footer row. Advanced: only consumed with engine:'vxe'."),
+    footerData: z
+      .array(z.array(z.unknown()))
+      .optional()
+      .describe(
+        "Static footer rows, a 2-D array ([row][column]). Advanced: only with engine:'vxe'. The function form `footerMethod` cannot travel in JSON — use `vxeConfig` at runtime."
+      ),
+    exportConfig: z
+      .union([z.boolean(), z.record(z.string(), z.unknown())])
+      .optional()
+      .describe(
+        "vxe export config: `true` for defaults, or an object with filename / type ('xlsx'|'csv'|'html'|'xml'|'txt') / useStyle / isColgroup. Advanced: only with engine:'vxe'. Non-CSV formats need the vxe export plugin; the `download` callback is a function and is out of the JSON contract."
+      ),
+    toolbarConfig: z
+      .union([z.boolean(), z.record(z.string(), z.unknown())])
+      .optional()
+      .describe(
+        "vxe toolbar config (`true` for defaults, or { buttons: [...] } etc.). Advanced: only with engine:'vxe'."
+      ),
+    columnConfig: z
+      .record(z.string(), z.unknown())
+      .optional()
+      .describe(
+        "vxe column config, e.g. { resizable: true, drag: true, showOverflow: 'tooltip' }. Advanced: only with engine:'vxe'."
+      ),
+    keepSource: z
+      .boolean()
+      .optional()
+      .describe(
+        "Keep a pre-edit snapshot of each row so revertData() / getUpdateRecords() / getInsertRecords() work. Auto-enabled when editConfig is set. Advanced: vxe inline editing only."
+      ),
   }).optional(),
   pagination: z.object({
     pageSize: z.number().int().default(10).describe('Rows per page on first render (default 10).'),

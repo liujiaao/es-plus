@@ -207,6 +207,58 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       antdv: full("a-table 的 sorter:true 本就是服务端语义（从不本地排），故只需漏斗 + change 重取；vxe 引擎置 sortConfig.remote"),
     },
   },
+
+  // ── vxe 一等公民（AI-31）：JSON 可承载，但三端都只在 engine:'vxe' 生效 ──
+  {
+    key: 'tableOptions.showFooter',
+    targets: {
+      vue3: partial("仅 engine:'vxe' 消费（core build-grid-config 直传 vxe-grid）；默认 / 虚拟引擎忽略"),
+      vue2: partial('同上（vue2 的 vxe 适配器同样消费）'),
+      antdv: partial('同上（antdv 的 vxe 适配器同样消费）'),
+    },
+  },
+  {
+    key: 'tableOptions.footerData',
+    targets: {
+      vue3: partial("仅 engine:'vxe' 消费；默认 / 虚拟引擎忽略。函数版 footerMethod 不进 AI 契约"),
+      vue2: partial('同上'),
+      antdv: partial('同上'),
+    },
+  },
+  {
+    key: 'tableOptions.exportConfig',
+    targets: {
+      vue3: partial(
+        "engine:'vxe' 走 vxe-table 原生 exportData（xlsx/csv/xml/html）；默认 / 虚拟引擎只用 filename 与 type:'csv' 驱动 core 的 CSV 兜底，其它格式明确抛错"
+      ),
+      vue2: partial('同上'),
+      antdv: partial('同上'),
+    },
+  },
+  {
+    key: 'tableOptions.toolbarConfig',
+    targets: {
+      vue3: partial("仅 engine:'vxe' 消费（vxe-grid 工具栏）；默认 / 虚拟引擎忽略"),
+      vue2: partial('同上'),
+      antdv: partial('同上'),
+    },
+  },
+  {
+    key: 'tableOptions.columnConfig',
+    targets: {
+      vue3: partial("仅 engine:'vxe' 消费（列宽拖拽 / 溢出提示等）；默认 / 虚拟引擎忽略"),
+      vue2: partial('同上'),
+      antdv: partial('同上'),
+    },
+  },
+  {
+    key: 'tableOptions.keepSource',
+    targets: {
+      vue3: partial("仅 engine:'vxe' 的行内编辑消费（保留编辑前快照）；其它引擎忽略"),
+      vue2: partial('同上'),
+      antdv: partial('同上'),
+    },
+  },
 ]
 
 /** 取一格（key 不存在时返回 undefined —— 未列入 ≠ 不支持）。 */

@@ -1637,6 +1637,61 @@ describe('AI-22 — tableOptions 尾部键 / 字段级 labelKey（strip-hazard �
   })
 })
 
+describe('AI-31 — vxe 一等公民的 JSON 子集', () => {
+  const TO = {
+    engine: 'vxe',
+    showFooter: true,
+    footerData: [['合计', 1000, 500]],
+    exportConfig: { filename: '报表', type: 'xlsx' },
+    toolbarConfig: { buttons: ['add'] },
+    columnConfig: { resizable: true },
+    keepSource: false,
+  }
+  const KEYS = ['showFooter', 'footerData', 'exportConfig', 'toolbarConfig', 'columnConfig', 'keepSource'] as const
+  const cfg = (extra: Record<string, unknown> = {}) => ({
+    name: 'T',
+    apiUrl: '/x',
+    fields: [{ prop: 'a', label: 'A', formtype: 'Input' }],
+    actions: ['view'],
+    tableOptions: TO,
+    ...extra,
+  })
+
+  it('Zod 解析保留 6 个键（含 false 值，不被静默 strip）', () => {
+    const r: any = StructuredCrudConfigSchema.safeParse(cfg())
+    expect(r.success).toBe(true)
+    for (const k of KEYS) expect(r.data.tableOptions[k], `键 ${k} 不得被剥`).toBeDefined()
+  })
+
+  it('schema 模式发射全部键（对象与二维数组原样落盘）', () => {
+    const { code } = generateFromConfig(StructuredCrudConfigSchema.parse(cfg()) as any)
+    const m = code.match(/export\s+const\s+pageSchema[^=]*=\s*(\{[\s\S]*\})\s*$/)!
+    const to: any = JSON.parse(m[1]).tableOptions
+    expect(to.showFooter).toBe(true)
+    expect(to.footerData).toEqual([['合计', 1000, 500]])
+    expect(to.exportConfig).toEqual({ filename: '报表', type: 'xlsx' })
+    expect(to.toolbarConfig).toEqual({ buttons: ['add'] })
+    expect(to.columnConfig).toEqual({ resizable: true })
+    expect(to.keepSource).toBe(false)
+  })
+
+  it('sfc 模式同样发射（布尔直出，对象 / 数组走 inlineJson）', () => {
+    const { code } = generateFromConfig(StructuredCrudConfigSchema.parse(cfg({ mode: 'sfc' })) as any)
+    for (const k of KEYS) expect(new RegExp('\\b' + k + '\\s*:').test(code), k).toBe(true)
+    expect(code).toContain('showFooter: true,')
+    expect(code).toContain('keepSource: false,')
+    expect(code).toContain('footerData: [["合计",1000,500]],')
+  })
+
+  it('未给任何 vxe 键时两种模式都不添键（零回归）', () => {
+    const base = { name: 'T', apiUrl: '/x', fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['view'] }
+    for (const mode of ['schema', 'sfc'] as const) {
+      const { code } = generateFromConfig(StructuredCrudConfigSchema.parse({ ...base, mode }) as any)
+      for (const k of KEYS) expect(new RegExp('\\b' + k + '\\s*:').test(code), `${mode}/${k}`).toBe(false)
+    }
+  })
+})
+
 describe('AI-35 — 声明的弹窗必须有人能打开（dialogs 不参与按钮派生）', () => {
   const F = [{ prop: 'a', label: 'A', formtype: 'Input' as const }]
   const dlg = { add: { title: '新增' }, edit: { title: '编辑' } }

@@ -835,6 +835,14 @@ function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): Structu
     // 三端组件侧读到它后各自落地：el-table spanMethod / a-table 列级 customCell /
     // vxe mergeMethod（求值全部复用 core buildRowSpanMethod，三端等价由构造保证）。
     ...(config.mergeConfig ? { mergeConfig: { rowsBy: [...config.mergeConfig.rowsBy] } } : {}),
+    // vxe 一等公民（JSON 安全子集，AI-31）：只在 engine:'vxe' 生效。
+    // `false` 是 showFooter / keepSource 的有效取值 → 判 `!== undefined`。
+    ...(tOpts.showFooter !== undefined ? { showFooter: tOpts.showFooter } : {}),
+    ...(tOpts.footerData ? { footerData: tOpts.footerData } : {}),
+    ...(tOpts.exportConfig !== undefined ? { exportConfig: tOpts.exportConfig } : {}),
+    ...(tOpts.toolbarConfig !== undefined ? { toolbarConfig: tOpts.toolbarConfig } : {}),
+    ...(tOpts.columnConfig ? { columnConfig: tOpts.columnConfig } : {}),
+    ...(tOpts.keepSource !== undefined ? { keepSource: tOpts.keepSource } : {}),
   }
 
   // Query form layout (minFoldRows for collapse)
@@ -1349,6 +1357,13 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   if (config.mergeConfig) {
     lines.push(`  mergeConfig: ${inlineJson({ rowsBy: config.mergeConfig.rowsBy })},`)
   }
+  // vxe 一等公民（JSON 安全子集，AI-31）：布尔直出，对象 / 二维数组走 inlineJson。
+  if (tOpts.showFooter !== undefined) lines.push(`  showFooter: ${tOpts.showFooter},`)
+  if (tOpts.footerData) lines.push(`  footerData: ${inlineJson(tOpts.footerData)},`)
+  if (tOpts.exportConfig !== undefined) lines.push(`  exportConfig: ${inlineJson(tOpts.exportConfig)},`)
+  if (tOpts.toolbarConfig !== undefined) lines.push(`  toolbarConfig: ${inlineJson(tOpts.toolbarConfig)},`)
+  if (tOpts.columnConfig) lines.push(`  columnConfig: ${inlineJson(tOpts.columnConfig)},`)
+  if (tOpts.keepSource !== undefined) lines.push(`  keepSource: ${tOpts.keepSource},`)
   lines.push(`}`)
 
   // delete handler

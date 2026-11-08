@@ -610,6 +610,13 @@ const configShape = {
         .describe(
           "vxe-only row-expand switch (paired with `expand: true` / an expand column). Distinct from the top-level `expandConfig` (declarative read-only field list honored by all three renderers)."
         ),
+      // vxe 一等公民（JSON 安全子集）：运行时只在 engine:'vxe' 生效。
+      showFooter: z.boolean().optional(),
+      footerData: z.array(z.array(z.unknown())).optional(),
+      exportConfig: z.union([z.boolean(), z.record(z.string(), z.unknown())]).optional(),
+      toolbarConfig: z.union([z.boolean(), z.record(z.string(), z.unknown())]).optional(),
+      columnConfig: z.record(z.string(), z.unknown()).optional(),
+      keepSource: z.boolean().optional(),
     })
     .optional(),
   pagination: z

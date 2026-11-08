@@ -401,6 +401,13 @@ export const tableBlockOptionsSchema = z.object({
     .passthrough()
     .optional()
     .describe('vxe-only row-expand switch (paired with an expand column).'),
+  // vxe 一等公民（JSON 安全子集）：运行时只在 engine:'vxe' 生效。
+  showFooter: z.boolean().optional().describe("Show the vxe footer row (engine:'vxe' only)."),
+  footerData: z.array(z.array(z.unknown())).optional().describe('Static footer rows ([row][column]); engine:vxe only.'),
+  exportConfig: z.union([z.boolean(), z.record(z.string(), z.unknown())]).optional().describe("vxe export config (true = defaults); engine:'vxe' only."),
+  toolbarConfig: z.union([z.boolean(), z.record(z.string(), z.unknown())]).optional().describe("vxe toolbar config (true = defaults); engine:'vxe' only."),
+  columnConfig: z.record(z.string(), z.unknown()).optional().describe("vxe column config, e.g. { resizable: true, showOverflow: 'tooltip' }; engine:'vxe' only."),
+  keepSource: z.boolean().optional().describe('Keep pre-edit row snapshots for revertData()/getUpdateRecords(); vxe inline editing only.'),
 }).passthrough();
 
 /** `generate_table` 的分页播种（权威 schema 顶层 `pagination` 的数据子集）。 */

@@ -292,6 +292,37 @@ describe('generateTableBlock — 容器级词汇（Wave 4）', () => {
     })
     expect(editable.warnings.some((w) => w.includes('editConfig'))).toBe(false)
   })
+  it('vxe 一等公民 JSON 子集：逐键发射，且追加在冻结顺序尾部', () => {
+    const { code } = generateTableBlock({
+      fields: columns,
+      apiUrl: '/api/orders',
+      tableOptions: {
+        engine: 'vxe',
+        expandConfig: { accordion: true },
+        showFooter: true,
+        footerData: [['合计', 1000]],
+        exportConfig: { filename: '报表', type: 'csv' },
+        toolbarConfig: true,
+        columnConfig: { resizable: true },
+        keepSource: false,
+      },
+    })
+    expect(code).toContain('  showFooter: true,')
+    expect(code).toContain('  footerData: [["合计",1000]],')
+    expect(code).toContain('  exportConfig: {"filename":"报表","type":"csv"},')
+    expect(code).toContain('  toolbarConfig: true,')
+    expect(code).toContain('  columnConfig: {"resizable":true},')
+    expect(code).toContain('  keepSource: false,')
+    // 冻结顺序：既有键在前，新增 6 键追加在 expandConfig 之后
+    const at = (k: string) => code.indexOf(`\n  ${k}:`)
+    expect(at('expandConfig')).toBeLessThan(at('showFooter'))
+    expect(at('showFooter')).toBeLessThan(at('footerData'))
+    expect(at('footerData')).toBeLessThan(at('exportConfig'))
+    expect(at('exportConfig')).toBeLessThan(at('toolbarConfig'))
+    expect(at('toolbarConfig')).toBeLessThan(at('columnConfig'))
+    expect(at('columnConfig')).toBeLessThan(at('keepSource'))
+  })
+
 })
 
 const dialogFields = [

@@ -124,8 +124,9 @@ export const CAPABILITY_TOKENS = {
     tier: 'C',
     scenes: ['crud', 'table'],
     reason:
-      'vxe 一等公民块（vxeConfig/vxeOn/toolbarConfig/exportConfig/proxyConfig/footerMethod/keyboardConfig/mouseConfig/columnConfig/showFooter/mergeFooterItems）——' +
-      '两处 AI Zod 零声明 + 生成器零发射（经 AI 入口静默 strip），只能走运行时 vxeConfig/vxeOn 逃生舱手工注入',
+      'vxe 一等公民的**函数形态**（vxeConfig/vxeOn/proxyConfig.ajax/footerMethod/mergeFooterItems）——' +
+      '只能走运行时逃生舱手工注入。声明式子集（showFooter/footerData/exportConfig/toolbarConfig/columnConfig/keepSource）' +
+      '已进 AI 契约（AI-31），不再属于本档',
   },
   renderFn: { tier: 'C', scenes: ['crud', 'table', 'form', 'dialog'], reason: '自定义单元格 / 控件 / 弹窗内容 / 详情渲染 = 函数源码串（Tier-3 永久逃生舱）' },
   formatterFn: { tier: 'C', scenes: ['crud', 'table'], reason: '展示格式化 = 函数源码串（formatter / summary-method / footerMethod）' },

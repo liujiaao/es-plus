@@ -344,6 +344,13 @@ export interface TableBlockOptions {
     accordion?: boolean
     lazy?: boolean
   }
+  // ── vxe 一等公民（JSON 安全子集；仅 engine:'vxe' 生效）──────────────
+  showFooter?: boolean
+  footerData?: unknown[][]
+  exportConfig?: boolean | Record<string, unknown>
+  toolbarConfig?: boolean | Record<string, unknown>
+  columnConfig?: Record<string, unknown>
+  keepSource?: boolean
 }
 
 /**
@@ -392,6 +399,13 @@ export const TABLE_BLOCK_OPTION_ORDER = [
   // AN-08：vxe 树表 / 行展开（纯 JSON → optionLiteral 走 inlineJson）。
   'treeConfig',
   'expandConfig',
+  // vxe 一等公民（JSON 安全子集）：追加在尾部，冻结既有键的顺序。
+  'showFooter',
+  'footerData',
+  'exportConfig',
+  'toolbarConfig',
+  'columnConfig',
+  'keepSource',
 ] as const
 
 /**

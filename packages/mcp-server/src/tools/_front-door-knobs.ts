@@ -131,6 +131,13 @@ export const tableOptionsSchema = z
       .strict()
       .optional()
       .describe("vxe-only row-expand switch (distinct from the top-level declarative `expandConfig`)."),
+    // vxe 一等公民（JSON 安全子集）：运行时只在 engine:'vxe' 生效。
+    showFooter: z.boolean().optional(),
+    footerData: z.array(z.array(z.unknown())).optional(),
+    exportConfig: z.union([z.boolean(), z.record(z.string(), z.unknown())]).optional(),
+    toolbarConfig: z.union([z.boolean(), z.record(z.string(), z.unknown())]).optional(),
+    columnConfig: z.record(z.string(), z.unknown()).optional(),
+    keepSource: z.boolean().optional(),
   })
   .strict();
 

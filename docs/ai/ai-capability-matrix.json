@@ -310,6 +310,102 @@
           "note": "a-table 的 sorter:true 本就是服务端语义（从不本地排），故只需漏斗 + change 重取；vxe 引擎置 sortConfig.remote"
         }
       }
+    },
+    "tableOptions.showFooter": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅 engine:'vxe' 消费（core build-grid-config 直传 vxe-grid）；默认 / 虚拟引擎忽略"
+        },
+        "vue2": {
+          "level": "partial",
+          "note": "同上（vue2 的 vxe 适配器同样消费）"
+        },
+        "antdv": {
+          "level": "partial",
+          "note": "同上（antdv 的 vxe 适配器同样消费）"
+        }
+      }
+    },
+    "tableOptions.footerData": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅 engine:'vxe' 消费；默认 / 虚拟引擎忽略。函数版 footerMethod 不进 AI 契约"
+        },
+        "vue2": {
+          "level": "partial",
+          "note": "同上"
+        },
+        "antdv": {
+          "level": "partial",
+          "note": "同上"
+        }
+      }
+    },
+    "tableOptions.exportConfig": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅 engine:'vxe' 消费原生 exportData；默认引擎改走 core CSV 兜底（只支持 csv）"
+        },
+        "vue2": {
+          "level": "partial",
+          "note": "同上"
+        },
+        "antdv": {
+          "level": "partial",
+          "note": "同上"
+        }
+      }
+    },
+    "tableOptions.toolbarConfig": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅 engine:'vxe' 消费（vxe-grid 工具栏）；默认 / 虚拟引擎忽略"
+        },
+        "vue2": {
+          "level": "partial",
+          "note": "同上"
+        },
+        "antdv": {
+          "level": "partial",
+          "note": "同上"
+        }
+      }
+    },
+    "tableOptions.columnConfig": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅 engine:'vxe' 消费（列宽拖拽 / 溢出提示等）；默认 / 虚拟引擎忽略"
+        },
+        "vue2": {
+          "level": "partial",
+          "note": "同上"
+        },
+        "antdv": {
+          "level": "partial",
+          "note": "同上"
+        }
+      }
+    },
+    "tableOptions.keepSource": {
+      "targets": {
+        "vue3": {
+          "level": "partial",
+          "note": "仅 engine:'vxe' 的行内编辑消费（保留编辑前快照）；其它引擎忽略"
+        },
+        "vue2": {
+          "level": "partial",
+          "note": "同上"
+        },
+        "antdv": {
+          "level": "partial",
+          "note": "同上"
+        }
+      }
     }
   },
   "sceneCapability": {
