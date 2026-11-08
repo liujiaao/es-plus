@@ -57,10 +57,14 @@ const tableRowClassName = ({ row }) => {
 .example-table-merge {
   padding: 0;
 }
+/* 行底色用「状态色的低透明度」而不是浅色调字面量：同一个 rgba 压在白底上就是
+   原来的浅绿/浅橙，压在深色表体上则是同色的暗底 —— 一条规则同时服务两套主题。
+   写死 #f0f9eb / #fdf6ec 的话，深色页面上会出现两行刺眼的亮色（与 docs-content.css
+   里 .tip / .warning 的暗色覆盖是同一种做法，只是这里没有共享文件可挂，就地解决）。 */
 :deep(.row-completed) {
-  background-color: #f0f9eb !important;
+  background-color: rgba(22, 163, 74, 0.12) !important;
 }
 :deep(.row-warning) {
-  background-color: #fdf6ec !important;
+  background-color: rgba(217, 119, 6, 0.12) !important;
 }
 </style>

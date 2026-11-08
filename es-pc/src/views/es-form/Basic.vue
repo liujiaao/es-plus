@@ -78,7 +78,7 @@ const configBtn = [
 .result-box {
   margin-top: 20px;
   padding: 16px;
-  background-color: #fafafa;
+  background-color: var(--es-fill-light);
   border-radius: 4px;
 }
 .result-box h4 {

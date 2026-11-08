@@ -21,15 +21,15 @@ import { EsTable } from '@es-plus/adapter-antdv'
 
 const field = (label, value) =>
   h('div', { style: 'flex:1 1 30%;min-width:180px' }, [
-    h('span', { style: 'color:#909399' }, `${label}：`),
-    h('span', { style: 'color:#303133' }, String(value)),
+    h('span', { style: 'color:var(--es-text-secondary)' }, `${label}：`),
+    h('span', { style: 'color:var(--es-text-primary)' }, String(value)),
   ])
 
 const columns = [
   {
     type: 'expand', width: 50,
     render: (_h, { row }) =>
-      h('div', { style: 'padding:16px;background:#f5f7fa;border-radius:4px;display:flex;flex-wrap:wrap;gap:12px' }, [
+      h('div', { style: 'padding:16px;background:var(--es-fill);border-radius:4px;display:flex;flex-wrap:wrap;gap:12px' }, [
         field('员工ID', row.id),
         field('姓名', row.name),
         field('部门', row.department),

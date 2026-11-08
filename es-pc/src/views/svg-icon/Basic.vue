@@ -119,7 +119,7 @@ const externalUrl = `${window.location.origin}${import.meta.env.BASE_URL}icons/s
   color: #8c8c8c;
 }
 .si-note code {
-  background: #f5f5f5;
+  background: var(--es-fill);
   padding: 1px 5px;
   border-radius: 3px;
   font-family: 'Fira Code', monospace;

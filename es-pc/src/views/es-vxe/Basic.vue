@@ -349,7 +349,7 @@ onMounted(async () => {
 }
 .wb-metric b {
   font-size: 13px;
-  color: #262626;
+  color: var(--es-text-primary);
   font-variant-numeric: tabular-nums;
 }
 .wb-foot {
@@ -378,7 +378,7 @@ onMounted(async () => {
   color: #8c8c8c;
 }
 .wb-note code {
-  background: #f5f5f5;
+  background: var(--es-fill);
   padding: 1px 5px;
   border-radius: 3px;
   font-family: 'Fira Code', monospace;

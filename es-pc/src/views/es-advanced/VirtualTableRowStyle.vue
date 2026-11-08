@@ -12,7 +12,7 @@
       v-model:pagination="pagination"
       @row-click="handleRowClick"
     />
-    <div v-if="clickedRow" style="margin-top: 12px; padding: 10px; background: #f5f7fa; border-radius: 4px; font-size: 13px;">
+    <div v-if="clickedRow" style="margin-top: 12px; padding: 10px; background: var(--es-fill-light); border-radius: 4px; font-size: 13px;">
       <strong>当前选中行：</strong>{{ clickedRow.name }} — {{ clickedRow.taskName }} ({{ clickedRow.status }})
     </div>
   </div>

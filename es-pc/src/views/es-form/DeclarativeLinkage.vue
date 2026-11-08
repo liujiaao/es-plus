@@ -73,7 +73,7 @@ const configBtn = [
   max-height: 260px;
   overflow: auto;
   padding: 12px;
-  background: #f6f8fa;
+  background: var(--es-doc-code-block-bg);
   border-radius: 6px;
   font-size: 12px;
   line-height: 1.5;

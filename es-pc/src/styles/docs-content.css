@@ -690,6 +690,35 @@
   background-color: var(--es-fill) !important;
 }
 
+/* Ant Design Vue 端同病：表头由组件默认下发内联 background: '#f5f7fa'，
+   斑马纹（.table-striped）与当前行高亮（.table-striped 同源的组件 CSS）分别是
+   #fafafa / #e6f4ff —— 都是编译进库里的字面量，暗色算法管不到。
+   同样用 !important + 更高特异性压回主题色。
+
+   注意落点：adapter-antdv 把 `headerCellStyle` 交给 a-table 的 customHeaderRow，
+   内联样式落在 **<tr>** 上（不是 th）。只管 th 的话，行底那块亮色仍在 —— 实测
+   /es-table、/flagship-approval、/ai-generated 的表头行 computed 背景都是
+   rgb(245,247,250)。所以 tr 与 th 各压一条：th 管 ADV 自己下发的 #fafafa,
+   tr 管内联的 #f5f7fa。 */
+.dark .ant-table-thead > tr {
+  background: var(--es-fill) !important;
+}
+
+.dark .ant-table-thead > tr > th {
+  background: var(--es-fill) !important;
+  /* 表头文字也走令牌：演示用的 headerCellStyle 常带 color（如 #303133），
+     那条内联样式挂在 <tr> 上被 th 继承 —— 深色下就是「深底深字」。 */
+  color: var(--es-text-primary);
+}
+
+.dark .table-striped .ant-table-tbody > tr:nth-child(even) {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.dark .ant-table-tbody > tr.ant-table-row-highlighted {
+  background: rgba(59, 130, 246, 0.18) !important;
+}
+
 /* 窄屏：正文表格的表头/单元格有 min-content 宽度，390px 下会撑出页面横向滚动条
    （/guide/mcp-server 的 schema 表实测 438px）。表格自身变成横向滚动容器，
    页面宽度保持不变 —— 表格内容仍然一眼可扫，只是需要横滑。 */

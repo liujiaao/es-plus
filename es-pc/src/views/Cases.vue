@@ -192,9 +192,9 @@ const delta = (v) => (v === 0 ? '—' : v > 0 ? `−${v}%` : `+${Math.abs(v)}%`)
 }
 
 .cases-hero h1 {
-  font-size: 32px;
+  font-size: var(--es-text-32);
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--es-doc-heading);
   margin-bottom: 12px;
 }
 
@@ -211,7 +211,7 @@ const delta = (v) => (v === 0 ? '—' : v > 0 ? `−${v}%` : `+${Math.abs(v)}%`)
   padding: 18px 20px 16px;
   border: 1px solid #f0f0f0;
   border-radius: 10px;
-  background: #fafafa;
+  background: var(--es-fill-light);
 }
 
 .compare-header {
@@ -224,7 +224,7 @@ const delta = (v) => (v === 0 ? '—' : v > 0 ? `−${v}%` : `+${Math.abs(v)}%`)
   h2 {
     font-size: 17px;
     margin: 0;
-    color: #1a1a2e;
+    color: var(--es-doc-heading);
   }
 }
 
@@ -263,7 +263,7 @@ const delta = (v) => (v === 0 ? '—' : v > 0 ? `−${v}%` : `+${Math.abs(v)}%`)
 
   .compare-scene {
     text-align: left;
-    color: #1a1a2e;
+    color: var(--es-doc-heading);
   }
 
   .compare-native {
@@ -363,7 +363,7 @@ const delta = (v) => (v === 0 ? '—' : v > 0 ? `−${v}%` : `+${Math.abs(v)}%`)
 .flagship-cta-title {
   font-size: 16px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--es-doc-heading);
 }
 
 .flagship-cta-desc {
@@ -415,7 +415,7 @@ const delta = (v) => (v === 0 ? '—' : v > 0 ? `−${v}%` : `+${Math.abs(v)}%`)
   gap: 8px;
   font-size: 17px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--es-doc-heading);
   margin-bottom: 10px;
 }
 

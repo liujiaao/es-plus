@@ -163,8 +163,8 @@ const logError = (err, info) => {
   gap: 10px;
 }
 .eb-kpi strong {
-  font-size: 26px;
-  color: #262626;
+  font-size: var(--es-text-26);
+  color: var(--es-text-primary);
   font-variant-numeric: tabular-nums;
 }
 .eb-up {
@@ -235,7 +235,7 @@ const logError = (err, info) => {
   color: #8c8c8c;
 }
 .eb-note code {
-  background: #f5f5f5;
+  background: var(--es-fill);
   padding: 1px 5px;
   border-radius: 3px;
   font-family: 'Fira Code', monospace;

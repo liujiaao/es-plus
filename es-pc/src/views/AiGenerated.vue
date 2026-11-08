@@ -224,7 +224,7 @@ function handleDialogConfirm(key, data) {
 }
 
 .ai-hero h1 {
-  font-size: 26px;
+  font-size: var(--es-text-26);
   margin: 8px 0 10px;
   color: rgba(0, 0, 0, 0.88);
 }
@@ -248,7 +248,7 @@ function handleDialogConfirm(key, data) {
   margin: 12px 0;
   padding: 10px 14px;
   border-left: 3px solid #1677ff;
-  background: #fafafa;
+  background: var(--es-fill-light);
   color: rgba(0, 0, 0, 0.88);
   line-height: 1.8;
   font-size: 13px;
@@ -341,7 +341,7 @@ function handleDialogConfirm(key, data) {
   border: 1px solid #f0f0f0;
   border-radius: 6px;
   padding: 14px 16px;
-  background: #fff;
+  background: var(--es-bg);
 }
 
 .evidence-steps strong {
@@ -399,7 +399,7 @@ function handleDialogConfirm(key, data) {
 .evidence-counts span {
   padding: 1px 6px;
   border-radius: 3px;
-  background: #f5f5f5;
+  background: var(--es-fill);
   color: rgba(0, 0, 0, 0.45);
   font-size: 12px;
   font-variant-numeric: tabular-nums;
@@ -409,7 +409,7 @@ function handleDialogConfirm(key, data) {
   margin: 0 0 4px;
   padding: 12px 14px;
   border-radius: 6px;
-  background: #f6f8fa;
+  background: var(--es-doc-code-block-bg);
   color: #333;
   font-size: 12px;
   line-height: 1.7;
@@ -431,7 +431,7 @@ function handleDialogConfirm(key, data) {
   border: 1px solid #f0f0f0;
   border-radius: 6px;
   padding: 14px 16px;
-  background: #fff;
+  background: var(--es-bg);
 }
 
 .evidence-metric-value {

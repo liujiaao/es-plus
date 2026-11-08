@@ -42,7 +42,7 @@ const rendererize = (text) => text.replaceAll('{renderer}', 'antdv')
 
 .code-block {
   margin: 16px 0;
-  background: #f6f8fa;
+  background: var(--es-doc-code-block-bg);
 }
 
 .code-block pre {

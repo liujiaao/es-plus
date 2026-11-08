@@ -111,7 +111,7 @@ const schemaCode = computed(() => JSON.stringify(schema, null, 2))
   border: 1px solid #f0f0f0;
   border-radius: 16px;
   overflow: hidden;
-  background: #fff;
+  background: var(--es-bg);
 }
 
 .tri-schema {
@@ -123,7 +123,7 @@ const schemaCode = computed(() => JSON.stringify(schema, null, 2))
   align-items: center;
   gap: 12px;
   padding: 14px 20px;
-  background: #fafafa;
+  background: var(--es-fill-light);
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -162,7 +162,7 @@ const schemaCode = computed(() => JSON.stringify(schema, null, 2))
 .tri-evidence {
   padding: 18px 20px;
   border-bottom: 1px solid #f0f0f0;
-  background: #fafafa;
+  background: var(--es-fill-light);
 }
 
 .tri-evidence-header {
@@ -195,7 +195,7 @@ const schemaCode = computed(() => JSON.stringify(schema, null, 2))
   padding: 12px 14px;
   border: 1px solid #f0f0f0;
   border-radius: 8px;
-  background: #fff;
+  background: var(--es-bg);
 }
 
 .tri-stat-label {
@@ -261,7 +261,7 @@ const schemaCode = computed(() => JSON.stringify(schema, null, 2))
   border: 1px solid #f0f0f0;
   border-radius: 8px;
   overflow: hidden;
-  background: #fff;
+  background: var(--es-bg);
 }
 
 .tri-proof-pane-header {
@@ -269,7 +269,7 @@ const schemaCode = computed(() => JSON.stringify(schema, null, 2))
   flex-direction: column;
   gap: 2px;
   padding: 8px 12px;
-  background: #f5f5f5;
+  background: var(--es-fill);
   border-bottom: 1px solid #f0f0f0;
 }
 
@@ -345,7 +345,7 @@ const schemaCode = computed(() => JSON.stringify(schema, null, 2))
 
 .tri-pkg {
   padding: 4px 10px;
-  background: #f5f5f5;
+  background: var(--es-fill);
   color: var(--es-brand-primary);
   border-radius: 4px;
   font-family: 'SFMono-Regular', Consolas, monospace;

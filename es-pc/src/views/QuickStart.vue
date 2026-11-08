@@ -96,9 +96,9 @@ dialog({
 }
 
 .qs-hero h1 {
-  font-size: 32px;
+  font-size: var(--es-text-32);
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--es-doc-heading);
   margin-bottom: 12px;
 }
 
@@ -131,7 +131,7 @@ dialog({
 .case-header h2 {
   font-size: 20px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--es-doc-heading);
   margin: 0;
 }
 

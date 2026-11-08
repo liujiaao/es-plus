@@ -251,9 +251,9 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
 }
 
 .flagship-hero h1 {
-  font-size: 26px;
+  font-size: var(--es-text-26);
   margin: 8px 0 10px;
-  color: #1a1a2e;
+  color: var(--es-doc-heading);
 }
 
 .flagship-badge {
@@ -307,7 +307,7 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
 .flagship-schema summary {
   cursor: pointer;
   font-size: 14px;
-  color: #1a1a2e;
+  color: var(--es-doc-heading);
 }
 
 .flagship-schema pre {
@@ -328,7 +328,7 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
 .flagship-story h2 {
   font-size: 20px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--es-doc-heading);
   margin: 36px 0 12px;
 }
 
@@ -356,21 +356,21 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
   border: 1px solid #f0f0f0;
   border-radius: 6px;
   padding: 14px 16px;
-  background: #fff;
+  background: var(--es-bg);
 }
 
 .story-pain {
   margin: 0 0 8px;
   font-size: 14px;
   line-height: 1.7;
-  color: #1a1a2e;
+  color: var(--es-doc-heading);
 }
 
 .story-config {
   display: inline-block;
   padding: 2px 8px;
   border-radius: 4px;
-  background: #f5f5f5;
+  background: var(--es-fill);
   color: #333;
   font-family: monospace;
   font-size: 12px;
@@ -420,8 +420,8 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
 
 .story-cost th {
   font-weight: 600;
-  color: #1a1a2e;
-  background: #fafafa;
+  color: var(--es-doc-heading);
+  background: var(--es-fill-light);
 }
 
 .story-cost code {
@@ -444,13 +444,13 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
   border: 1px solid #f0f0f0;
   border-radius: 6px;
   padding: 14px 16px;
-  background: #fff;
+  background: var(--es-bg);
 }
 
 .story-metric-value {
   font-size: 22px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--es-doc-heading);
   font-variant-numeric: tabular-nums;
 }
 
@@ -478,7 +478,7 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
 .story-metric-counts span {
   padding: 1px 6px;
   border-radius: 3px;
-  background: #f5f5f5;
+  background: var(--es-fill);
   font-variant-numeric: tabular-nums;
 }
 
@@ -498,7 +498,7 @@ onUnmounted(() => configureEsPlus({ permission: () => true }))
 .story-boundaries strong {
   display: inline-block;
   margin-right: 6px;
-  color: #1a1a2e;
+  color: var(--es-doc-heading);
 }
 
 .story-boundaries strong::after {

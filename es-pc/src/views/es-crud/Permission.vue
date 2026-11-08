@@ -1,6 +1,6 @@
 <template>
   <div class="example-crud-permission">
-    <div style="margin-bottom: 12px; padding: 8px 12px; background: #f5f7fa; border-radius: 4px;">
+    <div style="margin-bottom: 12px; padding: 8px 12px; background: var(--es-fill-light); border-radius: 4px;">
       <span style="margin-right: 12px; font-size: 13px; color: #606266;">当前角色：</span>
       <a-radio-group v-model:value="currentRole" size="small" @change="handleRoleChange">
         <a-radio-button value="admin">管理员</a-radio-button>

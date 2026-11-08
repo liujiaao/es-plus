@@ -325,7 +325,7 @@ const VirtualTableCrud = defineAsyncComponent(() => import('./es-advanced/Virtua
 h1 {
   font-size: var(--es-text-3xl);
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--es-doc-heading);
   margin-bottom: 8px;
 }
 
@@ -339,7 +339,7 @@ h2 {
   font-size: var(--es-text-2xl);
   font-weight: 600;
   margin: 0 0 16px;
-  color: #1a1a2e;
+  color: var(--es-doc-heading);
 }
 
 section {
@@ -353,7 +353,7 @@ section p {
 }
 
 code {
-  background: #f5f5f5;
+  background: var(--es-fill);
   padding: 2px 6px;
   border-radius: 4px;
   font-family: 'Fira Code', monospace;

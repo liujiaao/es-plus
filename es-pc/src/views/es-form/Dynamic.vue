@@ -95,7 +95,7 @@ const showResult = () => {
   gap: 12px;
 }
 pre {
-  background: #f5f7fa;
+  background: var(--es-fill-light);
   padding: 16px;
   border-radius: 4px;
   font-size: 13px;

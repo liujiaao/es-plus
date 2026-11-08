@@ -114,7 +114,7 @@ const openEditDialog = () => {
 .result-box {
   margin-top: 24px;
   padding: 16px;
-  background-color: #f5f7fa;
+  background-color: var(--es-fill-light);
   border-radius: 4px;
 }
 .result-box h4 {

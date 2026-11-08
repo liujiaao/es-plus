@@ -41,8 +41,8 @@ const PRINT_STYLE = `
   tfoot { display: table-footer-group; }
   tr { page-break-inside: avoid; }
   th, td { border: 1px solid #c0c4cc; padding: 5px 8px; text-align: center; vertical-align: middle; }
-  th { background: #f5f7fa; font-weight: bold; }
-  tfoot td { background: #fafafa; font-weight: bold; }
+  th { background: var(--es-fill-light); font-weight: bold; }
+  tfoot td { background: var(--es-fill-light); font-weight: bold; }
 `
 
 // vxe print 不执行 spanMethod（与之互斥），用 patchHtmlRowSpans 修正 tbody rowspan/colspan。

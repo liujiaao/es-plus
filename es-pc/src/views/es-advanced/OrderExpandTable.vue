@@ -108,7 +108,7 @@ const itemTableOptions = {
 }
 .expand-wrapper {
   padding: 12px 20px;
-  background: #fafafa;
+  background: var(--es-fill-light);
 }
 .expand-total {
   display: flex;
@@ -117,7 +117,7 @@ const itemTableOptions = {
   padding: 8px 12px;
   font-size: 13px;
   color: #595959;
-  background: #fff;
+  background: var(--es-bg);
   border: 1px solid #f0f0f0;
   border-top: none;
 }

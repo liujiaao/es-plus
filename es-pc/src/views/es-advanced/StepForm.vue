@@ -142,7 +142,7 @@ const submitForm = () => {
 }
 .review-section {
   padding: 20px;
-  background-color: #f5f7fa;
+  background-color: var(--es-fill-light);
   border-radius: 4px;
 }
 .step-actions {

@@ -298,7 +298,7 @@ const layoutProps = {
   max-height: 400px;
   overflow: auto;
   padding: 16px;
-  background-color: #f5f7fa;
+  background-color: var(--es-fill-light);
   border-radius: 4px;
   font-size: 13px;
   line-height: 1.6;
@@ -366,7 +366,7 @@ const layoutProps = {
 
 .example-form-file-upload .file-name {
   font-size: 13px;
-  color: #303133;
+  color: var(--es-text-primary);
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -427,7 +427,7 @@ const layoutProps = {
 
 .example-form-file-upload .preview-btn.disabled {
   color: #c0c4cc;
-  background: #f5f7fa;
+  background: var(--es-fill-light);
   border-color: #e4e7ed;
   cursor: not-allowed;
 }

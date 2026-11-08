@@ -11,8 +11,8 @@ body {
   font-family: var(--es-font-sans);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  color: #333;
-  background: #f5f5f5;
+  color: var(--es-text-primary);
+  background: var(--es-bg-page);
 }
 
 /* 滚动条美化 */
@@ -26,22 +26,22 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #d9d9d9;
+  background: var(--es-border);
   border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #bfbfbf;
+  background: var(--es-text-secondary);
 }
 
 /* 代码块样式 */
 code {
-  background: #f5f5f5;
+  background: var(--es-fill);
   padding: 2px 6px;
   border-radius: 4px;
   font-family: 'Fira Code', 'Cascadia Code', Consolas, monospace;
   font-size: 13px;
-  color: var(--es-brand-primary);
+  color: var(--es-brand-strong);
 }
 
 /* 链接样式 */
@@ -51,7 +51,7 @@ a {
 }
 
 a:hover {
-  color: #4096ff;
+  color: var(--es-brand-strong);
 }
 
 /* Ant Design Vue 菜单覆盖 */

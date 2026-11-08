@@ -44,6 +44,24 @@
           <a-button type="link" class="github-btn" href="https://github.com/liujiaao/es-plus" target="_blank">
             <GithubOutlined /><span class="github-text"> GitHub</span>
           </a-button>
+          <!-- 深色开关（审计 P1-4）：与主文档站同一套口径，图标用同一组线性 SVG，
+               不额外引第三方图标包 -->
+          <a-button
+            type="text"
+            class="theme-btn"
+            :aria-label="isDark ? '切换亮色' : '切换暗色'"
+            :title="isDark ? '切换亮色' : '切换暗色'"
+            :aria-pressed="isDark ? 'true' : 'false'"
+            @click="toggleTheme"
+          >
+            <svg v-if="isDark" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41" />
+            </svg>
+            <svg v-else viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+          </a-button>
           <!-- 版本号是元信息，不是主行动：此前它被渲染成 ant-btn-primary，
                和「快速上手」抢同一视觉层级（审计 P1-7）。改成中性胶囊 + 等宽数字。 -->
           <span class="version-chip" :title="`@es-plus/adapter-antdv v${adapterVersion}`">v{{ adapterVersion }}</span>
@@ -232,6 +250,8 @@ import DocSearch from '@/components/doc/DocSearch.vue'
 // 目录行为（标题发号 + 滚动高亮）与另两站共用同一份实现
 import { bindSkipLink, collectHeadings, createScrollSpy, scrollToHeading as scrollToHeadingImpl, lastUpdatedFor } from '@/utils/doc-chrome.js'
 import { docEntryForRouteName, docNeighbors } from '@/utils/doc-nav'
+// 深色开关（审计 P1-4）；规则与 index.html 首屏脚本一致，见 stores/theme.js
+import { isDark, toggleTheme } from '@/stores/theme'
 
 // 跳转链接必须拦默认行为：hash 路由会把 #es-main 当成一条不存在的路径
 onMounted(() => bindSkipLink(document))
@@ -375,8 +395,8 @@ const onTocClick = (id) => {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  background: #fff;
-  border-bottom: 1px solid #f0f0f0;
+  background: var(--es-bg);
+  border-bottom: 1px solid var(--es-border-lighter);
   padding: 0 24px;
   height: 64px;
   line-height: 64px;
@@ -405,12 +425,32 @@ const onTocClick = (id) => {
 .header-left .logo-text {
   font-size: 18px;
   font-weight: 600;
-  color: #1a1a2e;
+  color: var(--es-text-primary);
 }
 
 .header-right {
   display: flex;
   align-items: center;
+}
+
+/* 深色开关：与相邻的图标按钮同一条水平线，颜色走令牌 */
+.theme-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  color: var(--es-text-secondary);
+
+  &:hover {
+    color: var(--es-brand-primary);
+  }
+
+  svg {
+    width: 18px;
+    height: 18px;
+  }
 }
 
 .site-switcher-btn {
@@ -419,7 +459,7 @@ const onTocClick = (id) => {
 
 .site-current {
   font-weight: 600;
-  color: #1677ff;
+  color: var(--es-brand-primary);
 }
 
 /* 版本胶囊：中性灰底、等宽数字，和 header 里的图标同一条水平线 */
@@ -448,8 +488,8 @@ const onTocClick = (id) => {
 }
 
 .doc-sider {
-  background: #fff;
-  border-right: 1px solid #f0f0f0;
+  background: var(--es-bg);
+  border-right: 1px solid var(--es-border-lighter);
   height: calc(100vh - 64px);
   position: sticky;
   top: 64px;
@@ -471,12 +511,12 @@ const onTocClick = (id) => {
    推到视口下方整一屏（路线图 1.8）。 */
 .doc-content {
   padding: 24px;
-  background: #f5f5f5;
+  background: var(--es-bg-page);
 }
 
 .content-wrapper {
   max-width: calc(var(--es-layout-max) - var(--es-sidebar-width));
-  background: #fff;
+  background: var(--es-bg);
   border-radius: 8px;
   padding: 32px;
 }

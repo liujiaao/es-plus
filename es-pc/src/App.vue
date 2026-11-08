@@ -1,11 +1,16 @@
 <template>
-  <a-config-provider :locale="zhCN" :theme="theme">
+  <a-config-provider :locale="zhCN" :theme="themeConfig">
     <router-view />
   </a-config-provider>
 </template>
 
 <script setup>
+import { computed } from 'vue'
 import zhCN from 'ant-design-vue/es/locale/zh_CN'
+// ADv 4 的暗色**不是** CSS 类：组件颜色由 cssinjs 算法计算，必须把 darkAlgorithm
+// 传给 ConfigProvider。只挂 <html class="dark"> 的后果是外壳变暗、a-* 组件全亮。
+import { theme as antdTheme } from 'ant-design-vue'
+import { isDark } from './stores/theme'
 
 /**
  * 把品牌主色接进 Ant Design Vue 的主题入口。
@@ -40,9 +45,15 @@ const readBrandPrimary = () => {
 
 const brandPrimary = readBrandPrimary()
 
-const theme = {
+/**
+ * algorithm 随主题切换：darkAlgorithm 会把 token 派生到暗色底（表格、菜单、
+ * 下拉、输入框全部跟随），defaultAlgorithm 是亮色基线。两者都保留自定义
+ * colorPrimary —— 暗色下它仍指向同一份品牌单源。
+ */
+const themeConfig = computed(() => ({
+  algorithm: isDark.value ? antdTheme.darkAlgorithm : antdTheme.defaultAlgorithm,
   token: {
     colorPrimary: brandPrimary || '#1677ff',
   },
-}
+}))
 </script>

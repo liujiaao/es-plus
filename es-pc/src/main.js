@@ -19,6 +19,7 @@ import { demoHttpRequest } from './utils/demo-http'
 import { installAntd } from './utils/install-antd'
 import { initAnalytics } from './utils/analytics.js'
 import { ensureVxe, needsVxe } from './utils/vxe-loader'
+import { initTheme } from './stores/theme'
 import './styles/design-tokens.css'
 import './styles/docs-content.css'
 import './styles/docs-layout.css'
@@ -33,6 +34,9 @@ import './styles/global.css'
 import './styles/docs-a11y.css'
 
 const app = createApp(App)
+// 主题在挂载前落定：index.html 的首屏脚本已经挂过 `dark`，这里只是把
+// 模块级 isDark 与 DOM 对齐（供 ConfigProvider 的算法选择使用）
+initTheme()
 installAntd(app)
 app.use(router)
 app.use(ESPlus, {

@@ -183,7 +183,7 @@ function download(name, data) {
   padding: 10px 14px;
   border: 1px solid #f0f0f0;
   border-radius: 8px;
-  background: #fafafa;
+  background: var(--es-fill-light);
   color: inherit;
   text-decoration: none;
 
@@ -214,7 +214,7 @@ function download(name, data) {
 .ai-gallery-chip {
   padding: 0 6px;
   border-radius: 4px;
-  background: #fafafa;
+  background: var(--es-fill-light);
   font-size: 12px;
 
   &.ok {
@@ -251,7 +251,7 @@ function download(name, data) {
   border: 1px solid #f0f0f0;
   border-radius: 8px;
   padding: 14px 16px;
-  background: #fff;
+  background: var(--es-bg);
 
   h3 {
     font-size: 15px;
@@ -302,7 +302,7 @@ function download(name, data) {
   margin-right: 6px;
   padding: 0 6px;
   border-radius: 4px;
-  background: #fafafa;
+  background: var(--es-fill-light);
   font-family: monospace;
 }
 

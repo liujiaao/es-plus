@@ -103,7 +103,7 @@ const pageSchema = {
 }
 .log-label {
   font-weight: 600;
-  color: #262626;
+  color: var(--es-text-primary);
 }
 .log-detail {
   display: inline-flex;

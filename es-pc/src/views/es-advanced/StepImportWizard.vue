@@ -491,7 +491,7 @@ const openWizard = () => {
 
 .import-wizard code,
 .ant-modal .csv-tip code {
-  background: #f5f5f5;
+  background: var(--es-fill);
   padding: 1px 5px;
   border-radius: 3px;
   font-family: 'Fira Code', monospace;
@@ -516,14 +516,14 @@ const openWizard = () => {
   padding: 12px 12px 4px;
   border: 1px solid #f0f0f0;
   border-radius: 6px;
-  background: #fafafa;
+  background: var(--es-fill-light);
 }
 
 .ant-modal .fix-title {
   margin-bottom: 8px;
   font-size: 13px;
   font-weight: 600;
-  color: #262626;
+  color: var(--es-text-primary);
 }
 
 .ant-modal .fix-actions {

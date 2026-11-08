@@ -218,7 +218,7 @@ const diffData = [
 h1 {
   font-size: var(--es-text-3xl);
   font-weight: 700;
-  color: #1a1a2e;
+  color: var(--es-doc-heading);
   margin-bottom: 8px;
 }
 
@@ -231,7 +231,7 @@ h2 {
   font-size: var(--es-text-2xl);
   font-weight: 600;
   margin: 24px 0 16px;
-  color: #1a1a2e;
+  color: var(--es-doc-heading);
 }
 
 h3 {

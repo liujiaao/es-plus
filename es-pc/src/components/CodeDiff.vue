@@ -58,7 +58,7 @@ defineProps({
   align-items: center;
   justify-content: space-between;
   padding: 12px 16px;
-  background: #fafafa;
+  background: var(--es-fill-light);
   border-bottom: 1px solid #f0f0f0;
 }
 

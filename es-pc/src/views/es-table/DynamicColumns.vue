@@ -52,7 +52,7 @@ const dynamicColumns = computed(() => [
 const tableOptions = {
   border: true,
   // a-table 没有 summary-method，合计行请用列 footer 或独立统计条（el-table 端有 showSummary）
-  headerCellStyle: { background: '#f0f5ff', color: '#303133', fontWeight: '600' }
+  headerCellStyle: { background: '#f0f5ff', color: 'var(--es-text-primary)', fontWeight: '600' }
 }
 </script>
 
