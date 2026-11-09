@@ -235,6 +235,11 @@
               <td>(queryModel)</td>
             </tr>
             <tr>
+              <td>import</td>
+              <td>点击导入按钮（文件选取与上传由宿主实现）</td>
+              <td>(queryModel)</td>
+            </tr>
+            <tr>
               <td>btn-click</td>
               <td>其余按钮的通用事件；表单内旧式确认按钮会带 <code>add-confirm</code> / <code>edit-confirm</code> 之类的 key</td>
               <td>(key, payload)</td>

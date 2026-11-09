@@ -103,7 +103,8 @@ export const docsData: Record<string, any> = {
       { group: '联动与数据', key: 'computed-fields', title: '联动计算', description: 'on.change + on.input 实现商品选择→自动填充单价→数量折扣→实时计算总价；其中「回写」这一步可改用 reactions.fulfill.value 纯声明式完成（见『报销单：零回调联动』）。', component: getComponent('form/15-computed-fields'), code: code('form/15-computed-fields') },
       { group: '模式与组合', key: 'custom-button', title: '自定义按钮区', description: 'renderBtn 完全自定义按钮区域，支持异步提交、保存草稿、确认弹窗等交互。', component: getComponent('form/16-custom-button'), code: code('form/16-custom-button') },
       { group: '模式与组合', key: 'detail-mode', title: '详情模式', description: '编辑/详情双模式切换：详情模式禁用所有字段并隐藏按钮，编辑模式恢复可交互。', component: getComponent('form/17-detail-mode'), code: code('form/17-detail-mode') },
-      { group: '模式与组合', key: 'search-form', title: '组合搜索', description: 'isHidden 条件显隐 + apiParams 异步选项 + 更多/收起，完整搜索表单模式。', component: getComponent('form/18-search-form'), code: code('form/18-search-form') }
+      { group: '模式与组合', key: 'search-form', title: '组合搜索', description: 'isHidden 条件显隐 + apiParams 异步选项 + 更多/收起，完整搜索表单模式。', component: getComponent('form/18-search-form'), code: code('form/18-search-form') },
+      { group: '模式与组合', key: 'form-group', title: '分组布局：Tabs / Steps / 折叠面板', description: 'EsForm 没有内置分组容器：用容器组件包裹多个 EsForm、共用一个 model。示例演示真正的难点 —— 保存时逐组校验，并把第一个出错的组切到前台；分步模式下「下一步」只校验当前步。', component: getComponent('form/21-form-group'), code: code('form/21-form-group') }
     ],
     api: {
       props: [
@@ -240,7 +241,7 @@ export const docsData: Record<string, any> = {
       // 高度自适应该归「结构与展示」：它讲的是容器度量（ResizeObserver/heightType），
       // 不是交互；700px 也是交互组里最重的一块。
       { group: '结构与展示', key: 'table-height', title: '自适应容器高度', description: 'heightType: height 继承父容器高度 + ResizeObserver 自动计算，容器变表格自适应。', component: getComponent('table/18-table-height'), code: code('table/18-table-height') },
-      { group: '结构与展示', key: 'code-label', title: '码值列：零 render 出标签', description: '状态是 0/1/2 这样的码值，列上写一份 dataOptions 就得到中文标签与语义色 —— 三端各自渲染原生标签（ElTag / el-tag / a-tag），没有一个 render 函数。未命中显示原值，空值走 emptyPlaceholder。', component: getComponent('table/19-code-label'), code: code('table/19-code-label') }
+      { group: '结构与展示', key: 'code-label', title: '码值列：零 render 出标签', description: '状态是 0/1/2 这样的码值，列上写一份 dataOptions 就得到中文标签与语义色 —— 三端各自渲染原生标签（ElTag / el-tag / a-tag），没有一个 render 函数。未命中显示原值，空值走 emptyPlaceholder。', component: getComponent('table/19-code-label'), code: code('table/19-code-label') },
     ],
     api: {
       props: [
@@ -562,6 +563,7 @@ export const docsData: Record<string, any> = {
         { name: 'btn-click', params: '(key, payload?)', desc: '按钮点击时触发（非弹窗类按钮或行操作）' },
         { name: 'query', params: '(model)', desc: '查询事件' },
         { name: 'export', params: '(model)', desc: '导出事件' },
+        { name: 'import', params: '(model)', desc: '导入事件（actions 含 import 时点击「导入」触发；文件选取与上传由宿主实现）' },
         { name: 'add', params: '-', desc: '新增按钮点击（向后兼容）' },
         { name: 'edit', params: '(row)', desc: '编辑按钮点击（向后兼容）' },
         { name: 'view', params: '(row)', desc: '查看按钮点击（向后兼容）' },

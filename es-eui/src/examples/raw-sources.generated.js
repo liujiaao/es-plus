@@ -5988,6 +5988,158 @@ export default {
 }
 </style>
 `
+export const RAW_form_GroupLayout = `<template>
+  <div class="group-layout-demo">
+    <div class="intro-wrap">
+      <el-alert
+        title="EsForm 是平铺的栅格表单，没有内置分组容器"
+        type="info"
+        :closable="false"
+        show-icon
+      >用 el-tabs 包裹多个 EsForm：每组一份 formItemList，共用同一个 model。
+        保存前逐组 validate()，否则藏在未打开标签页里的错误用户看不见。</el-alert>
+    </div>
+
+    <el-tabs v-model="activeTab" type="border-card">
+      <el-tab-pane label="基本信息" name="basic">
+        <es-form
+          ref="basicRef"
+          :model="model"
+          :form-item-list="basicItems"
+          :config-btn="[]"
+          :layout-form-props="{ labelWidth: '100px' }"
+        />
+      </el-tab-pane>
+      <el-tab-pane label="工作信息" name="work">
+        <es-form
+          ref="workRef"
+          :model="model"
+          :form-item-list="workItems"
+          :config-btn="[]"
+          :layout-form-props="{ labelWidth: '100px' }"
+        />
+      </el-tab-pane>
+      <el-tab-pane label="权限设置" name="perm">
+        <es-form
+          ref="permRef"
+          :model="model"
+          :form-item-list="permItems"
+          :config-btn="[]"
+          :layout-form-props="{ labelWidth: '100px' }"
+        />
+      </el-tab-pane>
+    </el-tabs>
+
+    <div class="action-bar">
+      <el-button @click="handleReset">重置</el-button>
+      <el-button type="primary" @click="handleSubmit">提交</el-button>
+    </div>
+
+    <pre v-if="submitted" class="model-preview">{{ JSON.stringify(model, null, 2) }}</pre>
+  </div>
+</template>
+
+<script>
+import { defineComponent, ref, reactive } from '@vue/composition-api'
+import Message from 'element-ui/lib/message'
+
+export default defineComponent({
+  name: 'GroupLayout',
+  setup() {
+    const activeTab = ref('basic')
+    const submitted = ref(false)
+    const basicRef = ref()
+    const workRef = ref()
+    const permRef = ref()
+
+    const model = reactive({
+      name: '', phone: '', email: '',
+      department: '', role: '', salary: undefined,
+      permissions: [],
+    })
+
+    const basicItems = [
+      { prop: 'name', label: '姓名', formtype: 'Input', span: 12, required: true },
+      { prop: 'phone', label: '手机号', formtype: 'Input', span: 12 },
+      { prop: 'email', label: '邮箱', formtype: 'Input', span: 24,
+        rules: [{ type: 'email', message: '请输入合法邮箱', trigger: 'blur' }] },
+    ]
+
+    const workItems = [
+      { prop: 'department', label: '部门', formtype: 'Select', span: 12, required: true,
+        dataOptions: [
+          { label: '技术部', value: 'tech' }, { label: '产品部', value: 'product' },
+          { label: '运营部', value: 'ops' }, { label: '市场部', value: 'market' },
+        ] },
+      { prop: 'role', label: '职位', formtype: 'Select', span: 12,
+        dataOptions: [
+          { label: '工程师', value: 'engineer' }, { label: '技术负责人', value: 'lead' },
+        ] },
+      { prop: 'salary', label: '薪资（元）', formtype: 'InputNumber', span: 12,
+        attrs: { min: 0, max: 999999, step: 1000 } },
+    ]
+
+    const permItems = [
+      { prop: 'permissions', label: '功能权限', formtype: 'Checkbox', span: 24,
+        dataOptions: [
+          { label: '查看', value: 'view' }, { label: '编辑', value: 'edit' },
+          { label: '删除', value: 'delete' }, { label: '导出', value: 'export' },
+        ] },
+    ]
+
+    // 逐组校验；第一个不通过的组切到前台 —— 否则错误藏在没打开的标签页里
+    async function handleSubmit() {
+      const groups = [
+        { prop: 'basic', label: '基本信息', form: basicRef },
+        { prop: 'work', label: '工作信息', form: workRef },
+        { prop: 'perm', label: '权限设置', form: permRef },
+      ]
+      for (const g of groups) {
+        try {
+          await g.form.value?.validate()
+        } catch (e) {
+          activeTab.value = g.prop
+          Message.error('「' + g.label + '」有未通过的字段')
+          return
+        }
+      }
+      submitted.value = true
+      Message.success('提交成功')
+    }
+
+    function handleReset() {
+      Object.assign(model, { name: '', phone: '', email: '', department: '', role: '', salary: undefined, permissions: [] })
+      submitted.value = false
+      activeTab.value = 'basic'
+    }
+
+    return { activeTab, submitted, model, basicItems, workItems, permItems, basicRef, workRef, permRef, handleSubmit, handleReset }
+  },
+})
+</script>
+
+<style scoped>
+.group-layout-demo {
+  max-width: 900px;
+}
+.intro-wrap {
+  margin-bottom: var(--es-space-3);
+}
+.action-bar {
+  display: flex;
+  justify-content: flex-end;
+  gap: var(--es-space-2);
+  margin-top: var(--es-space-3);
+}
+.model-preview {
+  background: var(--es-fill-light);
+  padding: var(--es-space-3);
+  border-radius: var(--es-radius-xs);
+  margin-top: var(--es-space-3);
+  font-size: var(--es-text-xs);
+}
+</style>
+`
 export const RAW_form_ImageUpload = `<template>
   <es-form
     ref="uploadForm"
@@ -11335,6 +11487,120 @@ export default defineComponent({
 })
 </script>
 `
+export const RAW_vxe_table_EngineVxe = `<template>
+  <div class="engine-vxe-demo">
+    <div class="intro-wrap">
+      <el-alert
+        title="vxe 引擎行内编辑 — 三件套缺一不可"
+        type="warning"
+        :closable="false"
+        show-icon
+      >
+        行内编辑需要同时声明：① <strong>engine: 'vxe'</strong>（引擎）、
+        ② <strong>editConfig</strong>（表级开关）、
+        ③ 列上 <strong>editRender</strong>（单元格渲染器）。
+        漏写 engine 时，es-table 会在控制台告警并忽略这些配置；漏写 editRender 时单元格不可编辑（用 AI 生成器生成时会提示）。
+      </el-alert>
+    </div>
+
+    <es-table
+      :columns="columns"
+      :options="tableOptions"
+      :data-source="tableData"
+      @cell-edit="onCellEdit"
+    />
+
+    <div v-if="lastEdit" class="edit-log">
+      <strong>最近编辑：</strong>
+      字段 <code>{{ lastEdit.prop }}</code> ·
+      旧值 <code>{{ lastEdit.oldValue }}</code> →
+      新值 <code>{{ lastEdit.value }}</code>
+    </div>
+  </div>
+</template>
+
+<script>
+import { defineComponent, reactive, ref } from '@vue/composition-api'
+
+export default defineComponent({
+  name: 'EngineVxe',
+  setup() {
+    const tableData = reactive([
+      { id: 1, name: '无线鼠标', price: 89, stock: 120, category: 'peripheral' },
+      { id: 2, name: '机械键盘', price: 359, stock: 45, category: 'peripheral' },
+      { id: 3, name: 'USB 集线器', price: 59, stock: 200, category: 'accessory' },
+    ])
+
+    // ① 引擎 ② 表级 editConfig ③ 列上 editRender — 三件套
+    const columns = [
+      { prop: 'name', label: '商品名称', width: 160 },
+      {
+        prop: 'price',
+        label: '价格（元）',
+        width: 140,
+        editRender: { name: '\$input', props: { type: 'number', min: 0 } },
+      },
+      {
+        prop: 'stock',
+        label: '库存',
+        width: 110,
+        editRender: { name: '\$input', props: { type: 'number', min: 0 } },
+      },
+      {
+        prop: 'category',
+        label: '分类',
+        width: 140,
+        dataOptions: [
+          { label: '外设', value: 'peripheral' },
+          { label: '配件', value: 'accessory' },
+        ],
+        editRender: {
+          name: '\$select',
+          options: [
+            { label: '外设', value: 'peripheral' },
+            { label: '配件', value: 'accessory' },
+          ],
+        },
+      },
+    ]
+
+    const tableOptions = {
+      engine: 'vxe',           // ① 必须声明引擎
+      editConfig: {             // ② 表级开关
+        trigger: 'click',
+        mode: 'cell',
+        showStatus: true,
+      },
+      border: true,
+      height: 280,
+    }
+
+    const lastEdit = ref(null)
+    function onCellEdit(payload) {
+      lastEdit.value = payload
+    }
+
+    return { columns, tableOptions, tableData, lastEdit, onCellEdit }
+  },
+})
+</script>
+
+<style scoped>
+.engine-vxe-demo {
+  max-width: 860px;
+}
+.intro-wrap {
+  margin-bottom: var(--es-space-3);
+}
+.edit-log {
+  margin-top: var(--es-space-2);
+  padding: var(--es-space-2) var(--es-space-3);
+  background: var(--es-fill-light);
+  border-radius: var(--es-radius-xs);
+  font-size: var(--es-text-sm);
+}
+</style>
+`
 export const RAW_vxe_table_EscapeHatch = `<template>
   <div>
     <el-alert
@@ -12660,6 +12926,7 @@ export const RAW_SOURCES = {
   'form/DetailMode': RAW_form_DetailMode,
   'form/DynamicField': RAW_form_DynamicField,
   'form/DynamicRule': RAW_form_DynamicRule,
+  'form/GroupLayout': RAW_form_GroupLayout,
   'form/ImageUpload': RAW_form_ImageUpload,
   'form/Layout': RAW_form_Layout,
   'form/MultiImageUpload': RAW_form_MultiImageUpload,
@@ -12700,6 +12967,7 @@ export const RAW_SOURCES = {
   'vxe-table/ColumnResize': RAW_vxe_table_ColumnResize,
   'vxe-table/CrudWithDialog': RAW_vxe_table_CrudWithDialog,
   'vxe-table/CustomRender': RAW_vxe_table_CustomRender,
+  'vxe-table/EngineVxe': RAW_vxe_table_EngineVxe,
   'vxe-table/EscapeHatch': RAW_vxe_table_EscapeHatch,
   'vxe-table/ExpandRow': RAW_vxe_table_ExpandRow,
   'vxe-table/FooterSummary': RAW_vxe_table_FooterSummary,

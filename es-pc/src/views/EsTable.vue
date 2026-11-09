@@ -220,6 +220,17 @@
       </CodeDemo>
     </section>
 
+    <a-divider v-if="isActive('config')" />
+
+    <!-- 大数据量：a-table 无虚拟滚动 -->
+    <section v-if="isActive('config')" id="performance-warn">
+      <h2>性能预警：大数据量与引擎选路</h2>
+      <p>a-table 没有虚拟滚动：es-table 一次<strong>实际渲染</strong>超过 1000 行时会在控制台告警一次（分页只渲染当前页，不会触发）。实测：一次渲染 5k 行首屏约 12s、20k 行约 510s。要一次展示大量数据，请用 <code>engine: 'vxe'</code>（vxe-grid 内置虚拟滚动）。</p>
+            <CodeDemo :source="rawSFCs['./es-table/PerformanceWarn.vue']">
+        <EsTablePerformanceWarn />
+      </CodeDemo>
+    </section>
+
     <a-divider />
 
     <h2>API / 属性</h2>
@@ -304,6 +315,7 @@ import EsTableDynamicColumns from './es-table/DynamicColumns.vue'
 import EsTableQueryTable from './es-table/QueryTable.vue'
 import EsTableCallbackPipeline from './es-table/CallbackPipeline.vue'
 import EsTableCodeLabel from './es-table/CodeLabel.vue'
+import EsTablePerformanceWarn from './es-table/PerformanceWarn.vue'
 
 const rawSFCs = import.meta.glob('./es-table/*.vue', { query: '?raw', import: 'default', eager: true })
 
@@ -323,7 +335,7 @@ const SECTION_GROUPS = [
   { key: 'editing', name: '编辑、排序与选中', ids: ['edit', 'sort', 'current-row'] },
   { key: 'layout', name: '尺寸与数据源', ids: ['fixed', 'remote', 'height'] },
   { key: 'render', name: '结构与渲染', ids: ['group', 'expand', 'cell-merge', 'dynamic-columns'] },
-  { key: 'config', name: '配置化查询与码值', ids: ['query-table', 'callback-pipeline', 'code-label'] },
+  { key: 'config', name: '配置化查询与码值', ids: ['query-table', 'callback-pipeline', 'code-label', 'performance-warn'] },
 ]
 
 const route = useRoute()

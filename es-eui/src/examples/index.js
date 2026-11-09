@@ -15,6 +15,7 @@ import FormMultiImageUpload from './form/MultiImageUpload.vue'
 import FormComputedFields from './form/ComputedFields.vue'
 import FormDeclarativeLinkage from './form/DeclarativeLinkage.vue'
 import FormDetailMode from './form/DetailMode.vue'
+import FormGroupLayout from './form/GroupLayout.vue'
 
 import TableBasic from './table/Basic.vue'
 import TableAutoRequest from './table/AutoRequest.vue'
@@ -98,6 +99,7 @@ import VxeTableFooterSummary from './vxe-table/FooterSummary.vue'
 import VxeTableEscapeHatch from './vxe-table/EscapeHatch.vue'
 import VxeTableCrudWithDialog from './vxe-table/CrudWithDialog.vue'
 import VxeTableMergeCells from './vxe-table/MergeCells.vue'
+import VxeTableEngineVxe from './vxe-table/EngineVxe.vue'
 
 import ErrorBoundaryBasic from './error-boundary/Basic.vue'
 import SvgIconBasic from './svg-icon/Basic.vue'
@@ -119,6 +121,7 @@ const componentMap = {
   './form/ComputedFields.vue': FormComputedFields,
   './form/DeclarativeLinkage.vue': FormDeclarativeLinkage,
   './form/DetailMode.vue': FormDetailMode,
+  './form/GroupLayout.vue': FormGroupLayout,
   './table/Basic.vue': TableBasic,
   './table/AutoRequest.vue': TableAutoRequest,
   './table/CustomHttp.vue': TableCustomHttp,
@@ -197,6 +200,7 @@ const componentMap = {
   './vxe-table/EscapeHatch.vue': VxeTableEscapeHatch,
   './vxe-table/CrudWithDialog.vue': VxeTableCrudWithDialog,
   './vxe-table/MergeCells.vue': VxeTableMergeCells,
+  './vxe-table/EngineVxe.vue': VxeTableEngineVxe,
   './error-boundary/Basic.vue': ErrorBoundaryBasic,
   './svg-icon/Basic.vue': SvgIconBasic,
 }
@@ -237,6 +241,7 @@ export const formExamples = [
   { key: 'ComputedFields', title: '字段联动计算', description: 'watch 监听字段变化自动回填与计算（单价×数量=小计，×折扣=应付），派生字段只读展示。' },
   { key: 'DeclarativeLinkage', title: '报销单：零回调联动', description: '省→市→门店三级下拉、选了城市才要求发票号、大区自动带出并锁定、金额 > 5000 才要求说明、非部分退款时隐藏退款原因 —— 全部来自一份纯 JSON（reactions + JSON 表达式），示例里 0 个函数。' },
   { key: 'DetailMode', title: '详情/编辑模式', description: '同一份 formItemList 通过 computed 切换 attrs.disabled，实现详情与编辑双模式复用。' },
+  { key: 'GroupLayout', title: '分组布局（Tabs/Steps/Collapse）', description: 'EsForm 没有内置分组容器：用 el-tabs 包裹多个 EsForm、共用一个 model；保存前逐组 validate()，避免错误藏在没打开的标签页里。' },
 ]
 
 export const tableExamples = [
@@ -330,6 +335,7 @@ export const vxeTableExamples = [
   { key: 'EscapeHatch', title: '逃生舱 vxeConfig + vxeOn', description: 'vxeConfig 深度合并任意 vxe-grid 原生配置；vxeOn 注入 cell-click / sort-change 等原生事件。' },
   { key: 'CrudWithDialog', title: 'vxe 业务闭环：查询·多选·弹窗', description: '搜索（EsForm）+ 多选分页表格（engine:vxe）+ useDialog 新增/编辑弹窗 + 删除确认 —— 完整业务闭环。' },
   { key: 'MergeCells', title: '复杂合并单元格', description: '两级分组表头（4 组）+ spanMethod 行列动态合并 + mergeFooterItems 表尾合并 + 可编辑实时重算；表单联动切换合并模式。' },
+  { key: 'EngineVxe', title: 'vxe 引擎行内编辑（三件套）', description: 'engine:\'vxe\' + editConfig + 列级 editRender 三件套必须同时出现。漏写 engine 时 es-table 会在控制台告警并忽略这些配置；漏写 editRender 时单元格不可编辑。' },
 ]
 
 export const errorBoundaryExamples = [

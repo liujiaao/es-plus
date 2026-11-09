@@ -139,6 +139,7 @@ type: 'component'
 | btn-click | (key, payload?) | 按钮点击时触发（非弹窗类按钮或行操作） |
 | query | (model) | 查询事件 |
 | export | (model) | 导出事件 |
+| import | (model) | 导入事件（actions 含 import 时点击「导入」触发；文件选取与上传由宿主实现） |
 | add | - | 新增按钮点击（向后兼容） |
 | edit | (row) | 编辑按钮点击（向后兼容） |
 | view | (row) | 查看按钮点击（向后兼容） |

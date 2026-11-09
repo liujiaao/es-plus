@@ -204,6 +204,17 @@
       </CodeDemo>
     </section>
 
+    <a-divider v-if="isActive('scenes')" />
+
+    <!-- 分组布局：容器组件包裹多个 EsForm -->
+    <section v-if="isActive('scenes')" id="form-group">
+      <h2>分组布局：Tabs / Steps / Collapse</h2>
+      <p>用 <code>a-tabs / a-steps / a-collapse</code> 包裹多个 EsForm 实现字段分组，字段联动与校验在各组内独立生效。保存前逐组 <code>validate()</code>，避免错误藏在没打开的标签页里。</p>
+            <CodeDemo :source="rawSFCs['./es-form/GroupLayout.vue']">
+        <EsFormGroupLayout />
+      </CodeDemo>
+    </section>
+
     <a-divider />
 
     <h2>API / 属性</h2>
@@ -293,6 +304,7 @@ import EsFormComputedFields from './es-form/ComputedFields.vue'
 import EsFormCustomButton from './es-form/CustomButton.vue'
 import EsFormDialog from './es-form/Dialog.vue'
 import EsFormFileUpload from './es-form/FileUpload.vue'
+import EsFormGroupLayout from './es-form/GroupLayout.vue'
 
 const rawSFCs = import.meta.glob('./es-form/*.vue', { query: '?raw', import: 'default', eager: true })
 
@@ -311,7 +323,7 @@ const SECTION_GROUPS = [
     name: '选择、运行期与按钮',
     ids: ['advanced-buttons', 'cascader', 'datetime-range', 'dynamic', 'custom-button'],
   },
-  { key: 'scenes', name: '业务场景', ids: ['detail', 'upload', 'search', 'dialog', 'file-upload'] },
+  { key: 'scenes', name: '业务场景', ids: ['detail', 'upload', 'search', 'dialog', 'file-upload', 'form-group'] },
 ]
 
 const route = useRoute()

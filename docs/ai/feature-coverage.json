@@ -196,6 +196,16 @@
       ]
     },
     {
+      "id": "form/21-form-group",
+      "group": "es-form",
+      "title": "分组布局：Tabs / Steps / 折叠面板",
+      "tokens": [
+        "formtype",
+        "validation",
+        "hostOrchestration"
+      ]
+    },
+    {
       "id": "table/01-basic",
       "group": "es-table",
       "title": "基础表格",
@@ -399,6 +409,15 @@
       ],
       "aiCase": [
         "employee-roster"
+      ]
+    },
+    {
+      "id": "vxe-table/16-engine-warning",
+      "group": "vxe-table",
+      "title": "vxe 三件套：漏写 engine 会被告警",
+      "tokens": [
+        "inlineEdit",
+        "vxeFirstClass"
       ]
     },
     {
@@ -1008,7 +1027,7 @@
       "site": "es-eui",
       "root": "es-eui/src/examples",
       "refs": 40,
-      "uncovered": 58,
+      "uncovered": 60,
       "cases": [
         {
           "id": "combination/BatchEdit",
@@ -1440,6 +1459,15 @@
           "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
         },
         {
+          "id": "form/GroupLayout",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
           "id": "form/ImageUpload",
           "demo": null,
           "tokens": [
@@ -1795,6 +1823,15 @@
           "tier": "C"
         },
         {
+          "id": "vxe-table/EngineVxe",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
           "id": "vxe-table/EscapeHatch",
           "demo": "vxe-table/13-escape-hatch",
           "tokens": [
@@ -1887,7 +1924,7 @@
       "site": "es-pc",
       "root": "es-pc/src/views",
       "refs": 98,
-      "uncovered": 28,
+      "uncovered": 30,
       "cases": [
         {
           "id": "Advanced",
@@ -2635,6 +2672,15 @@
           "tier": "C"
         },
         {
+          "id": "es-form/GroupLayout",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
+        },
+        {
           "id": "es-form/Layout",
           "demo": "form/02-layout",
           "tokens": [
@@ -2787,6 +2833,15 @@
             "httpRequestFn"
           ],
           "tier": "C"
+        },
+        {
+          "id": "es-table/PerformanceWarn",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
         },
         {
           "id": "es-table/QueryTable",

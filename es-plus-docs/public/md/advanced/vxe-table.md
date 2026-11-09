@@ -36,6 +36,7 @@ type: 'advanced'
 - 逃生舱 vxeConfig + vxeOn —— vxeConfig 深度合并任意 vxe-grid 原生配置；vxeOn 注入 cell-click / sort-change 等原生事件。
 - vxe 业务闭环：查询·多选·弹窗 —— 搜索（EsForm）+ 多选分页表格（engine:vxe）+ useDialog 新增/编辑弹窗 + 删除确认 — 完整业务闭环。
 - 分组表头 + 动态行合并 + 打印 —— 两级分组表头 groups + spanMethod 动态行合并 + mergeFooterItems 多行表尾；表单控合并模式，patchHtmlRowSpans 让合并单元格可打印。
+- vxe 三件套：漏写 engine 会被告警 —— editConfig / toolbarConfig / keyboardConfig 等 12 个键只在 engine: 'vxe' 下生效。左侧是正确写法（engine + editConfig + 列级 editRender，点单元格可编辑）；右侧是漏写 engine 的常见错误 —— 生成阶段与 validate_config 都会点名告警，而不是静默失效。
 
 ## API
 

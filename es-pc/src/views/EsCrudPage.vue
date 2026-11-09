@@ -320,6 +320,7 @@ const crudEvents = [
   { key: '4', event: 'delete', params: '(row)', desc: '点击删除' },
   { key: '5', event: 'view', params: '(row)', desc: '点击查看' },
   { key: '6', event: 'export', params: '(model)', desc: '点击导出' },
+  { key: '6b', event: 'import', params: '(model)', desc: '点击导入（文件选取与上传由宿主实现）' },
   { key: '7', event: 'row-click', params: '(row)', desc: '行点击' },
   { key: '8', event: 'btn-click', params: '(key, payload?)', desc: '工具栏按钮点击（携带按钮 key）' },
   { key: '9', event: 'dialog-confirm', params: '(dialogKey, data)', desc: '弹窗确认' },
