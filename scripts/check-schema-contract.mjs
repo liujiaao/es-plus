@@ -631,11 +631,24 @@ function checkStructuredConfigZod() {
     // 字段契约：FieldConfigSchema 必须声明每个 AI 契约字段（否则 Zod 静默剥掉）。
     // 只按「对象字面量块」定位，不靠行号 —— 块以列 0 的 `})` 收尾（嵌套对象均缩进，
     // 不会误当块尾）。见 STRUCTURED_FIELD_CONTRACT 的说明。
-    const fc = src.match(/const FieldConfigSchema\s*=\s*z\s*\.object\(\{([\s\S]*?)\n\}\);?/)
-    if (!fc) { fail(`未能在 ${label} 定位 FieldConfigSchema`); ok = false }
+    //
+    // P1-3 第二期把形状拆成 `FieldConfigBaseSchema`(z.object) + `FieldConfigSchema`
+    // (`.extend({ children })`，children 的元素就是 base)。契约字段落在任一块都算声明，
+    // 故把两块的键体并起来判；仍保留「未拆分」的整段写法作为兜底锚点。
+    const fcParts = []
+    for (const re of [
+      /const FieldConfigBaseSchema\s*=\s*z\s*\.object\(\{([\s\S]*?)\n\}\);?/,
+      /(?:export\s+)?const FieldConfigSchema\s*=\s*z\s*\.object\(\{([\s\S]*?)\n\}\);?/,
+      /(?:export\s+)?const FieldConfigSchema\s*=\s*FieldConfigBaseSchema\s*\.extend\(\{([\s\S]*?)\n\}\);?/,
+    ]) {
+      const m = src.match(re)
+      if (m) fcParts.push(m[1])
+    }
+    if (!fcParts.length) { fail(`未能在 ${label} 定位 FieldConfigSchema`); ok = false }
     else {
+      const fcBody = fcParts.join('\n')
       for (const f of STRUCTURED_FIELD_CONTRACT) {
-        if (!new RegExp(`\\b${f}\\s*:`).test(fc[1])) {
+        if (!new RegExp(`\\b${f}\\s*:`).test(fcBody)) {
           fail(`${label} 的 FieldConfigSchema 缺少契约字段 ${f}（会被 Zod 静默剥掉，配置里该字段凭空消失）`)
           ok = false
         }

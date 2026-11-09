@@ -122,6 +122,12 @@ export interface FormItemOption {
   span?: number
   /** 分组键（P1-3）：与 `layoutFormProps.layout.groups[].key` 对应 */
   group?: string
+  /**
+   * 嵌套对象字段（P1-3 第二期，只支持一层）：本字段成为整行标题，子字段渲染在其下。
+   * 子字段 prop 为相对路径时自动拼成 `<父 prop>.<子 prop>`；容器自身不绑定数据。
+   * 摊平规则见 core `flattenFormItems`。
+   */
+  children?: FormItemOption[]
   /** Shortcut: auto-injected into attrs.placeholder */
   placeholder?: string
   /** 详情模式（EsForm mode="detail"）下空值的展示文本，默认 '-' */

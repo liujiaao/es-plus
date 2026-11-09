@@ -215,6 +215,15 @@
       ]
     },
     {
+      "id": "form/23-form-nested",
+      "group": "es-form",
+      "title": "嵌套对象：一个标题 + 一组子字段",
+      "tokens": [
+        "formtype",
+        "validation"
+      ]
+    },
+    {
       "id": "table/01-basic",
       "group": "es-table",
       "title": "基础表格",
@@ -1052,7 +1061,7 @@
     {
       "site": "es-eui",
       "root": "es-eui/src/examples",
-      "refs": 42,
+      "refs": 43,
       "uncovered": 60,
       "cases": [
         {
@@ -1499,6 +1508,15 @@
           "tokens": [
             "formLayout",
             "formtype"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "form/FormNested",
+          "demo": "form/23-form-nested",
+          "tokens": [
+            "formtype",
+            "validation"
           ],
           "tier": "A"
         },
@@ -1967,7 +1985,7 @@
     {
       "site": "es-pc",
       "root": "es-pc/src/views",
-      "refs": 101,
+      "refs": 102,
       "uncovered": 31,
       "cases": [
         {
@@ -2730,6 +2748,15 @@
           "tokens": [
             "formLayout",
             "formtype"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "es-form/FormNested",
+          "demo": "form/23-form-nested",
+          "tokens": [
+            "formtype",
+            "validation"
           ],
           "tier": "A"
         },

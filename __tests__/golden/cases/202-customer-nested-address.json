@@ -1,0 +1,60 @@
+{
+  "nl": "客户管理：查询条件有客户名称；表格展示客户名称、联系电话、所属行业；新增/编辑表单里，「联系地址」是一组子字段——省、市、详细地址，省和市用下拉选择（省：浙江/江苏，市：杭州/南京），详细地址用输入框；支持新增、编辑、删除。",
+  "nlEn": "Customer management: the query condition is customer name; the table shows customer name, contact phone and industry; in the add/edit form \"Contact address\" is a group of sub-fields — province, city and detailed address — where province and city are dropdowns (province: Zhejiang / Jiangsu, city: Hangzhou / Nanjing) and the detailed address is a text input; supports add, edit and delete.",
+  "fixedFields": ["customerName", "phone", "industry", "address"],
+  "pinnedDims": ["propSet", "actions", "membership", "fieldChildren"],
+  "nlStatedDims": ["propSet", "actions", "membership", "fieldChildren"],
+  "config": {
+    "name": "CustomerAddressManage",
+    "apiUrl": "/api/customers",
+    "fields": [
+      { "prop": "customerName", "label": "客户名称", "formtype": "Input", "inForm": true },
+      { "prop": "phone", "label": "联系电话", "formtype": "Input", "inQuery": false, "inForm": true },
+      { "prop": "industry", "label": "所属行业", "formtype": "Input", "inQuery": false, "inForm": true },
+      {
+        "prop": "address",
+        "label": "联系地址",
+        "formtype": "Input",
+        "inQuery": false,
+        "inTable": false,
+        "inForm": true,
+        "children": [
+          {
+            "prop": "province",
+            "label": "省",
+            "formtype": "Select",
+            "inQuery": false,
+            "inTable": false,
+            "inForm": true,
+            "dataOptions": [
+              { "label": "浙江", "value": "zj" },
+              { "label": "江苏", "value": "js" }
+            ]
+          },
+          {
+            "prop": "city",
+            "label": "市",
+            "formtype": "Select",
+            "inQuery": false,
+            "inTable": false,
+            "inForm": true,
+            "dataOptions": [
+              { "label": "杭州", "value": "hz" },
+              { "label": "南京", "value": "nj" }
+            ]
+          },
+          {
+            "prop": "detail",
+            "label": "详细地址",
+            "formtype": "Input",
+            "inQuery": false,
+            "inTable": false,
+            "inForm": true
+          }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "P1-3 第二期（嵌套对象）：表单里一个对象（联系地址）承载一组子字段。判据是新维度 `fieldChildren`（gold 驱动）：容器字段的 pred 同名项必须也是容器，子字段 prop 序列逐位相等，gold 声明了 formtype 的子字段还要同名同型。容器的 formtype / 三面归属一律不比 —— 容器不渲染控件、不派生列，解析后 Zod 还会给它填默认 formtype:'Input'，比了就是完美答案也判负（formtypeEqual / membershipEqual / attrAcc 已排除容器）。**但容器上仍写了 formtype:'Input'**：前门的 `surfaceFieldSchema` 是片段/CRUD 共用的词汇，formtype 必填（片段侧容器也要求传 'Input'，生成器会剥掉它）；gold 语料要能推出 surfaces（check:front-door / check:scene-parity 的往返腿），故这里按该词汇写全 —— 模型省略 formtype 同样满分（容器不参与 formtype 比较）。子字段是相对 prop（`province` 绑定 `address.province`），与顶层命名空间不冲突，故不经 alignFields 改名。NL 穷举了查询面与表格面，故容器显式写 inQuery/inTable:false（membership-trap 反向矛盾守卫），公平性由 nlStatedDims ⊇ pinnedDims 承载，fieldChildren 的措辞依据在 nl-evidence 的 CONTAINER_EVIDENCE。"
+}

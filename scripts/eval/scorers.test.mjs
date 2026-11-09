@@ -55,6 +55,11 @@ const BASE_INPUT = {
     { prop: 'createdAt', label: '创建时间', formtype: 'DatePicker', inForm: false },
     // reactions：字段联动（选项随 status 变化 + 必填随 name）→ reactions 维度
     { prop: 'city', label: '城市', formtype: 'Select', reactions: [{ dependencies: ['status'], when: { '==': [{ var: 'status' }, 1] }, fulfill: { dataOptions: [{ label: '杭州', value: 'hz' }], required: { truthy: [{ var: 'name' }] } } }] },
+    // 嵌套对象容器（P1-3 第二期）：容器无 formtype、不绑数据，子字段用相对 prop
+    { prop: 'contact', label: '联系人', children: [
+      { prop: 'contactName', label: '姓名', formtype: 'Input' },
+      { prop: 'contactPhone', label: '电话', formtype: 'Input' },
+    ] }, // → fieldChildren 维度（嵌套对象结构契约）
   ],
   actions: ['add', 'edit', 'delete', 'view'],
   tableBtns: [
@@ -122,6 +127,8 @@ const PERTURB = {
   i18n: (c) => { c.i18n = false },
   formLayout: (c) => { c.formLayout.labelWidth = '120px' },
   fieldSpan: (c) => { c.fields[0].querySpan = 24 },
+  // 结构键扰动：子字段顺序/身份变了才算「咬得住」；容器自身的 formtype 不参与判定
+  fieldChildren: (c) => { c.fields[c.fields.length - 1].children[1].prop = 'contactTel' },
   target: (c) => { c.target = 'vue3' },
   mode: (c) => { c.mode = 'schema' },
   virtualScroll: (c) => { c.tableOptions.virtual = false },

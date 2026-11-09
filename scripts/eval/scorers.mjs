@@ -663,6 +663,14 @@ function sharedFields(gold, pred) {
   return gold.fields.filter((f) => pm.has(f.prop)).map((f) => ({ g: f, p: pm.get(f.prop) }))
 }
 
+/**
+ * 嵌套对象容器（P1-3 第二期）：带非空 `children` 的字段。它**不渲染控件**，只是整行
+ * 标题，故 `formtype` / 三面归属对它没有控制语义 —— 三个判据都跳过它，改由
+ * `fieldChildren` 判结构。不跳过的话，gold 按 prompt 教学省略 `formtype`（容器无控件），
+ * 而解析后的 pred 会被 Zod 默认填成 `"Input"`，完美答案也会被判负。
+ */
+const isNestedContainer = (f) => Array.isArray(f?.children) && f.children.length > 0
+
 // ── 维度判定（pass: (gold, pred) => boolean）─────────────────────────────────
 
 /**
@@ -674,16 +682,42 @@ function sharedFields(gold, pred) {
  * 维度仍然 applicable（gold 确实用了它），只是这一行**一个都没命中** = 未命中。
  */
 function formtypeEqual(gold, pred) {
-  const shared = sharedFields(gold, pred)
+  const shared = sharedFields(gold, pred).filter(({ g }) => !isNestedContainer(g))
   return shared.length > 0 && shared.every(({ g, p }) => g.formtype === p.formtype)
 }
 
 function membershipEqual(gold, pred) {
-  const shared = sharedFields(gold, pred)
+  const shared = sharedFields(gold, pred).filter(({ g }) => !isNestedContainer(g))
   return (
     shared.length > 0 &&
     shared.every(({ g, p }) => g.inQuery === p.inQuery && g.inTable === p.inTable && g.inForm === p.inForm)
   )
+}
+
+/**
+ * 嵌套对象容器结构（P1-3 第二期）：gold 每个带 `children` 的字段，pred 同名字段必须也是
+ * 容器，且子字段的 **prop 序列**逐位相等（顺序即渲染顺序），gold 声明了 `formtype` 的子字段
+ * 还要同名同型。子字段是相对 prop（`city` 绑定 `address.city`），与顶层字段命名空间不冲突，
+ * 故不需要经 `alignFields` 改名。
+ *
+ * 判据 gold 驱动（与 reactions/isHidden 同规）：gold 没写 `children` 的字段，pred 自作主张
+ * 加容器不追责 —— NL 没锁它。
+ */
+function fieldChildrenEqual(gold, pred) {
+  const pm = fieldMap(pred)
+  for (const f of gold.fields) {
+    if (!isNestedContainer(f)) continue
+    const pf = pm.get(f.prop)
+    if (!pf || !isNestedContainer(pf)) return false
+    const gc = f.children
+    const pc = pf.children
+    if (gc.length !== pc.length) return false
+    for (let i = 0; i < gc.length; i++) {
+      if (gc[i].prop !== pc[i].prop) return false
+      if (gc[i].formtype !== undefined && gc[i].formtype !== pc[i].formtype) return false
+    }
+  }
+  return true
 }
 
 /** tableBtns 的比较键元素（排序多重集）：name + 归一化 code（左右）+ actionType。
@@ -1001,6 +1035,21 @@ export function describeDimMiss(dim, gold, pred, opts = {}) {
     }
     return { want: canonicalView(want), got: canonicalView(got) }
   }
+  if (dim === 'fieldChildren') {
+    // 与 fieldChildrenEqual 同源：只展示 gold 声明过容器的字段，故判正的行 want===got。
+    const pm = fieldMap(pred)
+    const want = {}
+    const got = {}
+    for (const f of gold.fields) {
+      if (!isNestedContainer(f)) continue
+      want[f.prop] = f.children.map((c) => (c.formtype === undefined ? c.prop : `${c.prop}:${c.formtype}`))
+      const pf = pm.get(f.prop)
+      got[f.prop] = isNestedContainer(pf)
+        ? pf.children.map((c) => (c.formtype === undefined ? c.prop : `${c.prop}:${c.formtype}`))
+        : '（无）'
+    }
+    return { want: canonicalView(want), got: canonicalView(got) }
+  }
   if (dim === 'defaultSort') {
     return {
       want: canonicalView(gold.tableOptions?.defaultSort),
@@ -1245,6 +1294,8 @@ export const CAPABILITY_SCORERS = [
   { key: 'dataOptions', applicable: (g) => g.fields.some((f) => (f.dataOptions ?? []).length), pass: dataOptionsEqual },
   { key: 'i18n', applicable: (g) => g.i18n === true, pass: (g, p) => g.i18n === p.i18n },
   { key: 'formLayout', applicable: (g) => g.formLayout !== undefined, pass: (g, p) => eq(g.formLayout ?? null, p.formLayout ?? null) },
+  // P1-3 第二期：嵌套对象容器（`children` 一层）。gold 含容器才适用。
+  { key: 'fieldChildren', applicable: (g) => g.fields.some(isNestedContainer), pass: fieldChildrenEqual },
   {
     // 字段级列宽（AI-31③）：查询面 `querySpan` / 表单面 `formSpan` 的按字段等值。
     //
@@ -1479,7 +1530,9 @@ export function scoreAll(gold, pred, mask, opts = {}) {
   const predFields = fieldMap(alignedPred)
   const propF1 = f1(new Set(goldFields.keys()), new Set(predFields.keys()))
 
-  const shared = [...goldFields.keys()].filter((p) => predFields.has(p))
+  // 容器字段不参与 4 属性诊断（不渲染控件、不派生列，formtype 会被 Zod 默认填充成
+  // "Input"），否则完美答案也凭空多出 miss 行。
+  const shared = [...goldFields.keys()].filter((p) => predFields.has(p) && !isNestedContainer(goldFields.get(p)))
   const attrs = ['formtype', 'inQuery', 'inTable', 'inForm']
   let attrHits = 0
   let attrTotal = 0

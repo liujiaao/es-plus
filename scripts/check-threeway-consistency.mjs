@@ -246,10 +246,31 @@ const PROBE_FIELD = {
   ],
 }
 
+/**
+ * 嵌套对象容器探针（P1-3 第二期）。
+ *
+ * 为什么必须单列：`children` 是**定义容器**的结构键，而上面的 PROBE_FIELD 是一个控件
+ * （formtype/dataOptions/reactions…全键同发）。同一个字段既是控件又是容器不可能 —— 生成器
+ * 一旦看到 children 就剥掉 formtype/attrs/span。所以「AI 声明了 children，产物里有没有」
+ * 只能由这个专用容器条目见证；把它塞进 PROBE_FIELD 会让其余 20 多个键全部「声明未发射」。
+ */
+const PROBE_NESTED_PROP = 'probeNested'
+const PROBE_NESTED = {
+  prop: PROBE_NESTED_PROP,
+  label: 'PROBE-NESTED',
+  inQuery: true,
+  inTable: false,
+  inForm: true,
+  children: [
+    { prop: 'probeChild', label: 'PROBE-CHILD', formtype: 'Input' },
+    { prop: 'probeChildSelect', label: 'PROBE-CHILD-SELECT', formtype: 'Select', dataOptions: [{ label: 'A', value: 'a' }] },
+  ],
+}
+
 const PROBE = {
   name: 'ThreeWayProbe',
   apiUrl: '/api/probe',
-  fields: [PROBE_FIELD],
+  fields: [PROBE_FIELD, PROBE_NESTED],
   actions: ['add', 'edit', 'delete', 'export'],
   permissions: { add: 'probe:add', edit: 'probe:edit', delete: 'probe:delete', export: 'probe:export' },
   i18n: true,
@@ -497,6 +518,9 @@ const itemKeys = (arr, prop) => {
   const picked = prop === undefined ? list : list.filter((it) => it.prop === prop)
   return new Set(picked.flatMap((it) => Object.keys(it)))
 }
+/** 轴① 的字段面见证：控件探针 ∪ 容器探针（`children` 只能由后者见证，见 PROBE_NESTED）。 */
+const probeItemKeys = (items) =>
+  new Set([...itemKeys(items, PROBE_PROP), ...itemKeys(items, PROBE_NESTED_PROP)])
 const PROBE_PROP = PROBE_FIELD.prop
 
 /**
@@ -558,7 +582,7 @@ function entryProp(entry) {
  * 天然只有 schema 一侧 —— 这不是不等价，是登记在案的降级。
  *
  * 字段面域（`formItem`/`column`）返回 `{ all, probe }` 两套：
- *   - `probe` 只含**探针字段**（`prop === PROBE_PROP`）发射的键 —— 轴①（声明未发射）用它，
+ *   - `probe` 只含**探针字段**（`prop === PROBE_PROP`，外加容器探针 `PROBE_NESTED_PROP`）发射的键 —— 轴①（声明未发射）用它，
  *     因为「AI 给这个字段声明的每个键，是否真落到了这个字段上」才是要问的问题。
  *     用 `all` 会被派生条目（`operate` 操作列自带 `label`/`btns`）污染：AI 字段键若在探针
  *     字段上条件缺席、却与派生列的同名键撞车，登记行就会被误判成「陈旧」。
@@ -571,7 +595,7 @@ function readSchemaProduct(code) {
   const allColumns = json.columns || []
   return {
     tableOptions: objKeys(json.tableOptions),
-    formItem: { all: itemKeys(allFormItems), probe: itemKeys(allFormItems, PROBE_PROP) },
+    formItem: { all: itemKeys(allFormItems), probe: probeItemKeys(allFormItems) },
     column: { all: itemKeys(allColumns), probe: itemKeys(allColumns, PROBE_PROP) },
     dialog: new Set(Object.values(json.dialogs || {}).flatMap((d) => Object.keys(d))),
     formLayout: objKeys(json.formLayout),
@@ -625,7 +649,7 @@ function readSfcProduct(code, failures) {
       return
     }
     for (const k of itemKeys(parsed)) out.formItem.all.add(k)
-    for (const k of itemKeys(parsed, PROBE_PROP)) out.formItem.probe.add(k)
+    for (const k of probeItemKeys(parsed)) out.formItem.probe.add(k)
   }
   addJsonItems(items.body, 'formItems')
   const dlgItems = constBlock(code, 'dialogFormItems')

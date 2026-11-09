@@ -161,6 +161,8 @@ const fail = (msg) => {
     ['状态不是启用时隐藏备注。', 'isHidden:remark'],
     // P1-3 分组容器：页签/分步/折叠是 formLayout.layout 的措辞依据（与标签宽度同维）
     ['查询区用页签分成「基础条件」和「高级筛选」两组。', 'formLayout'],
+    // P1-3 第二期：NL 必须把「一组子字段 / 嵌套对象」说出口
+    ['表单里地址是一组子字段：省、市、详细地址。', 'fieldChildren'],
   ]
   // 措辞表：否反例（认不出必须返回 false，不许「差不多就算」）
   const NO = [
@@ -169,6 +171,7 @@ const fail = (msg) => {
     ['用户管理：查询条件有用户名；表格展示用户名、头像；支持新增、编辑、删除。', 'i18n'],
     ['「离职日期」这一列如果为空显示“在职”，否则显示日期。', 'formtype:createdAt'], // 展示句不是控件依据
     ['用户管理：查询条件有用户名；表格展示用户名、头像。', 'isHidden:remark'], // 没提显隐
+    ['用户管理：查询条件有用户名；表格展示用户名、头像。', 'fieldChildren'], // 没提「一组子字段」
   ]
   for (const [nl, token] of YES) {
     if (!tokenEvidence(token, { nl, gold: GOLD })) fail(`措辞表自检：应认作有依据却判否 →「${nl}」× ${token}`)

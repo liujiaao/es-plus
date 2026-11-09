@@ -358,7 +358,34 @@ export function readReachability() {
     'structured-config.schema.ts StructuredCrudConfigSchema'
   )
   const sfBlock = sliceBlock(composeSrc, 'export interface SurfaceField {', '}', 'compose-crud-config.ts SurfaceField')
-  const fcBlock = sliceBlock(schemaSrc, 'const FieldConfigSchema = z.object({', '})', 'structured-config.schema.ts FieldConfigSchema')
+  // P1-3 第二期：字段形状拆成 base(z.object) + `.extend({ children })` 两块
+  // （children 的元素就是 base，「只许一层」由结构锁死）。词汇 = 两块键集之并。
+  // 只对**确实存在**的锚点切片：缺一个锚点不算错（拆分与不拆分两种写法都合法），
+  // 但三者全缺才算定位失败，避免守卫在写法演进时误报。
+  const maybeSlice = (src, startMarker, closeLine, label) =>
+    src.includes(startMarker) ? sliceBlock(src, startMarker, closeLine, label) : null
+  const fcBaseBlock = maybeSlice(
+    schemaSrc,
+    'const FieldConfigBaseSchema = z.object({',
+    '})',
+    'structured-config.schema.ts FieldConfigBaseSchema'
+  )
+  const fcExtendBlock = maybeSlice(
+    schemaSrc,
+    'export const FieldConfigSchema = FieldConfigBaseSchema.extend({',
+    '})',
+    'structured-config.schema.ts FieldConfigSchema'
+  )
+  const fcLegacyBlock = maybeSlice(
+    schemaSrc,
+    'const FieldConfigSchema = z.object({',
+    '})',
+    'structured-config.schema.ts FieldConfigSchema (legacy)'
+  )
+  const fcBlock =
+    fcBaseBlock !== null || fcExtendBlock !== null || fcLegacyBlock !== null
+      ? [fcBaseBlock, fcExtendBlock, fcLegacyBlock].filter((b) => b !== null).join('\n')
+      : null
   const tableBlock = sliceBlock(
     schemaSrc,
     '  tableOptions: z.object({',

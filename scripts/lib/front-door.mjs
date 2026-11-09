@@ -137,13 +137,24 @@ export async function captureFrontDoor() {
   }
 }
 
-/** 把 config 的一个字段投影成前门字段词汇（只保留 `surfaceFieldSchema` 认识的键）。 */
+/**
+ * 把 config 的一个字段投影成前门字段词汇（只保留 `surfaceFieldSchema` 认识的键）。
+ *
+ * `children` **递归投影**：容器子字段在 config 里是 `FieldConfig`（可带 inQuery/inTable/inForm
+ * 三面标志），在前门词汇里却是 `surfaceFieldBase`（面由所在 surface 本身决定，没有这三个键）。
+ * 不递归时投影会把 `children[].inForm` 原样带进 surfaces，被前门的分层未知键闸门判红
+ * （2026-11 P1-3 第二期实测：202-customer-nested-address）。
+ */
 export function fieldProjector(surfaceKeys) {
-  return (f) => {
+  const project = (f) => {
     const o = {}
-    for (const k of Object.keys(f)) if (surfaceKeys.has(k)) o[k] = f[k]
+    for (const k of Object.keys(f)) {
+      if (!surfaceKeys.has(k)) continue
+      o[k] = k === 'children' && Array.isArray(f[k]) ? f[k].map(project) : f[k]
+    }
     return o
   }
+  return project
 }
 
 /**

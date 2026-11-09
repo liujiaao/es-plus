@@ -126,7 +126,22 @@ function main() {
   // ── 1. SurfaceField 接口键集 ──
   const sfBlock = sliceBlock(read(SURFACE_FIELD_SRC), 'export interface SurfaceField {', '}', 'SurfaceField')
   // ── 2. surfaceFieldSchema(镜像)顶层键集 ──
-  const zBlock = sliceBlock(read(FRAGMENT_SHAPES_SRC), 'export const surfaceFieldSchema = z.object({', '});', 'surfaceFieldSchema')
+  // P1-3 第二期把镜像拆成 base + `.extend({ children })`（children 的元素就是 base，
+  // 「只许一层」由结构锁死）。键集 = base 块 ∪ extend 块。
+  const sfBaseBlock = sliceBlock(
+    read(FRAGMENT_SHAPES_SRC),
+    'const surfaceFieldBase = z.object({',
+    '});',
+    'surfaceFieldBase'
+  )
+  const sfExtendBlock = sliceBlock(
+    read(FRAGMENT_SHAPES_SRC),
+    'export const surfaceFieldSchema = surfaceFieldBase.extend({',
+    '});',
+    'surfaceFieldSchema'
+  )
+  const zBlock =
+    sfBaseBlock !== null && sfExtendBlock !== null ? `${sfBaseBlock}\n${sfExtendBlock}` : null
   if (sfBlock === null || zBlock === null) process.exit(1)
 
   const sfKeys = new Set(topLevelKeys(sfBlock))

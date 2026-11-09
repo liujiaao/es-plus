@@ -256,7 +256,7 @@ const FormGroupLayoutSchema = z.object({
     .describe("Title of the fallback bucket under `ungrouped:'default'` (built-in default: 其他 / Other)."),
 })
 
-const FieldConfigSchema = z.object({
+const FieldConfigBaseSchema = z.object({
   prop: z.string().min(1).refine(isSafeProp, {
     message:
       'prop 不得包含路径分隔符（/ \\）、空段/"."/".."，也不得使用 __proto__/constructor/prototype',
@@ -265,8 +265,8 @@ const FieldConfigSchema = z.object({
   labelKey: z.string().optional().describe(
     "i18n label key for this field's column/form label (used with a global t() function; takes precedence over `label`). When omitted, i18n mode derives one as `field.<prop>`. NOTE: it only takes effect once the HOST entry assembles the plugin with a `t` option (otherwise the runtime falls back to `label`)."
   ),
-  formtype: z.enum(formTypeEnum).describe(
-    "Pick by the field's MEANING, not by keyword matching: status/type/enum/gender → Select; date/time → DatePicker/TimePicker; image/avatar/attachment/file → Upload; long text/remark/description → Input (attrs.type:'textarea'); boolean on/off → Switch; single-choice small set → Radio; multi-choice → Checkbox; region/category tree → Cascader; department/org/permission tree where ANY level is selectable → TreeSelect; type-to-filter over a known option set → Autocomplete; score → Rate. Default to Input for plain text."
+  formtype: z.enum(formTypeEnum).default('Input').describe(
+    "Pick by the field's MEANING, not by keyword matching: status/type/enum/gender → Select; date/time → DatePicker/TimePicker; image/avatar/attachment/file → Upload; long text/remark/description → Input (attrs.type:'textarea'); boolean on/off → Switch; single-choice small set → Radio; multi-choice → Checkbox; region/category tree → Cascader; department/org/permission tree where ANY level is selectable → TreeSelect; type-to-filter over a known option set → Autocomplete; score → Rate. Default to Input for plain text. OMIT only for a nested-object container (a field carrying `children`) — the container renders no input."
   ),
   inQuery: z.boolean().default(true).describe('Show as a query/filter field above the table'),
   inTable: z.boolean().default(true).describe('Show as a table column'),
@@ -308,6 +308,24 @@ const FieldConfigSchema = z.object({
   reactions: z.array(ReactionSchema).optional().describe(
     "Field-level linkage / computed rules (AI-07) — PLAIN JSON, never JS callbacks. Use when THIS field's options/required/disabled/value depend on ANOTHER field. Each rule `{ dependencies?, when?, fulfill }`: `dependencies` lists the model paths that retrigger it (REQUIRED for fulfill.value); `when` gates the rule; `fulfill` supplies `dataOptions` (literal array), `required`/`disabled` (boolean expressions) and/or `value` (this field's new value, written back). `when`/`required`/`disabled`/`value` are JSONLogic EXPRESSION NODES only (e.g. `{ '==': [{ var: 'country' }, 'us'] }`) — never the `{ field, op, value }` legacy condition form and never a bare boolean. Example: `city` options follow `province` → one rule per province with `when: { '==': [{ var: 'province' }, 'zj'] }` and `fulfill.dataOptions: [{label:'杭州',value:'hz'}]`. Applies to the query/filter form and add/edit dialog forms — NOT to the table column."
   ),
+})
+
+/**
+ * 嵌套对象字段（P1-3 第二期）—— 一层 `children`。
+ *
+ * 子 schema 用**不含 children 的基座**：结构上就堵死两层以上（深层无处表达），与运行时
+ * `flattenFormItems` 的「只支持一层」严格一致 —— AI 产物里不会出现运行时会静默丢弃的配置。
+ * 容器自身不绑定数据（不产出输入控件、不派生表格列），子字段 `prop` 相对容器
+ * （`city` → `address.city`）或已是绝对路径均可。
+ */
+export const FieldConfigSchema = FieldConfigBaseSchema.extend({
+  children: z
+    .array(FieldConfigBaseSchema)
+    .min(1)
+    .optional()
+    .describe(
+      "Nested-object FORM grouping (ONE level only): this field becomes a full-width section heading and its children render under it. Child `prop` is relative to this field (`city` → `address.city`) unless already absolute. The container binds NO data — it is never a table column — so omit `formtype`. Children inherit this field's `group` (their own `group` wins) and cannot declare their own `children`."
+    ),
 })
 
 /**

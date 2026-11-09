@@ -203,7 +203,7 @@ const ReactionSchema = z
     message: "reactions.fulfill.value requires a non-empty dependencies (otherwise every model change would overwrite the user's manual edit)",
   });
 
-const FieldConfigSchema = z.object({
+const FieldConfigBaseSchema = z.object({
   prop: z
     .string()
     .min(1)
@@ -224,8 +224,9 @@ const FieldConfigSchema = z.object({
     // （camelCase datePicker/timePicker 由 normalizeFormType 归一化）。
     // 只列 VALID_FORM_TYPES 会让 MCP 把合法旧配置判成非法，与运行时行为不一致。
     .enum([...VALID_FORM_TYPES, ...Object.keys(FORM_TYPE_ALIASES)] as unknown as [string, ...string[]])
+    .default("Input")
     .describe(
-      "Pick by the field's MEANING, not by keyword matching: status/type/enum/gender → Select; date/time → DatePicker/TimePicker; image/avatar/attachment/file → Upload; long text/remark/description → Input (attrs.type:'textarea'); boolean on/off → Switch; single-choice small set → Radio; multi-choice → Checkbox; region/category tree → Cascader; score → Rate; numeric value (amount/price/quantity/stock/count/money/integer) → InputNumber. Default to Input for plain text."
+      "Pick by the field's MEANING, not by keyword matching: status/type/enum/gender → Select; date/time → DatePicker/TimePicker; image/avatar/attachment/file → Upload; long text/remark/description → Input (attrs.type:'textarea'); boolean on/off → Switch; single-choice small set → Radio; multi-choice → Checkbox; region/category tree → Cascader; score → Rate; numeric value (amount/price/quantity/stock/count/money/integer) → InputNumber. Default to Input for plain text. OMIT only for a nested-object container (a field carrying `children`) — the container renders no input."
     ),
   inQuery: z.boolean().default(true).describe("Show as a query/filter field above the table"),
   inTable: z.boolean().default(true).describe("Show as a table column"),
@@ -286,6 +287,22 @@ const FieldConfigSchema = z.object({
     .optional()
     .describe(
       "Field-level linkage / computed rules (AI-07) — PLAIN JSON, never JS callbacks. Use when THIS field's options/required/disabled/value depend on ANOTHER field. Each rule `{ dependencies?, when?, fulfill }`: `dependencies` lists the model paths that retrigger it (REQUIRED for fulfill.value); `when` gates the rule; `fulfill` supplies `dataOptions` (literal array), `required`/`disabled` (boolean expressions) and/or `value` (this field's new value, written back). `when`/`required`/`disabled`/`value` are JSONLogic EXPRESSION NODES only (e.g. `{ '==': [{ var: 'country' }, 'us'] }`) — never the `{ field, op, value }` legacy condition form and never a bare boolean. Example: `city` options follow `province` → one rule per province with `when: { '==': [{ var: 'province' }, 'zj'] }` and `fulfill.dataOptions: [{label:'杭州',value:'hz'}]`. Applies to the query/filter form and add/edit dialog forms — NOT the table column."
+    ),
+});
+
+/**
+ * 字段形状（P1-3 第二期）：在基础形状上开放**一层** `children`。`children` 的元素就是
+ * 基础形状本身（不含 `children`）—— 递归深度由结构锁死，而不是靠提示词自觉。
+ * shared 侧的权威 Zod 是同一形状（`structured-config.schema.ts`），
+ * `check-fragment-contract.mjs` 逐键比对 `_fragment-shapes.ts` 的镜像。
+ */
+export const FieldConfigSchema = FieldConfigBaseSchema.extend({
+  children: z
+    .array(FieldConfigBaseSchema)
+    .min(1)
+    .optional()
+    .describe(
+      "Nested-object FORM grouping (ONE level only): this field becomes a full-width section heading and its children render under it. Child `prop` is relative to this field (`city` → `address.city`) unless already absolute. The container binds NO data — it is never a table column — so omit `formtype`. Children inherit this field's `group` (their own `group` wins) and cannot declare their own `children`."
     ),
 });
 

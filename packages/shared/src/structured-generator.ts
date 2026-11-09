@@ -353,7 +353,7 @@ function attachFieldDataOptions(
 ): Array<Record<string, unknown>> {
   const byProp = new Map<string, FieldConfig>()
   for (const f of fields) {
-    if (f.inTable === false) continue
+    if (f.inTable === false || isNestedContainerField(f)) continue
     if (Array.isArray(f.dataOptions) && f.dataOptions.length > 0) byProp.set(f.prop, f)
   }
   if (byProp.size === 0) return columns
@@ -379,7 +379,7 @@ function renderFieldsExcludedByColumnsWarnings(config: StructuredCrudConfig): st
   if (!cols || cols.length === 0) return []
   const props = explicitDataColumnProps(cols)
   const excluded = (config.fields || []).filter(
-    (f) => f.inTable !== false && f.render && !props.has(f.prop)
+    (f) => f.inTable !== false && !isNestedContainerField(f) && f.render && !props.has(f.prop)
   )
   if (excluded.length === 0) return []
   return [
@@ -750,7 +750,8 @@ function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): Structu
   const warnings: string[] = []
   const target = readTarget(config)
   const queryFields = config.fields.filter(f => f.inQuery !== false)
-  const tableFields = config.fields.filter(f => f.inTable !== false)
+  // 嵌套容器不派生表格列（它没有数据绑定）
+  const tableFields = config.fields.filter(f => f.inTable !== false && !isNestedContainerField(f))
   const formFields = config.fields.filter(f => f.inForm !== false)
   const hasDelete = config.actions.includes('delete')
   const hasDialog = config.actions.includes('add') || config.actions.includes('edit') || config.actions.includes('view')
@@ -1037,7 +1038,8 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   const isVue2 = target === 'vue2'
   const esPlusPkg = getEsPlusPackageName(target)
   const queryFields = config.fields.filter(f => f.inQuery !== false)
-  const tableFields = config.fields.filter(f => f.inTable !== false)
+  // 嵌套容器不派生表格列（它没有数据绑定）
+  const tableFields = config.fields.filter(f => f.inTable !== false && !isNestedContainerField(f))
   const formFields = config.fields.filter(f => f.inForm !== false)
   const hasDelete = config.actions.includes('delete')
   const hasDialog = config.actions.includes('add') || config.actions.includes('edit') || config.actions.includes('view')
@@ -1218,16 +1220,13 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   const hasQueryFormType = ts && queryFields.length > 0
   if (hasQueryFormType) {
     lines.push(`interface QueryForm {`)
-    for (const f of queryFields) {
-      const tsType = inferTsType(f)
-      lines.push(`  ${qKey(f.prop)}: ${tsType}`)
-    }
+    lines.push(...buildModelTypeMembers(queryFields))
     lines.push(`}`)
     lines.push(``)
   }
 
   // Reactive state
-  const modelInit = queryFields.map(f => `${qKey(f.prop)}: ${getDefaultValue(f)}`).join(', ')
+  const modelInit = buildModelInitLiteral(queryFields)
   if (hasQueryFormType) {
     lines.push(`const queryForm = reactive<QueryForm>({ ${modelInit} })`)
   } else {
@@ -1475,7 +1474,7 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   if (hasDialog) {
     lines.push(``)
     lines.push(`function openForm(title${ts ? ': string' : ''}, row${ts ? ': any' : ''} = {}) {`)
-    const dialogModelInit = formFields.map(f => `${qKey(f.prop)}: ${getDefaultValue(f)}`).join(', ')
+    const dialogModelInit = buildModelInitLiteral(formFields)
     // 当没有任何表单字段（全部 inForm:false）时 dialogModelInit 为空串，直接拼
     // `{ ${''}, ...row }` 会产出前导逗号 `reactive({ , ...row })` —— JS 语法错。
     // filter(Boolean) 剔除空段，保证 `reactive({ ...row })` 恒合法。
@@ -2054,6 +2053,27 @@ export function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18
     }
   }
 
+  // P1-3 第二期：嵌套对象容器 —— 一层 children。
+  // 容器**不绑定数据**：剥掉 formtype / attrs / formItemOptions（否则会渲染出一个没有
+  // model 路径的输入框），只保留标识（prop/label/labelKey）、分组与 children。
+  // 子字段递归复用本函数（context 相同），其 prop 保持相对路径 —— 绝对化由运行时
+  // core `flattenFormItems` 单源完成（schema 与 SFC 两种产物共用同一份摊平语义）。
+  const children = (field as { children?: FieldConfig[] }).children
+  if (Array.isArray(children) && children.length > 0) {
+    delete item.formtype
+    delete item.attrs
+    delete item.formItemOptions
+    // 容器自身是整行标题（运行时恒 span 24），不发它自己的栅格；子字段也**不预设**栅格，
+    // 列数交给运行时按「容器内子字段数」算（`flattenFormItems` 的 autoSpan）——否则
+    // 生成器给每个子字段钉 span 6 / 24，容器内的自适应就永远轮不到。
+    delete item.span
+    item.children = children.map((child) => {
+      const built = buildFormItem(child, context, i18n)
+      if (child.querySpan === undefined && child.formSpan === undefined) delete built.span
+      return built
+    })
+  }
+
   return item
 }
 
@@ -2411,4 +2431,85 @@ export function getDefaultValue(field: FieldConfig): string {
       return field.attrs?.type?.toString().includes('range') ? '[]' : "''"
     default: return "''"
   }
+}
+
+// ============================================================================
+// 嵌套对象字段（P1-3 第二期）：模型初始化 / 类型成员
+// ============================================================================
+
+/** 有 children 的字段是**容器**：不绑定数据、不派生表格列、不产生默认值条目。 */
+function isNestedContainerField(field: FieldConfig): boolean {
+  const children = (field as { children?: unknown }).children
+  return Array.isArray(children) && children.length > 0
+}
+
+/**
+ * 子字段在容器对象里的相对 key：`address` + `address.city` → `city`。
+ * 子字段写相对 prop 时原样返回。
+ */
+function childRelativeProp(parentProp: string, childProp: string): string {
+  const parent = String(parentProp ?? '')
+  const child = String(childProp ?? '')
+  if (parent && child.startsWith(`${parent}.`)) return child.slice(parent.length + 1)
+  return child
+}
+
+/**
+ * 生成模型初始化字面量的**内部片段**（可直接放进 `reactive({ ... })`）。
+ *
+ * - 普通字段：与历史产物逐字一致（`qKey(prop): 默认值`，含点号 prop 的引号形态）；
+ * - 容器：`address: { city: '', street: '' }` —— 运行时按嵌套路径读写，模型上必须有
+ *   这个容器对象（ADV 的 strict 名字路径解析还会在缺失时 console.error）。
+ * - 容器 prop 带点号时按段包成嵌套对象（`extra.address` → `{ extra: { address: … } }`）。
+ */
+export function buildModelInitLiteral(fields: readonly FieldConfig[]): string {
+  const parts: string[] = []
+  for (const f of fields) {
+    if (!f) continue
+    const children = (f as { children?: FieldConfig[] }).children
+    if (!Array.isArray(children) || children.length === 0) {
+      parts.push(`${qKey(f.prop)}: ${getDefaultValue(f)}`)
+      continue
+    }
+    const inner = children
+      .map((c) => `${qKey(childRelativeProp(f.prop, c.prop))}: ${getDefaultValue(c)}`)
+      .join(', ')
+    // 点号容器 prop 用嵌套对象承载，避免产出 `'extra.address': {...}`（运行时读不到）。
+    // 最外一段是**属性名**（`address: {…}` / `extra: { address: {…} }`），其余段是对象层级；
+    // 整段都包成 `{ address: … }` 会得到对象字面量表达式，拼进 `reactive({ A: '', {…} })` 是语法错。
+    const segs = String(f.prop).split('.').filter(Boolean)
+    if (segs.length === 0) {
+      // prop 不合法的退化路径：宁可产出一个可编译的属性，也不静默丢掉这个字段
+      parts.push(`${qKey(f.prop)}: { ${inner} }`)
+      continue
+    }
+    let literal = `{ ${inner} }`
+    for (let i = segs.length - 1; i >= 0; i--) {
+      literal = i === 0 ? `${qKey(segs[i])}: ${literal}` : `{ ${qKey(segs[i])}: ${literal} }`
+    }
+    parts.push(literal)
+  }
+  return parts.join(', ')
+}
+
+/**
+ * 生成 TS interface 的成员行（含缩进）：容器聚合成一层对象类型。
+ *
+ * 返回的每行都以两个空格开头，调用点直接 `lines.push(...)`。
+ */
+export function buildModelTypeMembers(fields: readonly FieldConfig[]): string[] {
+  const out: string[] = []
+  for (const f of fields) {
+    if (!f) continue
+    const children = (f as { children?: FieldConfig[] }).children
+    if (!Array.isArray(children) || children.length === 0) {
+      out.push(`  ${qKey(f.prop)}: ${inferTsType(f)}`)
+      continue
+    }
+    const inner = children
+      .map((c) => `${qKey(childRelativeProp(f.prop, c.prop))}: ${inferTsType(c)}`)
+      .join('; ')
+    out.push(`  ${qKey(f.prop)}: { ${inner} }`)
+  }
+  return out
 }

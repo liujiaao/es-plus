@@ -38,6 +38,11 @@ export interface SurfaceField {
   formSpan?: number
   /** 表单分组 key（P1-3）：只作用于表单面，容器在表单的 formLayout.layout 里声明。 */
   group?: string
+  /**
+   * 嵌套对象字段（P1-3 第二期，一层）：只作用于表单面 —— 本字段成为整行标题，
+   * 子字段渲染在其下；容器不绑定数据，也不派生表格列。
+   */
+  children?: FieldConfig['children']
   required?: boolean
   rules?: unknown[]
   attrs?: Record<string, unknown>
@@ -183,6 +188,14 @@ export function composeCrudConfig(input: ComposeCrudInput): ComposeResult {
   for (const f of [...query, ...form]) {
     if (f.group && acc.get(f.prop)!.group === undefined) {
       acc.get(f.prop)!.group = f.group
+    }
+  }
+
+  // 5.2) children（P1-3 第二期）：同样只认表单面，form 面优先（语义键「form 覆盖 query」）。
+  //      容器不绑定数据，不参与表格面的列派生（由生成器过滤）。
+  for (const f of [...form, ...query]) {
+    if (Array.isArray(f.children) && f.children.length && acc.get(f.prop)!.children === undefined) {
+      acc.get(f.prop)!.children = f.children
     }
   }
 

@@ -108,8 +108,11 @@ const ReactionSchema = z.object({
  * A single field as described within ONE surface (query / table / form).
  * Deliberately omits inQuery/inTable/inForm — surface membership is implied by
  * which list the field appears in, and composeCrudConfig derives the flags.
+ *
+ * P1-3 第二期：`children`（嵌套对象容器，一层）加在**派生形状**上，基座不带 children
+ * —— 结构上就堵死两层以上，与共享权威 zod 及运行时 `flattenFormItems` 同一边界。
  */
-export const surfaceFieldSchema = z.object({
+const surfaceFieldBase = z.object({
   prop: z
     .string()
     .min(1)
@@ -226,6 +229,17 @@ export const surfaceFieldSchema = z.object({
     ),
 }).passthrough();
 
+/** 单面字段（含 P1-3 第二期嵌套对象容器）。子 schema 用不带 children 的基座 = 一层上限。 */
+export const surfaceFieldSchema = surfaceFieldBase.extend({
+  children: z
+    .array(surfaceFieldBase)
+    .min(1)
+    .optional()
+    .describe(
+      "Nested-object FORM grouping (ONE level only): this field becomes a full-width section heading and its children render under it. Child `prop` is relative to this field (`city` → `address.city`) unless already absolute. The container binds NO data — it is never a table column — so pass `formtype: 'Input'` (ignored on a container) and no attrs/rules. Children inherit this field's `group` (their own `group` wins) and cannot declare their own `children`."
+    ),
+}).passthrough();
+
 /**
  * `generate_table` 的字段形状（AI-51）。
  *
@@ -236,8 +250,8 @@ export const surfaceFieldSchema = z.object({
  * 对表格却是一条**幻影要求**：模型必须填，产物却不读。这里只对它放宽为 optional；
  * 其余键与文案逐字不变（契约守卫仍逐键对照 shared `SurfaceField`）。
  */
-export const tableFieldSchema = surfaceFieldSchema.extend({
-  formtype: surfaceFieldSchema.shape.formtype.optional(),
+export const tableFieldSchema = surfaceFieldBase.extend({
+  formtype: surfaceFieldBase.shape.formtype.optional(),
 });
 
 /** 格式 + 围栏：`result.fence` 优先（AI-28：dialog 有了第二种产物形态），否则用调用方的兜底。

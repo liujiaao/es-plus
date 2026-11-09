@@ -61,6 +61,14 @@
         "minLength": 1,
         "description": "Group key this field belongs to. Consumed by EsForm only when `layoutFormProps.layout` declares a container (`type: 'tabs' | 'steps' | 'collapse'`): the field is bucketed into the group whose `key` matches. Keys not declared in `layout.groups` are appended in first-appearance order; when no `layout` is set the key is ignored and the form renders flat. Query form and dialog forms only — table columns ignore it."
       },
+      "children": {
+        "type": "array",
+        "minItems": 1,
+        "description": "Nested-object FORM grouping, ONE level only. A field carrying `children` becomes a full-width section heading and renders NO input control of its own; the children render beneath it. Child `prop` is relative to the parent (`city` → `address.city`) unless it is already absolute. Children inherit the parent's `group` (their own `group` wins) and must not declare their own `children` — a deeper level is ignored at runtime (one-shot console warning). The container binds no data and never becomes a table column; when every child is filtered out by `isHidden`/permission, the heading disappears too.",
+        "items": {
+          "$ref": "#/items"
+        }
+      },
       "placeholder": {
         "type": "string",
         "description": "Shortcut for placeholder text. Automatically injected into attrs.placeholder; explicit attrs.placeholder takes priority."

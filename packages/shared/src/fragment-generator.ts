@@ -1,9 +1,9 @@
 import {
   buildFormItem,
+  buildModelInitLiteral,
+  buildModelTypeMembers,
   buildTableColumnSFC,
   expandConfigEngineWarning,
-  getDefaultValue,
-  inferTsType,
   inlineEditWarnings,
   pushSfcColumn,
   resolveTreeOptions,
@@ -188,15 +188,13 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
   // TS 接口(复用 inferTsType,与完整页一致)
   if (ts && fields.length > 0) {
     lines.push('interface FormModel {')
-    for (const f of fields) {
-      lines.push(`  ${qKey(f.prop)}: ${inferTsType(f as unknown as FieldConfig)}`)
-    }
+    lines.push(...buildModelTypeMembers(fields as unknown as FieldConfig[]))
     lines.push('}')
     lines.push('')
   }
 
-  // 响应式 model(复用 getDefaultValue)
-  const modelInit = fields.map((f) => `${qKey(f.prop)}: ${getDefaultValue(f as unknown as FieldConfig)}`).join(', ')
+  // 响应式 model(复用 getDefaultValue；嵌套容器聚合成一层对象)
+  const modelInit = buildModelInitLiteral(fields as unknown as FieldConfig[])
   lines.push(ts ? `const model = reactive<FormModel>({ ${modelInit} })` : `const model = reactive({ ${modelInit} })`)
 
   // 内部 es-form 的模板 ref —— validate / resetFields 的委托对象（P4）。
@@ -937,7 +935,7 @@ export function generateDialogBlock(input: DialogBlockInput): FragmentResult {
     : `  function open(title${titleDefault}, row = {}, onSuccess) {`
   lines.push(openSig)
 
-  const defaults = fields.map((f) => `${qKey(f.prop)}: ${getDefaultValue(f as unknown as FieldConfig)}`).join(', ')
+  const defaults = buildModelInitLiteral(fields as unknown as FieldConfig[])
   const formInit = [defaults, '...row'].filter(Boolean).join(', ')
   lines.push(`    const formData = reactive({ ${formInit} })`)
   lines.push(`    const isView = title === ${q(DIALOG_TITLES.view)}`)
@@ -1117,13 +1115,11 @@ function generateDialogComponent(p: {
   // TS 接口（复用 inferTsType，与 generateFormBlock 同一口径）+ 默认值对象
   if (ts && fields.length > 0) {
     lines.push('interface DialogModel {')
-    for (const f of fields) {
-      lines.push(`  ${qKey(f.prop)}: ${inferTsType(f as unknown as FieldConfig)}`)
-    }
+    lines.push(...buildModelTypeMembers(fields as unknown as FieldConfig[]))
     lines.push('}')
     lines.push('')
   }
-  const defaults = fields.map((f) => `${qKey(f.prop)}: ${getDefaultValue(f as unknown as FieldConfig)}`).join(', ')
+  const defaults = buildModelInitLiteral(fields as unknown as FieldConfig[])
   lines.push(`const DEFAULTS${ts ? ': DialogModel' : ''} = { ${defaults} }`)
   lines.push(`const formData = reactive${ts ? '<DialogModel>' : ''}({ ...DEFAULTS })`)
   lines.push('const visible = ref(false)')
