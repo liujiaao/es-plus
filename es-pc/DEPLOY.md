@@ -46,15 +46,19 @@ npm run preview
 `package.json`，而构建容器的 `RLIMIT_NOFILE` 偏低，fd 被用尽。
 
 现在 `es-pc` 的 `build` 走 `../scripts/build-vite.mjs`：POSIX 上先把软上限抬到硬上限
-允许的最大值（65535 → 16384 → 4096 → 1024 依次尝试）再 `exec` vite，并把实际生效的
-值打进构建日志：
+允许的最大值（65535 → 16384 → 4096 → 1024 依次尝试）再跑 vite，并把实际生效的
+值打进构建日志；Linux 上还会留一个父进程采样子进程的 `/proc/<pid>/fd`：
 
 ```
-[build-vite] RLIMIT_NOFILE=65535
+[build-vite] RLIMIT_NOFILE=1024（硬上限 1024）
+[build-vite] 子进程 fd：起始 12，峰值 1019
+[build-vite]   998 × node_modules/vue/package.json
 ```
 
-- 这行数值仍很小 → 说明容器的**硬上限**本身就低，脚本抬不动：把控制台构建命令改成
-  `ulimit -n 65535 2>/dev/null; npm run build`，或请平台放宽。
-- 这行数值已经很大却仍报 EMFILE → 就不是 fd 上限的问题了，把该行与完整报错一起留档再查。
+- **硬上限就是 1024**（实测如此，抬不动）→ 只能在「少开 fd」上做文章，或者换构建环境。
+  看峰值那几行：指向 `node_modules/*/package.json` 说明是解析阶段的并发峰值；
+  指向 `socket:` / `pipe:` 说明是别的东西在占；起始值就接近上限说明是**继承来的**。
+- 这行数值仍很小 → 把控制台构建命令改成 `ulimit -n 65535 2>/dev/null; npm run build`，
+  或请平台放宽。
 
 Windows 没有 `ulimit`，脚本直接调 vite，本地行为与改动前完全一致。
