@@ -119,6 +119,17 @@
 
     <a-divider />
 
+    <!-- 导出兜底 -->
+    <section id="export-fallback">
+      <h2>导出按钮兜底</h2>
+      <p>宿主没监听 <code>@export</code> 时，点导出直接下载当前页 CSV（表格内置导出）；接管后只走宿主逻辑。</p>
+            <CodeDemo :source="rawSFCs['./es-crud/ExportFallback.vue']">
+        <EsCrudExportFallback />
+      </CodeDemo>
+    </section>
+
+    <a-divider />
+
     <h2>API / 属性</h2>
     <a-table
       :dataSource="crudProps"
@@ -221,6 +232,7 @@ import EsCrudRowConfirm from './es-crud/RowConfirm.vue'
 import EsCrudFullBusiness from './es-crud/FullBusiness.vue'
 import EsCrudCustomFooter from './es-crud/CustomFooter.vue'
 import EsCrudHiddenColumn from './es-crud/HiddenColumn.vue'
+import EsCrudExportFallback from './es-crud/ExportFallback.vue'
 
 const rawSFCs = import.meta.glob('./es-crud/*.vue', { query: '?raw', import: 'default', eager: true })
 

@@ -18,6 +18,9 @@ vi.mock('../src/components/es-dialog/src/use-dialog', () => ({
 import EsCrudPage from '../src/components/es-crud-page/src/es-crud-page.vue'
 import type { CrudPageSchema } from '../src/components/es-crud-page/src/types'
 
+/** 表格 stub 的导出方法：模块级 spy（Vue 会把 methods 绑定成新函数，不能断言实例属性） */
+const exportDataSpy = vi.fn()
+
 const stubs = {
   'es-table': {
     name: 'EsTable',
@@ -26,6 +29,7 @@ const stubs = {
     methods: {
       httpRequestInstance: vi.fn(),
       getSelectionRows: () => [],
+      exportData: exportDataSpy,
     },
   },
   'es-form': {
@@ -178,5 +182,65 @@ describe('EsCrudPage (antdv) — AN-11⑥ query / row-click 接线', () => {
     const payload = { row: { id: 1, name: '李四' }, prop: 'name', value: '李四', oldValue: '张三' }
     w.findComponent({ name: 'EsTable' }).vm.$emit('cell-edit', payload)
     expect(w.emitted('cell-edit')).toEqual([[payload]])
+  })
+
+  // P2-2：宿主没有监听 @export 时，导出按钮不能是空壳 —— 退回表格内置导出。
+  it('export 按钮点击 → 宿主未监听时调用表格内置 exportData', async () => {
+    exportDataSpy.mockClear()
+    const w = mount(EsCrudPage, {
+      props: {
+        schema: { columns, formItems: dialogFormItems, actions: ['export'] } as CrudPageSchema,
+        autoLoad: false,
+      },
+      global: { stubs },
+    })
+    const exportBtn = (w.findComponent({ name: 'EsForm' }).props('configBtn') as any[]).find(
+      (b: any) => b.key === 'export'
+    )
+    exportBtn.click()
+    await w.vm.$nextTick()
+    expect(exportDataSpy).toHaveBeenCalledTimes(1)
+    expect(w.emitted('export')).toBeTruthy()
+  })
+
+  it('export 按钮点击 → 宿主监听 @export 时不自动导出（避免双份下载）', async () => {
+    exportDataSpy.mockClear()
+    const onExport = vi.fn()
+    const w = mount(EsCrudPage, {
+      props: {
+        schema: { columns, formItems: dialogFormItems, actions: ['export'] } as CrudPageSchema,
+        autoLoad: false,
+      },
+      attrs: { onExport },
+      global: { stubs },
+    })
+    const exportBtn = (w.findComponent({ name: 'EsForm' }).props('configBtn') as any[]).find(
+      (b: any) => b.key === 'export'
+    )
+    exportBtn.click()
+    await w.vm.$nextTick()
+    expect(onExport).toHaveBeenCalledTimes(1)
+    expect(exportDataSpy).not.toHaveBeenCalled()
+  })
+
+  // 回归：文档示例沿用 @btn-click 按 key 分派导出；不能因此再触发一次内置导出（双份下载）
+  it('export 按钮点击 → 宿主监听 @btn-click（老用法）时同样不兜底', async () => {
+    exportDataSpy.mockClear()
+    const onBtnClick = vi.fn()
+    const w = mount(EsCrudPage, {
+      props: {
+        schema: { columns, formItems: dialogFormItems, actions: ['export'] } as CrudPageSchema,
+        autoLoad: false,
+      },
+      attrs: { onBtnClick },
+      global: { stubs },
+    })
+    const exportBtn = (w.findComponent({ name: 'EsForm' }).props('configBtn') as any[]).find(
+      (b: any) => b.key === 'export'
+    )
+    exportBtn.click()
+    await w.vm.$nextTick()
+    expect(onBtnClick).toHaveBeenCalledWith('export', expect.any(Object))
+    expect(exportDataSpy).not.toHaveBeenCalled()
   })
 })

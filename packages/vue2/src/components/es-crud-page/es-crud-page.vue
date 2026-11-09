@@ -54,7 +54,7 @@
  *
  * 业务逻辑（schema 归一化、按钮处理、弹窗管理）100% 与 Vue 3 版本一致。
  */
-import { defineComponent, ref, reactive, computed, watch, set } from '../../vue-compat'
+import { defineComponent, ref, reactive, computed, watch, set, getCurrentInstance } from '../../vue-compat'
 import MessageBox from 'element-ui/lib/message-box'
 import EsForm from '../es-form/es-form.vue'
 import EsTable from '../es-table/component.vue'
@@ -150,6 +150,19 @@ export default defineComponent({
     const tableRef = ref<any>(null)
     const formRef = ref<any>(null)
     const tableData = ref<Record<string, unknown>[]>([])
+
+    const instance = getCurrentInstance()
+
+    /**
+     * 宿主是否监听了某个事件。
+     *
+     * Vue 2 和 Vue 3 不一样：已声明事件仍会出现在 `$listeners` 里（Vue 3 会从 attrs 摘掉）。
+     * `$listeners` 不是响应式字段，所以要用函数而非 computed（父组件换监听器时也要重新读）。
+     */
+    function hasHostListener(name: string) {
+      const listeners = ((instance as unknown as { proxy?: { $listeners?: Record<string, unknown> } } | null)?.proxy?.$listeners) || {}
+      return typeof listeners[name] === 'function'
+    }
     const queryModel = reactive<Record<string, unknown>>({})
 
     // 同步 schema.formItems → queryModel 默认字段
@@ -456,6 +469,10 @@ export default defineComponent({
 
       if (key === 'export' || btn.actionType === 'export') {
         emit('export', { ...queryModel })
+        // P2-2：宿主既没监听 @export、也没监听 @btn-click 时，导出按钮就是空壳 ——
+        // 用表格内置导出兜底；监听 @btn-click 的老用法（按 key 分派导出）同样视为
+        // 已接管，否则会双份下载。
+        if (!hasHostListener('export') && !hasHostListener('btn-click')) tableRef.value?.exportData?.()
       } else if (key === 'import' || btn.actionType === 'import') {
         // P0-3：专用 emit，对齐 export 的设计；宿主监听 @import 实现文件选取与上传
         emit('import', { ...queryModel })

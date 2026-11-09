@@ -28,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch } from 'vue'
+import { ref, reactive, computed, watch, getCurrentInstance } from 'vue'
 import { ElMessageBox } from 'element-plus'
 import EsForm from '../../es-form/src/es-form.vue'
 import EsTable from '../../es-table/src/component.vue'
@@ -80,6 +80,20 @@ const emit = defineEmits<{
 const tableRef = ref<any>(null)
 const formRef = ref<any>(null)
 const tableData = ref<Record<string, unknown>[]>([])
+
+const instance = getCurrentInstance()
+
+/**
+ * 宿主是否监听了某个事件。
+ *
+ * Vue 3 会把 `defineEmits` 里声明过的事件从 `attrs` 里摘掉，`useAttrs()` 看不到；
+ * 唯一可靠的来源是组件 vnode 的 props（`onExport` / `onImport`）。
+ * 用于 P2-2：没有宿主监听时，导出按钮退回表格内置导出，而不是点了没反应。
+ */
+function hasHostListener(name: string) {
+  const prop = 'on' + name.replace(/(^|-)([a-z])/g, (_, __, c) => c.toUpperCase())
+  return typeof (instance?.vnode.props as Record<string, unknown> | null | undefined)?.[prop] === 'function'
+}
 
 const queryModel = reactive<Record<string, unknown>>({})
 
@@ -370,6 +384,10 @@ async function handleToolbarBtnClick(btn: CrudBtnConfig) {
   // 非弹窗按钮的事件
   if (key === 'export' || btn.actionType === 'export') {
     emit('export', { ...queryModel })
+    // P2-2：宿主既没监听 @export、也没监听 @btn-click 时，导出按钮就是空壳 ——
+    // 用表格内置导出兜底（vxe 引擎走原生 exportData，默认引擎走 core 的 CSV 兜底）。
+    // 监听 @btn-click 的老用法（按 key 分派导出）同样视为已接管，否则会双份下载。
+    if (!hasHostListener('export') && !hasHostListener('btn-click')) tableRef.value?.exportData?.()
   } else if (key === 'import' || btn.actionType === 'import') {
     // P0-3：专用 emit，对齐 export 的设计；宿主监听 @import 实现文件选取与上传
     emit('import', { ...queryModel })

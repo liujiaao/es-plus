@@ -187,7 +187,18 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 
 ## P2-2：export 按钮无内置调用
 
-**实施方案**：`EsCrudPage` 的 export 分支增加 `tableRef.value?.exportData?.()`。
+**问题**：内置 `export` 操作只 `emit('export', queryModel)`；宿主没监听时点了没反应（空壳）。三端同病。
+
+**实施记录**（与初版方案的差异）：不能无条件调 `tableRef.exportData()` —— 宿主监听 `@export` 自己做导出时会**双份下载**。
+故先探测「宿主是否真的监听」，再决定是否兜底：
+
+- vue3 / antdv：已声明事件会被从 `$attrs` 摘掉，读 `getCurrentInstance().vnode.props.onExport`；
+- vue2：读 `instance.proxy.$listeners.export`（Vue 2 的监听仍在 `$listeners`）；
+- 判定为函数才视为「宿主接管」，否则 `tableRef.value?.exportData?.()`。
+
+**验收**：三端各两条用例（未监听 → 内置导出被调用 1 次；已监听 → 内置导出 0 次、宿主 handler 1 次）。
+
+**当前进度**：✅ 三端已实施（`vue3`/`vue2`/`adapter-antdv` 的 `es-crud-page`），用例 `vue3 50/50`、`vue2 7/7`、`antdv 11/11`，`typecheck` 与 `check:consistency 140/140` 全绿。
 
 ---
 

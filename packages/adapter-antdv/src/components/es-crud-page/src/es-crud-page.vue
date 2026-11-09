@@ -42,7 +42,7 @@ export default { name: 'EsCrudPage' }
 </script>
 
 <script setup lang="ts">
-import { ref, reactive, computed, watch, h } from 'vue'
+import { ref, reactive, computed, watch, h, getCurrentInstance } from 'vue'
 import { Modal } from 'ant-design-vue'
 import { ExclamationCircleOutlined } from '@ant-design/icons-vue'
 import EsForm from '../../es-form/src/es-form.vue'
@@ -133,6 +133,14 @@ const emit = defineEmits<{
 const tableRef = ref<any>(null)
 const formRef = ref<any>(null)
 const tableData = ref<Record<string, unknown>[]>([])
+
+const instance = getCurrentInstance()
+
+/** 宿主是否监听了某个事件（Vue 3 已声明事件不在 attrs 里，只能看 vnode.props）。 */
+function hasHostListener(name: string) {
+  const prop = 'on' + name.replace(/(^|-)([a-z])/g, (_, __, c) => c.toUpperCase())
+  return typeof (instance?.vnode.props as Record<string, unknown> | null | undefined)?.[prop] === 'function'
+}
 
 const queryModel = reactive<Record<string, unknown>>({})
 
@@ -415,6 +423,10 @@ async function handleToolbarBtnClick(btn: CrudBtnConfig) {
   // 非弹窗按钮的事件
   if (key === 'export' || btn.actionType === 'export') {
     emit('export', { ...queryModel })
+    // P2-2：宿主既没监听 @export、也没监听 @btn-click 时，导出按钮就是空壳 ——
+    // 用表格内置导出兜底；监听 @btn-click 的老用法（按 key 分派导出）同样视为
+    // 已接管，否则会双份下载。
+    if (!hasHostListener('export') && !hasHostListener('btn-click')) tableRef.value?.exportData?.()
   } else if (key === 'import' || btn.actionType === 'import') {
     // P0-3：专用 emit，对齐 export 的设计；宿主监听 @import 实现文件选取与上传
     emit('import', { ...queryModel })

@@ -474,6 +474,7 @@ export const docsData: Record<string, any> = {
       { group: '弹窗', key: 'custom-footer', title: '自定义弹窗底部', description: 'configBtn 按 action 语义装配：custom 自己接线，confirm 走校验后提交。', component: getComponent('crud-page/07-custom-footer'), code: code('crud-page/07-custom-footer') },
       { group: '弹窗', key: 'program-open', title: '程序化控制弹窗', description: 'ref.openDialog / closeDialog 程序化开关弹窗，保存结果回写列表。', component: getComponent('crud-page/08-program-open'), code: code('crud-page/08-program-open') },
       { group: '权限与操作列', key: 'hidden-column', title: '隐藏操作列', description: 'operationColumn: false + 纯工具栏：CSV 导出与清空日志都在 btn-click 里真实执行。', component: getComponent('crud-page/09-hidden-column'), code: code('crud-page/09-hidden-column') },
+      { group: '权限与操作列', key: 'export-fallback', title: '导出按钮兜底：没人监听也不空壳', description: '切换宿主是否监听 @export：未接管时点导出直接下载当前页 CSV（表格内置导出），接管后只走宿主逻辑。', component: getComponent('crud-page/11-export-fallback'), code: code('crud-page/11-export-fallback') },
       { group: '弹窗', key: 'full-business', title: '完整业务：多弹窗 + 导出', description: '用户管理全功能：多弹窗 + 动态标题 + render 详情 + 批量启用 + CSV 导出。', component: getComponent('crud-page/10-full-business'), code: code('crud-page/10-full-business') }
     ],
     api: {

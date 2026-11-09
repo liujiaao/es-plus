@@ -522,6 +522,15 @@
       ]
     },
     {
+      "id": "crud-page/11-export-fallback",
+      "group": "es-crud-page",
+      "title": "导出按钮兜底",
+      "tokens": [
+        "toolbarBtns",
+        "crudPage"
+      ]
+    },
+    {
       "id": "dialog/01-basic",
       "group": "use-dialog",
       "title": "弹窗基础与变体",
@@ -1026,7 +1035,7 @@
     {
       "site": "es-eui",
       "root": "es-eui/src/examples",
-      "refs": 40,
+      "refs": 41,
       "uncovered": 60,
       "cases": [
         {
@@ -1198,6 +1207,15 @@
           "demo": "crud-page/01-basic",
           "tokens": [
             "operationColumn"
+          ],
+          "tier": "A"
+        },
+        {
+          "id": "crud/ExportFallback",
+          "demo": "crud-page/11-export-fallback",
+          "tokens": [
+            "toolbarBtns",
+            "crudPage"
           ],
           "tier": "A"
         },
@@ -1923,7 +1941,7 @@
     {
       "site": "es-pc",
       "root": "es-pc/src/views",
-      "refs": 98,
+      "refs": 99,
       "uncovered": 30,
       "cases": [
         {
@@ -2375,6 +2393,15 @@
             "renderFn"
           ],
           "tier": "C"
+        },
+        {
+          "id": "es-crud/ExportFallback",
+          "demo": "crud-page/11-export-fallback",
+          "tokens": [
+            "toolbarBtns",
+            "crudPage"
+          ],
+          "tier": "A"
         },
         {
           "id": "es-crud/FullBusiness",

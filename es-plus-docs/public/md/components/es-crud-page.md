@@ -28,6 +28,7 @@ type: 'component'
 - 自定义弹窗底部 —— configBtn 按 action 语义装配：custom 自己接线，confirm 走校验后提交。
 - 程序化控制弹窗 —— ref.openDialog / closeDialog 程序化开关弹窗，保存结果回写列表。
 - 隐藏操作列 —— operationColumn: false + 纯工具栏：CSV 导出与清空日志都在 btn-click 里真实执行。
+- 导出按钮兜底：没人监听也不空壳 —— 切换宿主是否监听 @export：未接管时点导出直接下载当前页 CSV（表格内置导出），接管后只走宿主逻辑。
 - 完整业务：多弹窗 + 导出 —— 用户管理全功能：多弹窗 + 动态标题 + render 详情 + 批量启用 + CSV 导出。
 
 ## API

@@ -83,6 +83,7 @@ import CombinationGlobalRequest from './combination/GlobalRequest.vue'
 
 import CrudBasic from './crud/Basic.vue'
 import CrudMultiDialog from './crud/MultiDialog.vue'
+import CrudExportFallback from './crud/ExportFallback.vue'
 
 import VxeTableBasicSwitch from './vxe-table/BasicSwitch.vue'
 import VxeTableSelectionIndex from './vxe-table/SelectionIndex.vue'
@@ -185,6 +186,7 @@ const componentMap = {
   './combination/GlobalRequest.vue': CombinationGlobalRequest,
   './crud/Basic.vue': CrudBasic,
   './crud/MultiDialog.vue': CrudMultiDialog,
+  './crud/ExportFallback.vue': CrudExportFallback,
   './vxe-table/BasicSwitch.vue': VxeTableBasicSwitch,
   './vxe-table/SelectionIndex.vue': VxeTableSelectionIndex,
   './vxe-table/ExpandRow.vue': VxeTableExpandRow,
@@ -296,6 +298,7 @@ export const dialogExamples = [
 export const crudExamples = [
   { key: 'MultiDialog', title: '多弹窗 CRUD', description: '一张表挂「详情」「编辑」两个弹窗：「详情」用 render 自定义内容，「编辑」用 formItems + onConfirm 写回。' },
   { key: 'Basic', title: '基础 CRUD 页', description: '一份 schema 生成查询表单 + 表格 + 分页 + 新增/编辑弹窗；toolbarBtns 与 operationColumn 上的 dialogKey 决定开哪个弹窗。' },
+  { key: 'ExportFallback', title: '导出按钮兜底', description: '宿主没监听 @export/@btn-click 时，点导出直接下载当前页 CSV（表格内置导出）；接管后只走宿主逻辑。' },
 ]
 
 export const combinationExamples = [

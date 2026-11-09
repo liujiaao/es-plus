@@ -18,7 +18,7 @@ import Vue from 'vue'
 
 // 桩组件的方法在实例上会被 Vue `bind` 成新函数（不再是 spy），故把 spy 放在模块作用域，
 // 断言仍打在原始 spy 上（bound 包装调用时照样记录）。
-const mocks = vi.hoisted(() => ({ httpRequestInstance: vi.fn() }))
+const mocks = vi.hoisted(() => ({ httpRequestInstance: vi.fn(), exportData: vi.fn() }))
 
 // 源码走按需子路径 `element-ui/lib/message-box`（主入口是 CJS 全量包），
 // 而 vi.mock 按 import 说明符匹配 —— mock 入口拦不住子路径。
@@ -38,6 +38,7 @@ vi.mock('../src/components/es-table/component.vue', () => ({
     methods: {
       httpRequestInstance: mocks.httpRequestInstance,
       getSelectionRows: () => [],
+      exportData: mocks.exportData,
     },
   },
 }))
@@ -62,16 +63,28 @@ vi.mock('../src/components/es-error-boundary/es-error-boundary.vue', () => ({
 import EsCrudPage from '../src/components/es-crud-page/es-crud-page.vue'
 import type { CrudPageSchema } from '../src/components/es-crud-page/types'
 
-function mountPage(schema: CrudPageSchema) {
+function mountPage(
+  schema: CrudPageSchema,
+  extraListeners: Record<string, unknown> = {},
+  options: { omitBtnClick?: boolean } = {}
+) {
   const onQuery = vi.fn()
   const onRowClick = vi.fn()
   const onBtnClick = vi.fn()
   const onCellEdit = vi.fn()
+  const listeners: Record<string, unknown> = {
+    query: onQuery,
+    'row-click': onRowClick,
+    'btn-click': onBtnClick,
+    'cell-edit': onCellEdit,
+    ...extraListeners,
+  }
+  if (options.omitBtnClick) delete listeners['btn-click']
   const vm = new Vue({
     render: (h) =>
       h(EsCrudPage as any, {
         props: { schema, autoLoad: false },
-        on: { query: onQuery, 'row-click': onRowClick, 'btn-click': onBtnClick, 'cell-edit': onCellEdit },
+        on: listeners,
       }),
   }).$mount() as any
   const page = vm.$children[0]
@@ -80,9 +93,13 @@ function mountPage(schema: CrudPageSchema) {
 
 const columns: CrudPageSchema['columns'] = [{ prop: 'name', label: '姓名' }]
 
+/** 页面需有 formItems 才渲染 es-form（查询区/操作键的宿主），导出键挂在它上面。 */
+const formItems: CrudPageSchema['formItems'] = [{ prop: 'name', label: '姓名', formtype: 'Input' }]
+
 describe('EsCrudPage(vue2) — AN-11⑥ query / row-click 接线', () => {
   beforeEach(() => {
     mocks.httpRequestInstance.mockClear()
+    mocks.exportData.mockClear()
   })
 
   it('点击查询键 → 发起新搜索并 emit query（带当前查询模型）', async () => {
@@ -169,5 +186,36 @@ describe('EsCrudPage(vue2) — AN-11⑥ query / row-click 接线', () => {
     actionCol.btns.find((b: any) => b.name === '驳回').clickEvent(row)
     expect(onBtnClick).toHaveBeenCalledTimes(1)
     expect(onBtnClick).toHaveBeenCalledWith('驳回', row)
+  })
+
+  // P2-2：宿主没有监听 @export 时，导出按钮不能是空壳 —— 退回表格内置导出。
+  it('export 按钮点击 → 宿主未监听时调用表格内置 exportData', async () => {
+    const { page } = mountPage({ columns, formItems, actions: ['export'] }, {}, { omitBtnClick: true })
+    await page.$nextTick()
+    const exportBtn = (page.$refs.formRef.configBtn as any[]).find((b: any) => b.key === 'export')
+    expect(exportBtn).toBeDefined()
+    exportBtn.click()
+    expect(mocks.exportData).toHaveBeenCalledTimes(1)
+  })
+
+  it('export 按钮点击 → 宿主监听 @export 时不自动导出（避免双份下载）', async () => {
+    const onExport = vi.fn()
+    const { page } = mountPage({ columns, formItems, actions: ['export'] }, { export: onExport })
+    await page.$nextTick()
+    const exportBtn = (page.$refs.formRef.configBtn as any[]).find((b: any) => b.key === 'export')
+    exportBtn.click()
+    expect(onExport).toHaveBeenCalledTimes(1)
+    expect(mocks.exportData).not.toHaveBeenCalled()
+  })
+
+  // 回归：文档示例沿用 @btn-click 按 key 分派导出；不能因此再触发一次内置导出（双份下载）
+  it('export 按钮点击 → 宿主监听 @btn-click（老用法）时同样不兜底', async () => {
+    const { page, onBtnClick } = mountPage({ columns, formItems, actions: ['export'] })
+    await page.$nextTick()
+    const exportBtn = (page.$refs.formRef.configBtn as any[]).find((b: any) => b.key === 'export')
+    exportBtn.click()
+    // mountPage 默认就挂了 btn-click 监听
+    expect(onBtnClick).toHaveBeenCalledWith('export', expect.any(Object))
+    expect(mocks.exportData).not.toHaveBeenCalled()
   })
 })
