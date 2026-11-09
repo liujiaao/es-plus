@@ -53,6 +53,13 @@ export interface CapabilityEntry {
    * 例：`tableOptions.virtual` 的等价写法是 `tableOptions.engine: 'virtual'`。
    */
   equivalents?: ReadonlyArray<{ key: string; value: unknown }>
+  /**
+   * 该能力需要特定引擎才能生效。
+   * 有此字段的条目在 capabilityWarnings 里会做双重检查：
+   * ① 目标端是否支持（原有 none 判断）
+   * ② 当前 engine 是否匹配（partial-with-requires 检查，P0-1 修复）
+   */
+  requires?: { engine: 'vxe' | 'virtual' }
 }
 
 /** `tableOptions.x` → `['tableOptions','x']`；顶层键 → `[key]`。 */
@@ -153,6 +160,7 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       vue2: partial('同上'),
       antdv: partial('同上'),
     },
+    requires: { engine: 'vxe' },
   },
   {
     key: 'tableOptions.expandConfig',
@@ -216,6 +224,7 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       vue2: partial('同上（vue2 的 vxe 适配器同样消费）'),
       antdv: partial('同上（antdv 的 vxe 适配器同样消费）'),
     },
+    requires: { engine: 'vxe' },
   },
   {
     key: 'tableOptions.footerData',
@@ -224,6 +233,7 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       vue2: partial('同上'),
       antdv: partial('同上'),
     },
+    requires: { engine: 'vxe' },
   },
   {
     key: 'tableOptions.exportConfig',
@@ -234,6 +244,8 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       vue2: partial('同上'),
       antdv: partial('同上'),
     },
+    // 刻意不带 requires：默认 / 虚拟引擎也消费它（CSV 兜底的 filename / type），
+    // 不是「被忽略」—— 带上会让引擎告警说假话。
   },
   {
     key: 'tableOptions.toolbarConfig',
@@ -242,6 +254,7 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       vue2: partial('同上'),
       antdv: partial('同上'),
     },
+    requires: { engine: 'vxe' },
   },
   {
     key: 'tableOptions.columnConfig',
@@ -250,6 +263,7 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       vue2: partial('同上'),
       antdv: partial('同上'),
     },
+    requires: { engine: 'vxe' },
   },
   {
     key: 'tableOptions.keepSource',
@@ -258,6 +272,7 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       vue2: partial('同上'),
       antdv: partial('同上'),
     },
+    requires: { engine: 'vxe' },
   },
   {
     key: 'tableOptions.keyboardConfig',
@@ -266,6 +281,7 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       vue2: partial('同上（vue2 的 vxe 适配器同样消费）'),
       antdv: partial('同上（antdv 的 vxe 适配器同样消费）'),
     },
+    requires: { engine: 'vxe' },
   },
   {
     key: 'tableOptions.mouseConfig',
@@ -274,6 +290,7 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       vue2: partial('同上'),
       antdv: partial('同上'),
     },
+    requires: { engine: 'vxe' },
   },
   {
     key: 'tableOptions.validConfig',
@@ -282,6 +299,7 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       vue2: partial('同上'),
       antdv: partial('同上'),
     },
+    requires: { engine: 'vxe' },
   },
   {
     key: 'tableOptions.seqConfig',
@@ -290,6 +308,7 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       vue2: partial('同上'),
       antdv: partial('同上'),
     },
+    requires: { engine: 'vxe' },
   },
   {
     key: 'tableOptions.printConfig',
@@ -298,6 +317,7 @@ export const CAPABILITIES: readonly CapabilityEntry[] = [
       vue2: partial('同上'),
       antdv: partial('同上'),
     },
+    requires: { engine: 'vxe' },
   },
 ]
 
@@ -339,22 +359,46 @@ function isSet(config: unknown, entry: CapabilityEntry): boolean {
 }
 
 /**
- * 目标端**不支持**（`none`）且配置里确实设了 → 一条告警。
+ * 目标端**不支持**（`none`）或**需要特定引擎**（`partial` + `requires`）且配置里确实设了 → 一条告警。
  *
- * 只对 `none` 发声：`partial` 是「某引擎生效」的文档事实，每次生成都刷一遍会淹没真问题。
+ * - `none`：该端完全不支持，直接告警；
+ * - `partial` + `requires.engine`：该键仅在指定引擎下生效，当前引擎不匹配时告警，
+ *   避免「配置了 editConfig 但未写 engine:'vxe' 导致静默忽略」类问题。
  *
- * @param config 整份生成配置（顶层键与 `tableOptions` 都会被读到）
+ * @param config          整份生成配置（顶层键与 `tableOptions` 都会被读到）
+ * @param resolvedEngine  调用方已解析的引擎（'default' | 'virtual' | 'vxe'），
+ *                        未传则跳过引擎级 partial 检查
  */
 export function capabilityWarnings(
   target: CapabilityTarget,
-  config: Record<string, unknown> | undefined | null
+  config: Record<string, unknown> | undefined | null,
+  resolvedEngine?: 'default' | 'virtual' | 'vxe'
 ): string[] {
   const warnings: string[] = []
   for (const entry of CAPABILITIES) {
     const cell = entry.targets[target]
-    if (!cell || cell.level !== 'none') continue
+    if (!cell) continue
     if (!isSet(config, entry)) continue
-    warnings.push(`target=${target}: ${entry.key} is not supported — ${cell.note}.`)
+
+    // 完全不支持
+    if (cell.level === 'none') {
+      warnings.push(`target=${target}: ${entry.key} is not supported — ${cell.note}.`)
+      continue
+    }
+
+    // 仅 vxe/virtual 引擎有效，但当前引擎不匹配
+    if (
+      cell.level === 'partial' &&
+      entry.requires?.engine != null &&
+      resolvedEngine != null &&
+      resolvedEngine !== entry.requires.engine
+    ) {
+      warnings.push(
+        `target=${target}: ${entry.key} 仅在 engine:'${entry.requires.engine}' 下生效 — ` +
+        `当前引擎为 '${resolvedEngine}'，该配置将被运行时忽略。` +
+        `请添加 tableOptions.engine:'${entry.requires.engine}'，或使用 engine:'auto' 自动选路。`
+      )
+    }
   }
   return warnings
 }

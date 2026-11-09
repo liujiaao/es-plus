@@ -203,6 +203,13 @@ export type { TableCellDisplay } from './table-cell.js'
 
 // ─── 表单详情模式（W3-3）：只读展示解析单源，三端只渲染文本 ──────
 export { resolveFormDetailText, formatDetailDate } from './form-detail.js'
+export {
+  VXE_ONLY_TABLE_KEYS,
+  findVxeOnlyKeysOutsideVxe,
+  warnVxeOnlyKeysOutsideVxe,
+  __resetVxeOnlyWarnings,
+} from './table-engine-keys.js'
+export type { VxeOnlyTableKey } from './table-engine-keys.js'
 
 // ─── 列筛选（W3-2）：本地匹配语义单源，三端各引擎只做签名适配 ──────
 export {

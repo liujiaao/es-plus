@@ -230,6 +230,7 @@ import {
   checkPermissionValue,
   exportTableCsv,
   resolveBuiltinText,
+  warnVxeOnlyKeysOutsideVxe,
 } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
@@ -426,6 +427,9 @@ watch(virtualRequested, (requested) => {
 
 // ─── vxe engine ─────────────────────────────────
 const isVxeEngine = computed(() => tableOptions.value.engine === 'vxe')
+// P0-1：vxe-only 键（editConfig / toolbarConfig / keyboardConfig …）配在非 vxe 引擎上会被静默剥掉。
+// 手写 <es-table :options> 不经过生成器的告警，这里补运行时那一半（core 按键组合去重，不刷屏）。
+watch(tableOptions, (opts) => warnVxeOnlyKeysOutsideVxe(opts as Record<string, unknown>, 'antdv'), { immediate: true })
 const isVxeProxyMode = computed(() => {
   if (!isVxeEngine.value) return false
   const opts = tableOptions.value as any
@@ -1445,6 +1449,29 @@ watch(visibleShow, async (val, oldVal) => {
     vxeEngineRef.value?.doLayout?.()  // vxe 引擎：重算列宽（对齐 vue3/vue2 路径）
   }
 })
+
+// P0-2：antdv a-table 无虚拟滚动，一次渲染上千行会明显卡顿（实测 5k 行首渲染约 12s）。
+// 判的是**实际渲染的行数**（displayDataSource：本地分页已切片、请求模式取 tableData），
+// 所以「5k 行但每页 20 条」不会误报；immediate 让「一挂载就是 5k 行」也能被抓到。
+//
+// 刻意**不**用 import.meta.env.DEV 门控：本包经 vite lib 构建发布，DEV 在 dist 里被静态替换成
+// false —— 门控后的告警对使用者永远不会出现（已实测：dist 里 DEV 门控的告警串计数为 0）。
+// 与本组件其它配置告警同规：无条件；每个表格实例只告一次（<script setup> 顶层 let 是实例级）。
+const ANTDV_ROW_WARN_THRESHOLD = 1000
+let antdvRowWarnFired = false
+watch(
+  () => (Array.isArray(displayDataSource.value) ? displayDataSource.value.length : 0),
+  (rows) => {
+    if (antdvRowWarnFired || isVxeEngine.value || rows <= ANTDV_ROW_WARN_THRESHOLD) return
+    antdvRowWarnFired = true
+    console.warn(
+      `[es-plus/antdv] es-table 一次渲染了 ${rows} 行。a-table 没有虚拟滚动，` +
+        `超过 ${ANTDV_ROW_WARN_THRESHOLD} 行会明显卡顿（实测 5k 行首渲染约 12s）。` +
+        `请改用服务端分页 / localPagination，或 engine: 'vxe'（vxe-grid 内置虚拟滚动）。`
+    )
+  },
+  { immediate: true }
+)
 
 watch(() => props.dataSource, (val) => {
   initSelection(val)

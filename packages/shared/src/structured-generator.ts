@@ -26,7 +26,7 @@ import {
   buildStatusTagTemplate,
   rewriteElementUsage,
 } from './target.js'
-import { capabilityWarnings } from './capability.js'
+import { capabilityWarnings, type CapabilityTarget } from './capability.js'
 import { buildPreflight, type PreflightInput, type PreflightReport } from './preflight.js'
 import { buildRenderPlan, type RenderPlan } from './render-plan.js'
 import { DIALOG_TITLES } from './scene/registry.js'
@@ -695,6 +695,22 @@ export function generateFromConfig(rawConfig: StructuredCrudConfig): StructuredG
  *   ②即便引擎是 vxe，**只有列上声明了 `editRender` 的单元格才可编辑**（vxe 自身的契约）。
  * 两种情况运行时都是静默 no-op：页面看起来正常、双击没反应、控制台也不报错。
  */
+/**
+ * 生成器侧的能力告警：解析出生效引擎后交给能力矩阵判（P0-1）。
+ *
+ * `editConfig` 的引擎不匹配由更具体的 `inlineEditWarnings` 负责（它还管「vxe 但没有 editRender」），
+ * 这里把矩阵对同一个键的通用告警滤掉，避免同一问题出现两条。
+ */
+function generatorCapabilityWarnings(target: CapabilityTarget, config: StructuredCrudConfig): string[] {
+  const tOpts = (config.tableOptions || {}) as Record<string, unknown>
+  const engine: 'default' | 'virtual' | 'vxe' =
+    tOpts.engine === 'vxe' ? 'vxe'
+      : tOpts.virtual === true || tOpts.engine === 'virtual' ? 'virtual'
+        : 'default'
+  return capabilityWarnings(target, config as unknown as Record<string, unknown>, engine)
+    .filter((w) => !w.includes('tableOptions.editConfig 仅在'))
+}
+
 export function inlineEditWarnings(config: StructuredCrudConfig): string[] {
   const tOpts = (config.tableOptions || {}) as Record<string, unknown>
   if (tOpts.editConfig === undefined) return []
@@ -777,7 +793,7 @@ function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): Structu
   // **`engine: 'vxe'` 刻意不在矩阵里告警**：vue2 有完整的 vxe 适配器
   // （`packages/vue2/src/components/es-table/engines/vxe-engine.vue`，带单测），
   // 生成物里的 `engine` 也原样透传，运行时确实走 vxe 引擎 —— 告警会变成假信息。
-  warnings.push(...capabilityWarnings(target, config as unknown as Record<string, unknown>))
+  warnings.push(...generatorCapabilityWarnings(target, config))
 
   // 行内编辑仅 vxe 引擎生效（AI-09 子项④ / AN-11④）：告警统一在 generateFromConfig 里
   // 按配置判一次（两种 mode 同一条规则），不再每个模式各写一份。
@@ -1048,7 +1064,7 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
 
   // target 级能力差异：与 mode 无关（schema / sfc 两种产物落到同一套运行时），
   // 因此两种 mode 都从同一张矩阵取告警（AN-09）。
-  warnings.push(...capabilityWarnings(target, config as unknown as Record<string, unknown>))
+  warnings.push(...generatorCapabilityWarnings(target, config))
 
   // 行内编辑仅 vxe 引擎生效（AI-09 子项④ / AN-11④）：见 generateFromConfig 里的统一判定。
 

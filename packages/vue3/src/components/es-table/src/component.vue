@@ -185,6 +185,7 @@ import {
   buildColumnFilterMethod,
   columnFilterKey,
   hasColumnFilters,
+  warnVxeOnlyKeysOutsideVxe,
 } from '@es-plus/core'
 import type { TableSortState, FieldOutputProvider, CsvColumnLike } from '@es-plus/core'
 import type { TableColumn, PaginationConfig, VxeExportConfig } from '../../../types'
@@ -282,6 +283,9 @@ const virtualEngineRef = ref<InstanceType<typeof VirtualEngine> | null>(null)
 
 // vxe 高性能引擎切换
 const isVxeEngine = computed(() => (tableOptions.value.engine as string | undefined) === 'vxe')
+// P0-1：vxe-only 键（editConfig / toolbarConfig / keyboardConfig …）配在非 vxe 引擎上会被静默剥掉。
+// 手写 <es-table :options> 不经过生成器的告警，这里补运行时那一半（core 按键组合去重，不刷屏）。
+watch(tableOptions, (opts) => warnVxeOnlyKeysOutsideVxe(opts as Record<string, unknown>, 'vue3'), { immediate: true })
 const vxeEngineRef = ref<InstanceType<typeof VxeEngine> | null>(null)
 // 当 vxeConfig.proxyConfig 或一等公民 proxyConfig 存在时，由 vxe 接管请求层和分页，ES-Plus 原有机制退场
 const isVxeProxyMode = computed(() => {

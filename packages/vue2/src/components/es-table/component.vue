@@ -238,6 +238,7 @@ import {
   type TableOptions,
   type FieldOutputProvider,
   type CsvColumnLike,
+  warnVxeOnlyKeysOutsideVxe,
 } from '@es-plus/core'
 import ColumnItem from './column-item.vue'
 import TableBtns from './table-btns.vue'
@@ -467,6 +468,9 @@ export default defineComponent({
 
     // ─── Engine dispatch ──────────────────────
     const isVxeEngine = computed(() => tableOptions.value.engine === 'vxe')
+    // P0-1：vxe-only 键（editConfig / toolbarConfig / keyboardConfig …）配在非 vxe 引擎上会被静默剥掉。
+    // 手写 <es-table :options> 不经过生成器的告警，这里补运行时那一半（core 按键组合去重，不刷屏）。
+    watch(tableOptions, (opts) => warnVxeOnlyKeysOutsideVxe(opts as Record<string, unknown>, 'vue2'), { immediate: true })
     // vxeConfig.toolbarConfig 非 TableOptions 契约字段，需局部断言取值；且模板不能
     // 写 TS 断言（会破坏 vite build），故在此 script 内收敛为布尔供模板绑定。
     const hasVxeToolbar = computed(
