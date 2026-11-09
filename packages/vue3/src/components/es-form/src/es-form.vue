@@ -19,7 +19,11 @@
             :span="item.span"
             :class="{ 'es-col--foldable': item?.isFold !== undefined, 'is-folded': item?.isFold && folded }"
           >
+            <div v-if="isNestedFormHead(item)" class="es-form__nested-title">
+              {{ translateLabel(item) }}
+            </div>
             <el-form-item
+              v-else
               :label="translateLabel(item)"
               v-bind="initFormItemOptions(item)"
               :prop="item.prop"
@@ -221,6 +225,10 @@ import {
   checkPermissionValue,
   resolveFormDetailText,
   groupFormItems,
+  flattenFormItems,
+  isNestedFormHead,
+  isNestedFormChild,
+  pruneEmptyNestedContainers,
 } from '@es-plus/core'
 // locale 文案一律走包内桥（P2-4 热切换）
 import { resolveBuiltinText } from '../../../locale'
@@ -312,7 +320,18 @@ const filterOptions = (it: BtnConfig) => {
 // Refs
 const refs = ref<unknown>(null)
 const formInstance = ref<Record<string, unknown>>({})
-const formItemRowsList = ref<FormItemOption[]>(props.formItemList)
+
+/**
+ * P1-3 第二期：嵌套对象字段摊平（core 单源 `flattenFormItems`）。
+ *
+ * 摊平之后，后续的 reactions / 权限 / isHidden / 分桶 / 折叠**全部沿用既有扁平管线**：
+ * 容器变成一行「只有标题」的项，子字段（绝对 prop）紧跟在它后面。子字段的 span 在
+ * 容器内部单独计算，因此嵌套块的列宽不会被顶层字段的 auto-span 拉平。
+ */
+const flattenRows = (items: FormItemOption[]): FormItemOption[] =>
+  flattenFormItems(items || [], calculateAutoSpan) as unknown as FormItemOption[]
+
+const formItemRowsList = ref<FormItemOption[]>(flattenRows(props.formItemList))
 
 const setFormRef = (el: unknown) => {
   if (el) refs.value = el
@@ -352,7 +371,7 @@ const loadedApiProps = ref<Set<string>>(new Set())
 watch(
   () => props.formItemList,
   async (val) => {
-    const list = Array.isArray(val) ? val : []
+    const list = flattenRows(Array.isArray(val) ? val : [])
     // 只加载 isInitRun !== false 且尚未加载过数据的表单项
     const needLoadList = list.filter((it) => it && it.isInitRun !== false && !loadedApiProps.value.has(it.prop))
     if (!needLoadList.length) {
@@ -441,10 +460,16 @@ const formItemListFilter = computed(() => {
       return true
     })
 
-  // auto-span 算法统一走 core 单源（见 core/src/field-resolver.ts calculateAutoSpan）
-  const autoSpan = calculateAutoSpan(visible)
+  // 摊平早于过滤：子字段全被过滤掉的容器标题行在这里一并丢弃
+  const pruned = pruneEmptyNestedContainers(visible)
 
-  return visible.map((it) => ({ ...it, span: it.span || autoSpan })) as (FormItemOption & { span: number; dataOptions: Array<{ label: string; value: unknown }> })[]
+  // auto-span 算法统一走 core 单源（见 core/src/field-resolver.ts calculateAutoSpan）。
+  // 标题行（整行）与子字段（span 已由容器内部算好）不参与顶层的 auto-span。
+  const autoSpan = calculateAutoSpan(
+    pruned.filter((it) => !isNestedFormHead(it) && !isNestedFormChild(it))
+  )
+
+  return pruned.map((it) => ({ ...it, span: it.span || autoSpan })) as (FormItemOption & { span: number; dataOptions: Array<{ label: string; value: unknown }> })[]
 })
 
 // AI-07 字段联动（值回写）：watch source 是**依赖值的拼接串**（原始值，非数组）——
@@ -974,6 +999,17 @@ defineExpose({
         margin-bottom: 0; // 折叠时消除 form-item 底部间距
       }
     }
+  }
+
+  // P1-3 第二期：嵌套对象字段的标题行（容器自身不渲染输入控件）
+  .es-form__nested-title {
+    margin: 4px 0 16px;
+    padding-left: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 20px;
+    color: #303133;
+    border-left: 3px solid #409eff;
   }
 
   .buttonOperate {

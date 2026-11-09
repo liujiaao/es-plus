@@ -25,7 +25,11 @@
           :span="item.span"
           :class="{ 'es-col--foldable': item?.isFold !== undefined, 'is-folded': item?.isFold && folded }"
         >
+          <div v-if="isNestedFormHead(item)" class="es-form__nested-title">
+            {{ translateLabel(item) }}
+          </div>
           <a-form-item
+            v-else
             :name="toAdvNamePath(item.prop)"
             :label="translateLabel(item)"
             :labelCol="labelColStyle"
@@ -230,7 +234,6 @@ import {
   resolveFormRules,
   normalizeFormItem,
   parsePathSegments,
-  applyAutoSpan,
   resolveButtonSide,
   resolveHttpRequest,
   resolveFieldOutputProvider,
@@ -243,6 +246,11 @@ import {
   checkPermissionValue,
   resolveFormDetailText,
   groupFormItems,
+  flattenFormItems,
+  isNestedFormHead,
+  isNestedFormChild,
+  pruneEmptyNestedContainers,
+  calculateAutoSpan,
 } from '@es-plus/core'
 // locale 文案一律走包内桥（P2-4 热切换）
 import { resolveBuiltinText } from '../../../locale'
@@ -423,7 +431,17 @@ function mapBtnSize(size?: string): SizeType {
 // ─── Refs ───────────────────────────────────────────
 const formRef = ref<unknown>(null)
 const formInstance = ref<Record<string, unknown>>({})
-const formItemRowsList = ref<FormItemOption[]>(props.formItemList)
+
+/**
+ * P1-3 第二期：嵌套对象字段摊平（core 单源 `flattenFormItems`）。
+ * 摊平后沿用既有扁平管线：容器是一行「只有标题」的项，子字段（绝对 prop）紧随其后；
+ * 子字段 span 在容器内部单独计算，不被顶层 auto-span 拉平。
+ */
+const flattenRows = (items: FormItemOption[]): FormItemOption[] =>
+  flattenFormItems(items || [], (s) =>
+    calculateAutoSpan(s as unknown as Parameters<typeof calculateAutoSpan>[0])
+  ) as unknown as FormItemOption[]
+const formItemRowsList = ref<FormItemOption[]>(flattenRows(props.formItemList))
 
 const setFormRef = (el: unknown) => {
   if (el) formRef.value = el
@@ -479,10 +497,31 @@ const wrapperColStyle = computed(() => {
 // ─── 远程选项加载（缓存已加载 prop，对齐 vue3）────────
 const loadedApiProps = ref<Set<string>>(new Set())
 
+/**
+ * P1-3 第二期：嵌套对象字段要求 model 上存在容器对象。
+ *
+ * ADV 的 `a-form-item` 名字路径解析是 **strict** 的（`getPropByPath`）：model 里没有
+ * 中间对象时，每次渲染都会 `console.error('please transfer a valid name path...')`；
+ * Element Plus / Element UI 都容忍缺路径，只有 ADV 会刷屏。这里按需补一个空对象，
+ * 与 core `setNestedValue` 写入时「按需创建中间容器」的语义一致。
+ */
+watch(
+  () => [props.model, props.formItemList],
+  () => {
+    for (const it of formItemRowsList.value) {
+      if (!isNestedFormHead(it)) continue
+      const prop = typeof it.prop === 'string' ? it.prop : ''
+      if (!prop) continue
+      if (!isObject(getNestedValue(props.model, prop))) setNestedValue(props.model, prop, {})
+    }
+  },
+  { immediate: true }
+)
+
 watch(
   () => props.formItemList,
   async (val) => {
-    const list = Array.isArray(val) ? val : []
+    const list = flattenRows(Array.isArray(val) ? val : [])
     const needLoadList = list.filter((it) => it && it.isInitRun !== false && !loadedApiProps.value.has(it.prop))
     if (!needLoadList.length) {
       formItemRowsList.value = list
@@ -567,12 +606,17 @@ const formItemListFilter = computed(() => {
       return true
     })
 
-  // 自动 span 算法此前在本文件内联重写了一遍，与 @es-plus/core 的 applyAutoSpan
+  // 自动 span 算法此前在本文件内联重写了一遍，与 @es-plus/core 的 calculateAutoSpan
   // 逐行等价（vue2 也曾各自内联）。改回调用 core，使三端共用同一套布局数学。
   // 双重断言：本文件的 FormItemOption 来自 `../../../types`（本包自有的类型声明），
   // 与 @es-plus/core 的 FormItemOption 并非同一名义类型，直接传参会被 TS 拒绝。
   // 二者结构一致（本包类型本就应转出 core 的契约，见 types/index.ts），此处只需跨过名义差异。
-  return applyAutoSpan(visible as unknown as Parameters<typeof applyAutoSpan>[0]) as (FormItemOption & { span: number; dataOptions: Array<{ label: string; value: unknown }> })[]
+  // P1-3 第二期：标题行（整行）与子字段（span 已由容器内部算好）不参与顶层 auto-span。
+  // 摊平早于过滤：子字段全被过滤掉的容器标题行在这里一并丢弃。
+  const pruned = pruneEmptyNestedContainers(visible)
+  const spanSource = pruned.filter((it) => !isNestedFormHead(it) && !isNestedFormChild(it))
+  const autoSpan = calculateAutoSpan(spanSource as unknown as Parameters<typeof calculateAutoSpan>[0])
+  return pruned.map((it) => ({ ...it, span: it.span || autoSpan })) as (FormItemOption & { span: number; dataOptions: Array<{ label: string; value: unknown }> })[]
 })
 
 // AI-07 字段联动（值回写）：watch source 是**依赖值的拼接串**（原始值，非数组）——
@@ -1118,6 +1162,17 @@ defineExpose({
   :deep(.ant-input-number),
   :deep(.ant-cascader-picker) {
     width: 100%;
+  }
+
+  // P1-3 第二期：嵌套对象字段的标题行（容器自身不渲染输入控件）
+  .es-form__nested-title {
+    margin: 4px 0 16px;
+    padding-left: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 20px;
+    color: #303133;
+    border-left: 3px solid #409eff;
   }
 
   .buttonOperate {

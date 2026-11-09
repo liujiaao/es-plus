@@ -15,7 +15,11 @@
             :key="item.prop || index"
             :span="item.span"
           >
+            <div v-if="isNestedFormHead(item)" class="es-form__nested-title">
+              {{ translateLabel(item) }}
+            </div>
             <el-form-item
+              v-else
               :label="translateLabel(item)"
               v-bind="initFormItemOptions(item)"
               :prop="item.prop"
@@ -190,6 +194,11 @@ import {
   checkPermissionValue,
   resolveFormDetailText,
   groupFormItems,
+  flattenFormItems,
+  isNestedFormHead,
+  isNestedFormChild,
+  pruneEmptyNestedContainers,
+  calculateAutoSpan,
 } from '@es-plus/core'
 // locale 文案一律走包内桥（P2-4 热切换）
 import { resolveBuiltinText } from '../../locale'
@@ -515,7 +524,14 @@ export default defineComponent({
 
     // ─── refs ──
     const formInstance = ref<Record<string, unknown>>({})
-    const formItemRowsList = ref<FormItemOption[]>(props.formItemList || [])
+    /**
+     * P1-3 第二期：嵌套对象字段摊平（core 单源 `flattenFormItems`）。
+     * 摊平后沿用既有扁平管线：容器是一行「只有标题」的项，子字段（绝对 prop）紧随其后；
+     * 子字段 span 在容器内部单独计算，不被顶层 auto-span 拉平。
+     */
+    const flattenRows = (items: FormItemOption[]): FormItemOption[] =>
+      flattenFormItems(items || [], calculateAutoSpan) as unknown as FormItemOption[]
+    const formItemRowsList = ref<FormItemOption[]>(flattenRows(props.formItemList || []))
 
     // ─── composables ──
     const { formInputComponents } = useFormInputs()
@@ -583,7 +599,7 @@ export default defineComponent({
     watch(
       () => props.formItemList,
       async (val) => {
-        const list = Array.isArray(val) ? val : []
+        const list = flattenRows(Array.isArray(val) ? val : [])
         const needLoadList = list.filter(
           (it) => it && it.isInitRun !== false && !loadedApiProps.value.has(it.prop)
         )
@@ -691,11 +707,15 @@ export default defineComponent({
           return true
         })
 
-      const itemsWithoutSpan = visible.filter((it) => !it.span)
+      // 摊平早于过滤：子字段全被过滤掉的容器标题行在这里一并丢弃
+      const pruned = pruneEmptyNestedContainers(visible)
+      // 标题行（整行）与子字段（span 已由容器内部算好）不参与顶层的 auto-span
+      const spanSource = pruned.filter((it) => !isNestedFormHead(it) && !isNestedFormChild(it))
+      const itemsWithoutSpan = spanSource.filter((it) => !it.span)
       const autoCount = itemsWithoutSpan.length
       let autoSpan = 6
       if (autoCount > 0) {
-        const fixedTotal = visible.reduce((sum, it) => sum + (it.span || 0), 0)
+        const fixedTotal = spanSource.reduce((sum, it) => sum + (it.span || 0), 0)
         const remaining = 24 - (fixedTotal % 24 || (fixedTotal ? 24 : 0))
         if (fixedTotal === 0) {
           if (autoCount === 1) autoSpan = 24
@@ -708,7 +728,7 @@ export default defineComponent({
           if (autoSpan < 4) autoSpan = 6
         }
       }
-      return visible.map((it) => ({ ...it, span: it.span || autoSpan }))
+      return pruned.map((it) => ({ ...it, span: it.span || autoSpan }))
     })
 
     // ─── AI-07 字段联动：值回写（Vue 2 反应式写入）──
@@ -1077,6 +1097,7 @@ export default defineComponent({
       renderBtnFn,
       effectiveConfigBtn,
       isDetail,
+      isNestedFormHead,
       detailText,
       colRightLeftList,
       formInputComponents,
@@ -1147,6 +1168,16 @@ export default defineComponent({
   }
   ::v-deep(.el-form-item__label) {
     font-weight: 500;
+  }
+  // P1-3 第二期：嵌套对象字段的标题行（容器自身不渲染输入控件）
+  .es-form__nested-title {
+    margin: 4px 0 16px;
+    padding-left: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 20px;
+    color: #303133;
+    border-left: 3px solid #409eff;
   }
   .buttonOperate {
     display: flex;

@@ -106,6 +106,18 @@ export type { RowLayoutInfo, FormLayoutResult } from './form-layout.js'
 export { groupFormItems, UNGROUPED_FORM_GROUP_KEY } from './form-groups.js'
 export type { FormGroupItemLike, ResolvedFormGroup, FormGroupResult } from './form-groups.js'
 
+// ─── 嵌套对象字段（P1-3 第二期）：一层摊平单源，三端只画标题 ──────
+export {
+  flattenFormItems,
+  resolveNestedProp,
+  isNestedFormHead,
+  isNestedFormChild,
+  pruneEmptyNestedContainers,
+  NESTED_FORM_HEAD,
+  NESTED_FORM_PARENT,
+} from './form-nested.js'
+export type { NestedFormItemLike, NestedRenderItem } from './form-nested.js'
+
 // ─── EsCrudPage action 面解析（三端共用，AN-06）───────────────
 export { resolveCrudActions, LEGACY_CRUD_ACTIONS } from './crud-actions.js'
 export type { CrudActionsSource } from './crud-actions.js'

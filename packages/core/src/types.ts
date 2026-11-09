@@ -305,6 +305,19 @@ export interface FormItemOption {
    * 只在启用了分组容器（`layout.type`）时生效；未声明 → 归入「未分组」桶。
    */
   group?: string
+  /**
+   * 嵌套对象字段（P1-3 第二期，**只支持一层**）：本字段成为整行的标题，
+   * 子字段按声明顺序渲染在标题之下。
+   *
+   * - 子字段 `prop` 若已是绝对路径（等于 `<父 prop>` 或以 `<父 prop>.` 开头）原样使用，
+   *   否则拼成 `<父 prop>.<子 prop>`；子字段绑定的是 `model` 上的嵌套路径。
+   * - 容器自身**不绑定数据**：不渲染输入控件、不产生校验规则，`formtype` 等控件字段被忽略。
+   * - 子字段继承容器的 `group`（自己声明的优先）；子字段上的 `children` 被忽略并告警一次。
+   * - 子字段全部被 `isHidden` / 权限过滤时，标题行一并消失。
+   *
+   * 摊平规则由 core `flattenFormItems` 单源定义，三端只负责画标题。
+   */
+  children?: FormItemOption[]
   /** 占位文本快捷方式（自动注入到 attrs.placeholder，attrs 中的同名属性优先） */
   placeholder?: string
   /**
