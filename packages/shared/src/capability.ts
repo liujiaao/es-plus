@@ -396,7 +396,7 @@ export function capabilityWarnings(
       warnings.push(
         `target=${target}: ${entry.key} 仅在 engine:'${entry.requires.engine}' 下生效 — ` +
         `当前引擎为 '${resolvedEngine}'，该配置将被运行时忽略。` +
-        `请添加 tableOptions.engine:'${entry.requires.engine}'，或使用 engine:'auto' 自动选路。`
+        `请添加 tableOptions.engine:'${entry.requires.engine}'（并确保该引擎已注册）。`
       )
     }
   }
