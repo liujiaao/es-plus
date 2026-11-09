@@ -612,6 +612,26 @@ describe('EsCrudPage', () => {
       }
     })
 
+    // P0-3：import 按钮此前只派发通用 btn-click，与 export 不对等
+    it('import 按钮点击 → 派发专用 import 事件（并保留 btn-click）', async () => {
+      const wrapper = mountCrudPage({
+        schema: {
+          ...schemaWithForm,
+          actions: ['import']
+        }
+      })
+      const form = wrapper.findComponent({ name: 'EsForm' })
+      const configBtn = form.props('configBtn') as any[]
+      const importBtn = configBtn.find((b: any) => b.key === 'import')
+      expect(importBtn).toBeDefined()
+      expect(typeof importBtn.click).toBe('function')
+      importBtn.click()
+      await nextTick()
+      await nextTick()
+      expect(wrapper.emitted('import')).toBeTruthy()
+      expect(wrapper.emitted('btn-click')?.[0]?.[0]).toBe('import')
+    })
+
     // ─── AN-11⑥：两个「只写进 defineEmits、从不 emit」的死事件 ───
     it('query 按钮点击 → 发起新搜索并派发 query 事件（带当前查询模型）', async () => {
       const wrapper = mountCrudPage({ schema: schemaWithForm })

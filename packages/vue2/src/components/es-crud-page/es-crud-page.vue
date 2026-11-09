@@ -128,6 +128,7 @@ export default defineComponent({
     'delete',
     'view',
     'export',
+    'import',
     'row-click',
     'btn-click',
     'dialog-confirm',
@@ -455,6 +456,9 @@ export default defineComponent({
 
       if (key === 'export' || btn.actionType === 'export') {
         emit('export', { ...queryModel })
+      } else if (key === 'import' || btn.actionType === 'import') {
+        // P0-3：专用 emit，对齐 export 的设计；宿主监听 @import 实现文件选取与上传
+        emit('import', { ...queryModel })
       } else if (key === 'add') {
         emit('add')
       }

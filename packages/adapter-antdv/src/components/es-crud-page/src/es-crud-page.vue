@@ -119,6 +119,7 @@ const emit = defineEmits<{
   'delete': [row: Record<string, unknown>]
   'view': [row: Record<string, unknown>]
   'export': [model: Record<string, unknown>]
+  'import': [model: Record<string, unknown>]
   'row-click': [row: Record<string, unknown>]
   'btn-click': [key: string, payload?: Record<string, unknown>]
   'dialog-confirm': [dialogKey: string, data: Record<string, unknown>]
@@ -414,6 +415,9 @@ async function handleToolbarBtnClick(btn: CrudBtnConfig) {
   // 非弹窗按钮的事件
   if (key === 'export' || btn.actionType === 'export') {
     emit('export', { ...queryModel })
+  } else if (key === 'import' || btn.actionType === 'import') {
+    // P0-3：专用 emit，对齐 export 的设计；宿主监听 @import 实现文件选取与上传
+    emit('import', { ...queryModel })
   } else if (key === 'add') {
     emit('add')
   }
