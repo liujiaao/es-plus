@@ -211,6 +211,12 @@ export {
 } from './table-engine-keys.js'
 export type { VxeOnlyTableKey } from './table-engine-keys.js'
 
+// ─── 表格内部键单源（P2-1）：三端都剥掉、不透传到底座表格的公共键 ──────
+export {
+  BASE_TABLE_INTERNAL_KEYS,
+} from './table-internal-keys.js'
+export type { BaseTableInternalKey } from './table-internal-keys.js'
+
 // ─── 列筛选（W3-2）：本地匹配语义单源，三端各引擎只做签名适配 ──────
 export {
   normalizeFilterMode,

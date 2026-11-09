@@ -181,7 +181,22 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 
 ## P2-1：TABLE_INTERNAL_KEYS 三端不对齐
 
-**实施方案**：`core/constants.ts` 定义 `BASE_TABLE_INTERNAL_KEYS`，三端用 `new Set([...BASE, ...端专有])`；新增守卫。
+**问题**：三端各写一份「不透传到底座表格」的内部键清单（修前 43 / 44 / 50），新增跨端键时
+漏改一端 = 该端 DOM 上多一枚死属性，构建与单测全绿、无人发现。
+
+**实施记录**：
+1. `packages/core/src/table-internal-keys.ts` 定义 `BASE_TABLE_INTERNAL_KEYS`（43 个公共键，
+   按「前置列 / 请求映射 / 布局高度 / 引擎与虚拟滚动 / vxe 一等公民 / 声明式翻译」分组注释），
+   从 core 入口导出；
+2. 三端改为 `new Set<string>([...BASE_TABLE_INTERNAL_KEYS, ...端专有])`：vue2 专有 `lazyLoad`，
+   antdv 专有 7 个 a-table 映射键（border/stripe/size/showHeader/emptyText/headerCellStyle/
+   highlightCurrentRow），vue3 无专有；
+3. 新守卫 `check:table-internal-keys`（已进 `check:consistency` 的 cross-target 组）：
+   ① 单源 ⊆ 每端集合；② 单源 === 三端交集（三端共同新增却忘记回填单源 = 红）；
+   ③ 每端必须 `...BASE_TABLE_INTERNAL_KEYS` 展开、集合内无重复键；带 5 条自证
+   （缺键 / 未展开 / 未回填 / 重复 / 解析为空）。
+
+**当前进度**：✅ 已完成。三端 es-table 单测 64 / 36 / 77 全绿，typecheck 绿。
 
 ---
 

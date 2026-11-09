@@ -185,7 +185,9 @@ export const CONSUMED_NOT_DECLARED = {
       '自定义请求函数（表级逃生舱，宿主注入自己的 fetch 实现）。字段级另有同名的 `FormItemOption.httpRequest`（远端下拉）。AI 契约以 `apiParams.url` 表达数据源、不承载函数；函数值本就不进 AI 配置（Tier-3）。',
     consumedAt: [
       { file: 'packages/core/src/types.ts', pattern: /^ {2}httpRequest\?:\s*\(params/m },
-      { file: 'packages/vue3/src/components/es-table/src/component.vue', pattern: /'httpRequest', 'configTableOut', 'listenToCallBack'/ },
+      // P2-1 起内部键清单收敛到 core 单源，原来「同组三键」的证据随之搬走；
+      // 这里改指组件自己的消费点（真正的运行时判据），不再依赖清单排版。
+      { file: 'packages/vue3/src/components/es-table/src/component.vue', pattern: /typeof tableOptions\.value\.httpRequest === 'function'/ },
     ],
   },
   'tableOptions.listenToCallBack': {

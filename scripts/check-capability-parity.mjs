@@ -30,7 +30,7 @@
  *   P2 矩阵里加一个 schema 不存在的键                → A 必须红
  *   P3 让 `isSet` 永远判「没设」（设了也读不到）      → B 必须红（告警消失）
  *   P4 让 `capabilityWarnings` 在无引擎上下文时也对 partial 告警 → A6（only-none-warns）必须红
- *   P5 从 vue3 的 `TABLE_INTERNAL_KEYS` 删一个键      → D 必须红
+ *   P5 从 core 单源 `BASE_TABLE_INTERNAL_KEYS` 删一个键  → D 必须红（三端一起少剥）
  *   P6 删掉 partial+requires 的引擎不匹配告警          → A8 必须红
  *   P7 从 core 运行时 vxe-only 清单删一个键            → D2 必须红
  *   P8 某端 es-table 不再调用运行时告警                → D3 必须红
@@ -55,6 +55,12 @@ const GENERATOR_SRC = join(ROOT, 'packages/shared/src/structured-generator.ts')
 const GRID_CONFIG_SRC = join(ROOT, 'packages/core/src/vxe-engine/build-grid-config.ts')
 /** core 的运行时 vxe-only 清单（P0-1），相对仓根 —— 走 read() 以便注入伪造。 */
 const RUNTIME_VXE_ONLY_SRC = 'packages/core/src/table-engine-keys.ts'
+/**
+ * 表格内部键的 **core 单源**（P2-1）。三端 `TABLE_INTERNAL_KEYS` 现在写成
+ * `new Set([...BASE_TABLE_INTERNAL_KEYS, ...端专有])`，所以 D 判据必须把展开项解析进来，
+ * 否则会把「公共键」全部误判成缺失。
+ */
+const BASE_INTERNAL_KEYS_SRC = 'packages/core/src/table-internal-keys.ts'
 
 /**
  * 三端的**运行时剥离表**（D 用）。
@@ -377,12 +383,23 @@ function checkSuite(api) {
   return problems
 }
 
+/** 抓 core 单源 `BASE_TABLE_INTERNAL_KEYS`；结构变了返回 null（不许空集恒绿）。 */
+function baseInternalKeysOf(src) {
+  const m = src.match(/export const BASE_TABLE_INTERNAL_KEYS\s*=\s*\[([\s\S]*?)\]\s*as const/)
+  if (!m) return null
+  return new Set([...m[1].matchAll(/['"]([A-Za-z_$][\w$]*)['"]/g)].map((t) => t[1]))
+}
+
 /** 抓一个 component.vue 的 `TABLE_INTERNAL_KEYS` 键集；结构变了返回 null（不许空集恒绿）。 */
-function internalKeysOf(src) {
-  const m = src.match(/const TABLE_INTERNAL_KEYS = new Set\(\[([\s\S]*?)\]\)/)
+function internalKeysOf(src, baseKeys) {
+  const m = src.match(/const TABLE_INTERNAL_KEYS = new Set(?:<[^>]*>)?\(\[([\s\S]*?)\]\)/)
   if (!m) return null
   const keys = new Set()
   for (const t of m[1].matchAll(/['"]([A-Za-z_$][\w$]*)['"]/g)) keys.add(t[1])
+  // 展开单源 = 运行时含全部公共键（P2-1 起三端都走这条路径）
+  if (m[1].includes('...BASE_TABLE_INTERNAL_KEYS') && baseKeys) {
+    for (const k of baseKeys) keys.add(k)
+  }
   return keys
 }
 
@@ -412,6 +429,15 @@ function checkInternalKeys(read) {
     problems.push(`D0 从 build-grid-config.ts 只解析出 ${wanted.size} 个直传键 —— 解析器失效`)
     return problems
   }
+  let baseKeys = null
+  try {
+    baseKeys = baseInternalKeysOf(read(BASE_INTERNAL_KEYS_SRC))
+  } catch {
+    problems.push(`D0 找不到 ${BASE_INTERNAL_KEYS_SRC} —— 路径漂移，请同步守卫`)
+  }
+  if (!baseKeys || baseKeys.size < 10) {
+    problems.push(`D0 ${BASE_INTERNAL_KEYS_SRC} 解析不出 BASE_TABLE_INTERNAL_KEYS —— 结构已变，别让本判据空跑`)
+  }
   for (const [rel, target] of INTERNAL_KEY_CONSUMERS) {
     let src
     try {
@@ -420,10 +446,15 @@ function checkInternalKeys(read) {
       problems.push(`D0 找不到 ${rel}（target=${target}）—— 路径漂移，请同步守卫`)
       continue
     }
-    const keys = internalKeysOf(src)
+    const keys = internalKeysOf(src, baseKeys)
     if (!keys || keys.size < 10) {
       problems.push(`D0 ${rel} 解析不出 TABLE_INTERNAL_KEYS —— 结构已变，别让本判据空跑`)
       continue
+    }
+    if (!/\.\.\.BASE_TABLE_INTERNAL_KEYS/.test(src)) {
+      problems.push(
+        `D0 ${rel}（target=${target}）没有展开 core 单源 BASE_TABLE_INTERNAL_KEYS —— 公共键又回到手抄第二份`
+      )
     }
     for (const k of wanted) {
       if (!keys.has(k)) {
@@ -578,13 +609,13 @@ async function main() {
       },
     },
     {
-      name: 'P5 从 vue3 的 TABLE_INTERNAL_KEYS 删掉 keyboardConfig',
+      name: 'P5 从 core 单源 BASE_TABLE_INTERNAL_KEYS 删掉 keyboardConfig',
       expect: /D1 target=vue3 .*keyboardConfig/,
       override: () => {
-        const abs = join(ROOT, INTERNAL_KEY_CONSUMERS[0][0])
+        const abs = join(ROOT, BASE_INTERNAL_KEYS_SRC)
         const src = readFileSync(abs, 'utf-8')
-        const next = src.replace("'keyboardConfig', 'mouseConfig'", "'mouseConfig'")
-        if (next === src) throw new Error('P5 注入锚点未命中（vue3 TABLE_INTERNAL_KEYS 结构已变）')
+        const next = src.replace(/^ {2}'keyboardConfig',\r?\n/m, '')
+        if (next === src) throw new Error('P5 注入锚点未命中（BASE_TABLE_INTERNAL_KEYS 结构已变）')
         overrides.set(abs, next)
       },
       run: () => checkInternalKeys((rel) => readSrc(join(ROOT, rel))),

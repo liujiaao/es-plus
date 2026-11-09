@@ -231,6 +231,7 @@ import {
   exportTableCsv,
   resolveBuiltinText,
   warnVxeOnlyKeysOutsideVxe,
+  BASE_TABLE_INTERNAL_KEYS,
 } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
@@ -869,26 +870,21 @@ const serverSort = computed(() => resolveSortParam(tableOptions.value))
 const sortState = ref<TableSortState | null>(seedSortState(tableOptions.value?.defaultSort))
 
 // ─── 表格 attrs 透传 ────────────────────────────────
-const TABLE_INTERNAL_KEYS = new Set([
-  'multiSelect', 'expand', 'snIndex', 'loading', 'cachePageSelection',
-  'httpRequest', 'configTableOut', 'listenToCallBack',
-  'apiParams', 'actionUrl', 'heightType', 'tabHeight',
-  'isInitRun', 'entryQuery', 'configBtn', 'leftText', 'rowkey',
-  'virtual', 'engine', 'rowHeight', 'estimatedRowHeight', 'overscanCount',
-  'rowClassName', 'border', 'stripe', 'size', 'showHeader',
-  'emptyText', 'headerCellStyle', 'highlightCurrentRow',
-  // vxe 引擎专有字段，不传给 a-table（它们经 `options` prop 直达 vxe-engine，
-  // 若宿主把它们当 attr 传给 <es-table>，原样落到 a-table 只会变成根节点上的死属性）。
-  'vxeConfig', 'vxeOn',
-  'showFooter', 'footerMethod', 'footerData',
-  'editConfig', 'exportConfig', 'toolbarConfig', 'columnConfig',
-  'keyboardConfig', 'mouseConfig', 'validConfig', 'keepSource', 'printConfig',
-  'treeConfig', 'proxyConfig', 'expandConfig', 'seqConfig',
-  // AI-23：声明式合并单元格在默认引擎里由组件侧翻译成**列级 customCell**（a-table 无
-  // span-method prop），不是 a-table 的直接 attrs，故列入内部键。
-  'mergeConfig',
-  // 服务端排序声明：由请求层消费，a-table 没有这个 prop。
-  'sortParam',
+// 跨端公共键的单源在 @es-plus/core（BASE_TABLE_INTERNAL_KEYS）；
+// 守卫 check:table-internal-keys 断言「三端都剥掉全部基础键」+「三端共同新增的键
+// 必须回填单源」。
+const TABLE_INTERNAL_KEYS = new Set<string>([
+  ...BASE_TABLE_INTERNAL_KEYS,
+  // a-table 端专有：这些键由模板显式映射（:bordered / :size / :showHeader / :locale /
+  // highlightCurrentRow / headerCellStyle / 类名 stripe），若再作为 attr 落到根节点
+  // 就是一枚没人读的死属性。
+  'border',
+  'stripe',
+  'size',
+  'showHeader',
+  'emptyText',
+  'headerCellStyle',
+  'highlightCurrentRow',
 ])
 
 const fallthroughAttrs = useAttrs()

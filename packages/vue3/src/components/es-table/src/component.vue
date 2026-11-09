@@ -186,6 +186,7 @@ import {
   columnFilterKey,
   hasColumnFilters,
   warnVxeOnlyKeysOutsideVxe,
+  BASE_TABLE_INTERNAL_KEYS,
 } from '@es-plus/core'
 import type { TableSortState, FieldOutputProvider, CsvColumnLike } from '@es-plus/core'
 import type { TableColumn, PaginationConfig, VxeExportConfig } from '../../../types'
@@ -650,25 +651,11 @@ const elTableColumns = computed(() => {
   )
 })
 
-const TABLE_INTERNAL_KEYS = new Set([
-  'multiSelect', 'expand', 'snIndex', 'loading', 'cachePageSelection',
-  'httpRequest', 'configTableOut', 'listenToCallBack',
-  'apiParams', 'actionUrl', 'heightType', 'tabHeight',
-  'isInitRun', 'entryQuery', 'configBtn', 'leftText', 'rowkey',
-  'virtual', 'engine', 'rowHeight', 'estimatedRowHeight', 'overscanCount', 'rowClassName',
-  // vxe 引擎专有字段，不传给 el-table
-  'vxeConfig', 'vxeOn',
-  'showFooter', 'footerMethod', 'footerData',
-  'editConfig', 'exportConfig', 'toolbarConfig', 'columnConfig',
-  'keyboardConfig', 'mouseConfig', 'validConfig',
-  'treeConfig', 'proxyConfig', 'expandConfig', 'seqConfig',
-  // AI-31：vxe 一等公民的 JSON 子集里此前漏列的两个 —— keepSource / printConfig 也不是
-  // el-table 的 prop，漏列会被 v-bind 当成未知 attr 落到根节点（keepsource="false"）。
-  'keepSource', 'printConfig',
-  // AI-23：声明式合并单元格由组件侧翻译成 el-table 的 spanMethod，不是 el-table 的 prop。
-  'mergeConfig',
-  // 服务端排序声明：由请求层消费，el-table 没有这个 prop。
-  'sortParam',
+const TABLE_INTERNAL_KEYS = new Set<string>([
+  // 跨端公共键的单源在 @es-plus/core（BASE_TABLE_INTERNAL_KEYS）；
+  // 守卫 check:table-internal-keys 断言「三端都剥掉全部基础键」+「三端共同新增的键
+  // 必须回填单源」。vue3 暂无端专有键。
+  ...BASE_TABLE_INTERNAL_KEYS,
 ])
 
 const tableAttrs = computed(() => {
