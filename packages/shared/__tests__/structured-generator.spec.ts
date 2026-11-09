@@ -278,6 +278,45 @@ describe('generateFromConfig — schema mode', () => {
     expect(result.code).toContain('"禁用"')
   })
 
+  it('P1-3：schema 模式透传 formLayout.layout，字段级 group 落 buildFormItem', () => {
+    // 四份契约的终点：AI 配置里写的分组必须真的进产物。少任何一环，
+    // 运行时都只会渲染一张平铺表单（静默的能力丢失）。
+    const result = generateFromConfig({
+      ...baseConfig,
+      formLayout: {
+        labelWidth: '90px',
+        layout: { type: 'steps', groups: [{ key: 'basic', label: '基本信息' }, { key: 'job', label: '任职信息', description: '岗位与职级' }] },
+      },
+      fields: [
+        { prop: 'name', label: '姓名', formtype: 'Input' as const, group: 'basic' },
+        { prop: 'level', label: '职级', formtype: 'Input' as const, group: 'job' },
+      ],
+      mode: 'schema' as const,
+    })
+    const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))
+    expect(schema.formLayout).toEqual({
+      labelWidth: '90px',
+      layout: {
+        type: 'steps',
+        groups: [{ key: 'basic', label: '基本信息' }, { key: 'job', label: '任职信息', description: '岗位与职级' }],
+      },
+    })
+    expect(schema.formItems.map((f: any) => f.group)).toEqual(['basic', 'job'])
+  })
+
+  it('P1-3：sfc 模式把 layout 内联成 layoutFormProps 的兄弟键', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'sfc' as const,
+      formLayout: { labelWidth: '90px', layout: { type: 'tabs', groups: [{ key: 'basic', label: '基础' }] } },
+      fields: [{ prop: 'name', label: '姓名', formtype: 'Input' as const, group: 'basic' }],
+    })
+    expect(result.code).toContain(
+      'const formLayoutProps = { rowLayProps: { gutter: 16 }, formLayProps: {"labelWidth":"90px"}, layout: {"type":"tabs","groups":[{"key":"basic","label":"基础"}]} }'
+    )
+    expect(result.code).toContain('"group": "basic"')
+  })
+
   it('generates validation rules for required fields', () => {
     const result = generateFromConfig({ ...baseConfig, mode: 'schema' })
     const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))

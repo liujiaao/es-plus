@@ -1116,7 +1116,11 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   // layoutFormProps 绑到查询 es-form。`span` 已于 AI-31③ 从契约删除（layout 级无消费者，
   // 列数是逐字段的 querySpan/formSpan）。
   const sfcFormLayout = plan.emits('formLayout')
-    ? ((config.formLayout || {}) as { labelWidth?: string | number; minFoldRows?: number })
+    ? ((config.formLayout || {}) as {
+        labelWidth?: string | number
+        minFoldRows?: number
+        layout?: Record<string, unknown>
+      })
     : {}
   const sfcFormLayProps: Record<string, unknown> = {}
   // 键名必须是 labelWidth（与 schema 模式同一语义：查询字段的 label 宽度）。
@@ -1124,7 +1128,10 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   // 在两种模式下都只改变了空按钮行，字段本身没变。
   if (sfcFormLayout.labelWidth !== undefined) sfcFormLayProps.labelWidth = sfcFormLayout.labelWidth
   if (sfcFormLayout.minFoldRows) sfcFormLayProps.minFoldRows = sfcFormLayout.minFoldRows
-  const hasSfcFormLayout = Object.keys(sfcFormLayProps).length > 0
+  // 分组容器（P1-3）：`layout` 是 `layoutFormProps` 的兄弟键，原样透传。
+  const sfcFormGroupLayout = sfcFormLayout.layout
+  const hasSfcFormLayout =
+    Object.keys(sfcFormLayProps).length > 0 || sfcFormGroupLayout !== undefined
 
   const lines: string[] = []
 
@@ -1243,9 +1250,11 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   lines.push(...buildFormFaceRenderPlaceholderLines(config, '', { includeDialogs: false, dialect: 'js' }))
   lines.push(`const formItems${ts ? ': FormItemOption[]' : ''} = ${formItemsJson}`)
   if (hasSfcFormLayout) {
-    // 与 schema 模式（EsCrudPage.formLayoutProps）等价：labelWidth 映射到按钮区 label 宽度。
+    // 与 schema 模式（EsCrudPage.formLayoutProps）等价：labelWidth 映射到按钮区 label 宽度；
+    // `layout`（P1-3 分组容器）是同级键，原样透传。
+    const layoutPart = sfcFormGroupLayout ? `, layout: ${inlineJson(sfcFormGroupLayout)}` : ''
     lines.push(
-      `const formLayoutProps = { rowLayProps: { gutter: 16 }, formLayProps: ${inlineJson(sfcFormLayProps)} }`,
+      `const formLayoutProps = { rowLayProps: { gutter: 16 }, formLayProps: ${inlineJson(sfcFormLayProps)}${layoutPart} }`,
     )
   }
   lines.push(``)
@@ -2001,6 +2010,9 @@ export function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18
 
   if (field.dataOptions) item.dataOptions = field.dataOptions
   if (field.apiParams) item.apiParams = field.apiParams
+  // 表单分组 key（P1-3）：纯字符串，schema/SFC 两模式共用这一发射点。
+  // 只作用于 query / 弹窗表单（buildFormItem 的两个 context），**不进**表格列。
+  if (field.group) item.group = field.group
   // 字段级权限编码：字符串，可直接进 schema 模式 JSON；运行时由 es-form 的 formItemListFilter
   // 按全局 permission(code) 过滤（无权限则整个表单项不渲染）。按钮级 permissions 是另一回事。
   if (field.permissionValue) item.permissionValue = field.permissionValue

@@ -210,6 +210,52 @@ const ReactionSchema = z
     message: 'reactions.fulfill.value 需要非空 dependencies（否则任何 model 变更都会重算并覆盖用户手改）',
   })
 
+/**
+ * 表单分组容器（P1-3 第一期）—— `formLayout.layout` 的纯 JSON 形状。
+ *
+ * 字段上写 `group` 指向 `groups[].key`；容器（页签 / 分步 / 折叠面板）由 es-form 自己
+ * 渲染。未在 `groups` 里声明的组按字段首次出现顺序追加；没有 `group` 的字段按
+ * `ungrouped` 策略落进兜底组、并入首组或被丢弃。三端分桶规则来自 core
+ *（`groupFormItems`），生成器只负责把这份 JSON 原样发射。
+ */
+const FormGroupOptionSchema = z.object({
+  key: z.string().min(1).describe('Group key that fields reference via their `group` value.'),
+  label: z
+    .string()
+    .optional()
+    .describe('Group title shown in the container header (tab label / step title / panel header).'),
+  labelKey: z
+    .string()
+    .optional()
+    .describe("i18n key for the group title (takes precedence over `label` when the host provides a global t())."),
+  description: z
+    .string()
+    .optional()
+    .describe("Step subtitle. Consumed by `type:'steps'` only; ignored by tabs/collapse."),
+})
+
+const FormGroupLayoutSchema = z.object({
+  type: z
+    .enum(['tabs', 'steps', 'collapse'])
+    .describe("Container type: 'tabs' = tab panes, 'steps' = one group at a time with built-in prev/next, 'collapse' = panels (all expanded by default)."),
+  groups: z
+    .array(FormGroupOptionSchema)
+    .optional()
+    .describe(
+      'Declared groups in display order. Fields whose `group` is not listed are appended in first-appearance order; empty groups are dropped.'
+    ),
+  ungrouped: z
+    .enum(['default', 'first', 'hidden'])
+    .optional()
+    .describe(
+      "'default' (or omitted) = fields without a `group` go into a trailing bucket titled `defaultLabel`; 'first' = merge them into the first group; 'hidden' = do not render them."
+    ),
+  defaultLabel: z
+    .string()
+    .optional()
+    .describe("Title of the fallback bucket under `ungrouped:'default'` (built-in default: 其他 / Other)."),
+})
+
 const FieldConfigSchema = z.object({
   prop: z.string().min(1).refine(isSafeProp, {
     message:
@@ -227,6 +273,13 @@ const FieldConfigSchema = z.object({
   inForm: z.boolean().default(true).describe('Show in the add/edit form'),
   querySpan: z.number().int().min(1).max(24).optional().describe('Grid width of this field in the query form (1-24; 2 columns = 12 each). Column count is set PER FIELD — `formLayout` has no span key.'),
   formSpan: z.number().int().min(1).max(24).optional().describe('Grid width of this field in the add/edit form (1-24; 2 columns = 12 each). Column count is set PER FIELD — `formLayout` has no span key.'),
+  group: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      "Form-group key for the FORM face. Fields sharing a key are rendered inside that group's container; declare the containers in `formLayout.layout` (query form) or `dialogs[k].formLayout.layout` (dialog form). Ignored by the table column. Omit to follow the layout's `ungrouped` strategy."
+    ),
   required: z.boolean().optional(),
   rules: z.array(FieldRuleSchema).optional(),
   attrs: z.record(z.string(), z.unknown()).optional().describe("Extra component props, e.g. { type: 'textarea', maxlength: 200 }"),
@@ -544,6 +597,9 @@ const DialogConfigSchema = z.object({
   formLayout: z.object({
     labelWidth: z.union([z.string(), z.number()]).optional(),
     minFoldRows: z.number().int().optional().describe('Form collapses when rows exceed this number'),
+    layout: FormGroupLayoutSchema.optional().describe(
+      "Group containers for this dialog's form (P1-3). Fields reference groups via their `group` key. Omit for a flat grid form."
+    ),
   }).optional(),
   hasCustomRender: z
     .boolean()
@@ -868,6 +924,9 @@ export const StructuredCrudConfigSchema = z.object({
   formLayout: z.object({
     labelWidth: z.union([z.string(), z.number()]).optional(),
     minFoldRows: z.number().int().optional().describe('Query form collapses when rows exceed this number'),
+    layout: FormGroupLayoutSchema.optional().describe(
+      "Group containers for the QUERY form (P1-3). Fields reference groups via their `group` key. Omit for a flat query grid."
+    ),
   }).optional().describe('Query form layout config'),
   toolbarBtns: z.array(ToolbarBtnSchema).optional().describe('Buttons rendered in the QUERY-FORM button area, appended after 查询/重置. This area has NO left/right placement — when the description names a side ("左侧…右侧…", "on the left/right of the table"), use `tableBtns` instead, or the placement requirement is silently lost.'),
   tableBtns: z.array(TableBtnSchema).optional().describe('Table toolbar buttons rendered ABOVE EsTable — the only button surface that honours `position: "left" | "right"` (legacy alias code:1=left/2=right, auto-normalized). Default to this one for toolbar buttons the NL positions.'),

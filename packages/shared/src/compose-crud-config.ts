@@ -36,6 +36,8 @@ export interface SurfaceField {
   formtype: string
   querySpan?: number
   formSpan?: number
+  /** 表单分组 key（P1-3）：只作用于表单面，容器在表单的 formLayout.layout 里声明。 */
+  group?: string
   required?: boolean
   rules?: unknown[]
   attrs?: Record<string, unknown>
@@ -174,6 +176,13 @@ export function composeCrudConfig(input: ComposeCrudInput): ComposeResult {
   for (const f of [...query, ...table, ...form]) {
     if (f.permissionValue && acc.get(f.prop)!.permissionValue === undefined) {
       acc.get(f.prop)!.permissionValue = f.permissionValue
+    }
+  }
+
+  // 5.1) group:只认表单面（query / form）。表格面写了也没有消费者 —— 表格是列，不是分组容器。
+  for (const f of [...query, ...form]) {
+    if (f.group && acc.get(f.prop)!.group === undefined) {
+      acc.get(f.prop)!.group = f.group
     }
   }
 

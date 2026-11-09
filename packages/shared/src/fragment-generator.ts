@@ -74,10 +74,25 @@ export interface EsFormLayout {
   labelWidth?: string | number
   /** 超过 N 行折叠（映射 `formLayProps.minFoldRows`；需要按钮区，`buttons:'none'` 时会告警）。 */
   minFoldRows?: number
+  /** 分组容器（P1-3，映射 `layoutFormProps.layout`）：字段上用 `group` 指向 `groups[].key`。 */
+  layout?: {
+    type: 'tabs' | 'steps' | 'collapse'
+    groups?: { key: string; label?: string; labelKey?: string; description?: string }[]
+    ungrouped?: 'default' | 'first' | 'hidden'
+    defaultLabel?: string
+  }
 }
 
-/** `formLayout` 的发射枚举（与 {@link EsFormLayout} 键集相等，守卫钉住）。 */
+/** `formLayout` 的发射枚举（与 {@link EsFormLayout} 的 formLayProps 键集相等，守卫钉住）。 */
 export const FORM_LAYOUT_KEYS = ['labelWidth', 'minFoldRows'] as const
+
+/**
+ * `formLayout` 里映射到 `layoutFormProps` **顶层**（而非 `formLayProps`）的兄弟键。
+ *
+ * `layout`（分组容器）是 es-form 的独立 prop：塞进 formLayProps 会被 el-form 当作未知
+ * 属性吞掉、分组静默退回平铺。单独一张冻结表，让「接口加键 → 发射跟上」仍有守卫。
+ */
+export const FORM_LAYOUT_SIBLING_KEYS = ['layout'] as const
 
 /**
  * 独立表单的完整配置（= `generate_form` 的入参；Wave 4 起容器级词汇复用
@@ -203,7 +218,14 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
     for (const k of FORM_LAYOUT_KEYS) {
       if (layout[k] !== undefined) formLayProps[k] = layout[k]
     }
-    lines.push(`const layoutFormProps = { formLayProps: ${inlineJson(formLayProps)} }`)
+    // 分组容器是 formLayProps 的兄弟键（es-form 的 `layoutFormProps.layout`），
+    // 不参与 minFoldRows 的「需要按钮区」告警：容器自带翻页/展开交互。
+    // 兄弟键同样走冻结数组，避免「接口加键、发射漏写」。
+    let siblingPart = ''
+    for (const k of FORM_LAYOUT_SIBLING_KEYS) {
+      if (layout[k] !== undefined) siblingPart += `, ${k}: ${inlineJson(layout[k])}`
+    }
+    lines.push(`const layoutFormProps = { formLayProps: ${inlineJson(formLayProps)}${siblingPart} }`)
   }
 
   // 可选按钮
@@ -252,7 +274,12 @@ export function generateFormBlock(input: FormBlockInput): FragmentResult {
     `Generated standalone <es-form> block (target=${target}):`,
     `- ${fields.length} field(s), span context=${context}, buttons=${buttons}`,
     hasLayout
-      ? `- Form layout: ${FORM_LAYOUT_KEYS.filter((k) => layout[k] !== undefined).map((k) => `${k}=${String(layout[k])}`).join(', ') || '(isBtnHidden only)'}`
+      ? `- Form layout: ${
+          [
+            ...FORM_LAYOUT_KEYS.filter((k) => layout[k] !== undefined).map((k) => `${k}=${String(layout[k])}`),
+            ...(layout.layout ? [`container=${layout.layout.type}`] : []),
+          ].join(', ') || '(isBtnHidden only)'
+        }`
       : '',
     ts ? '- TypeScript enabled' : '',
     '- Runtime: emits submit/query/reset; exposes validate/resetFields/model.',

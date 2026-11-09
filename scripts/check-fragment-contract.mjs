@@ -32,6 +32,8 @@
  *     发射枚举里 = 接受入参却永不注入产物。
  *  7. 片段 `formLayout` / `pagination`(Wave 4):`EsFormLayout` / `EsTablePagination`
  *     各自 ≡ `FORM_LAYOUT_KEYS` / `PAGINATION_KEYS` ≡ mcp 镜像(三处全等)。
+ *     `formLayout` 另有**兄弟键**表 `FORM_LAYOUT_SIBLING_KEYS`（`layout` 分组容器：
+ *     映射到 `layoutFormProps` 顶层而非 `formLayProps`）；接口键集 ≡ 两表之并。
  *     片段与**权威 schema** 同名嵌套块的等价性由 `check-entry-contract.mjs` 断言(6),
  *     两条守卫各守一侧:本脚本守手写副本漂移,那条守片段↔权威收窄。
  *
@@ -274,6 +276,7 @@ function main() {
       label: 'formLayout',
       iface: 'export interface EsFormLayout {',
       constName: 'FORM_LAYOUT_KEYS',
+      siblingName: 'FORM_LAYOUT_SIBLING_KEYS',
       zod: 'export const formLayoutSchema = z.object({',
     },
     {
@@ -288,14 +291,20 @@ function main() {
     const zodBlock = sliceBlock(fshapesSrc, spec.zod, '});', `${spec.label} zod mirror`)
     const constKeys = constArrayMembers(fgenSrc, spec.constName, spec.constName)
     if (ifaceBlock === null || zodBlock === null || constKeys === null) process.exit(1)
+    // 兄弟键（映射到 layoutFormProps 顶层而非 formLayProps）同样必须被冻结表覆盖，
+    // 接口键集 = formLayProps 键 ∪ 兄弟键。
+    const siblingKeys = spec.siblingName
+      ? constArrayMembers(fgenSrc, spec.siblingName, spec.siblingName)
+      : []
+    if (siblingKeys === null) process.exit(1)
     const ifaceKeys = new Set(topLevelKeys(ifaceBlock))
     const zodKeys = new Set(topLevelKeys(zodBlock))
-    const constSet = new Set(constKeys)
+    const constSet = new Set([...constKeys, ...siblingKeys])
     const ifaceOnly = [...ifaceKeys].filter((k) => !constSet.has(k))
     const constOnly = [...constSet].filter((k) => !ifaceKeys.has(k))
     if (ifaceOnly.length || constOnly.length) {
       ok = fail(
-        `片段 ${spec.label}：接口与 ${spec.constName} 不等价（接口多 [${ifaceOnly.join(', ') || '无'}]、枚举多 [${constOnly.join(', ') || '无'}]）` +
+        `片段 ${spec.label}：接口与 ${spec.constName}（含兄弟键表）不等价（接口多 [${ifaceOnly.join(', ') || '无'}]、枚举多 [${constOnly.join(', ') || '无'}]）` +
           ' —— 接口声明了却不在发射枚举里 = 静默丢弃'
       )
     }
@@ -314,6 +323,7 @@ function main() {
     ['tableOptions', 'TABLE_BLOCK_OPTION_ORDER'],
     ['pagination', 'PAGINATION_KEYS'],
     ['formLayout', 'FORM_LAYOUT_KEYS'],
+    ['formLayout 兄弟键', 'FORM_LAYOUT_SIBLING_KEYS'],
   ]) {
     if (!fgenSrc.includes(`of ${constName}`)) {
       ok = fail(

@@ -218,4 +218,16 @@ describe('EsCrudPage(vue2) — AN-11⑥ query / row-click 接线', () => {
     expect(onBtnClick).toHaveBeenCalledWith('export', expect.any(Object))
     expect(mocks.exportData).not.toHaveBeenCalled()
   })
+
+  it('P1-3：schema.formLayout.layout 真到 EsForm.layoutFormProps.layout', async () => {
+    const { page } = mountPage({
+      columns,
+      formItems: [{ prop: 'name', label: '姓名', formtype: 'Input', group: 'basic' }],
+      formLayout: { layout: { type: 'steps', groups: [{ key: 'basic', label: '基础信息' }] } },
+    })
+    await page.$nextTick()
+    const form = page.$refs.formRef
+    expect(form.layoutFormProps.layout).toEqual({ type: 'steps', groups: [{ key: 'basic', label: '基础信息' }] })
+    expect((form.formItemList as any[])[0].group).toBe('basic')
+  })
 })

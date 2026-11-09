@@ -1,5 +1,5 @@
 import type { VNode, RenderFunction } from 'vue'
-import type { FormItemOption, BtnConfig, TableColumn, TableOptions, PaginationConfig, DialogOptions, LayoutFormProps } from '../../../types'
+import type { FormItemOption, BtnConfig, TableColumn, TableOptions, PaginationConfig, DialogOptions, LayoutFormProps, FormGroupLayout } from '../../../types'
 
 // ─── 核心 Schema ───
 
@@ -7,7 +7,7 @@ export interface CrudPageSchema {
   /** 查询表单字段配置（对齐 vue3） */
   formItems?: FormItemOption[]
   /** 表单布局配置（对齐 vue3） */
-  formLayout?: { labelWidth?: string | number; minFoldRows?: number }
+  formLayout?: { labelWidth?: string | number; minFoldRows?: number; layout?: FormGroupLayout }
   /** 工具栏按钮（渲染在 EsForm 按钮区域） */
   toolbarBtns?: CrudBtnConfig[]
   /** 兼容旧命名 */
@@ -109,7 +109,7 @@ export interface CrudDialogConfig {
   /** 内容模式 1：表单字段（简单场景） */
   formItems?: FormItemOption[]
   /** 表单布局 */
-  formLayout?: { labelWidth?: string | number }
+  formLayout?: { labelWidth?: string | number; layout?: FormGroupLayout }
   /** 内容模式 2：自定义渲染（复杂场景） */
   render?: (h: any, context: DialogRenderContext) => VNode | any
   /** 弹窗底部按钮（不传则根据 onConfirm 自动生成取消+确定） */

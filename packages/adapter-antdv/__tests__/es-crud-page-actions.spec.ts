@@ -244,3 +244,17 @@ describe('EsCrudPage (antdv) — AN-11⑥ query / row-click 接线', () => {
     expect(exportDataSpy).not.toHaveBeenCalled()
   })
 })
+
+describe('EsCrudPage (antdv) — P1-3 表单分组容器转接', () => {
+  it('schema.formLayout.layout 真到 EsForm.layoutFormProps.layout', () => {
+    const w = mountPage({
+      columns,
+      formItems: [{ prop: 'name', label: '姓名', formtype: 'Input', group: 'basic' }],
+      formLayout: { layout: { type: 'collapse', groups: [{ key: 'basic', label: '基础信息' }] } },
+    } as CrudPageSchema)
+    const form = w.findComponent({ name: 'EsForm' })
+    const props = form.props('layoutFormProps') as any
+    expect(props.layout).toEqual({ type: 'collapse', groups: [{ key: 'basic', label: '基础信息' }] })
+    expect((form.props('formItemList') as any[])[0].group).toBe('basic')
+  })
+})

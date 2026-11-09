@@ -128,8 +128,9 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 
 **验收**：每期四份契约同批 + golden + 三端运行时见证。
 
-**当前进度**：🟡 第一期运行时 + 站点示例已实现（2026-11-09，P1-3a）；AI 四份契约
-（Zod / 前门 knobs / `configShape` / 片段 shape）与 golden 未落，P1-3b 单独一批补齐。
+**当前进度**：✅ 第一期完成（2026-11-09）。运行时 + 站点示例见 P1-3a；AI 四份契约、
+生成器双模式发射、三端 schema→prop 转接、prompt 教学、golden 语料与守卫见 P1-3b。
+第二期（嵌套对象）/ 第三期（式数组子表单）未开始。
 
 **实施记录（P1-3 第一期 · 2026-11-09）**
 
@@ -171,6 +172,39 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 9. **验证**：`build:libs` 后四包单测全绿（core 531 / vue2 445 / vue3 722 / antdv 771）；
    三站构建成功（es-eui 用 `--dest dist-verify` 后删除）；`check:consistency` 140/141，
    唯一红仍是 `check:eval-freshness`（准确率产物需一次新的全量付费测量，不在本地伪造）。
+
+**实施记录（P1-3b · AI 契约与 golden · 2026-11-09）**
+
+1. **四份契约同批**：`structured-config.schema.ts` 新增 `FormGroupOptionSchema` /
+   `FormGroupLayoutSchema`，`FieldConfigSchema.group`，顶层与 `DialogConfigSchema` 的
+   `formLayout.layout`；`_front-door-knobs.ts`（strict）与 `_fragment-shapes.ts`
+   （passthrough）同步形状；`generate-from-config.ts` 的 Zod 副本同批放行 —— 否则
+   AI 入口会**解析成功、零告警、静默 strip**。`form-item.schema.json` 补 `group` 后
+   `schemas:sync`（3 消费方 × 7 文件）+ `gen-doc-schemas`（文档站 Playground 副本）。
+2. **生成器双模式发射**：`buildFormItem` 发 `group`；`generateSchema` 原样透传
+   `formLayout` / `dialogs[k].formLayout`；`generateSFC` 把 `layout` 内联成
+   `layoutFormProps.layout`（**兄弟键**，不是 `formLayProps`）。片段侧新增冻结表
+   `FORM_LAYOUT_SIBLING_KEYS = ['layout']`，`EsFormLayout.layout` 由它驱动发射，
+   `check-fragment-contract` 的「接口 ≡ 冻结枚举」改为「接口 ≡ formLayProps 键 ∪ 兄弟键」。
+3. **三端 schema→prop 转接**：`CrudPageSchema.formLayout` / `CrudDialogConfig.formLayout`
+   类型加 `layout?: FormGroupLayout`；查询表单 `formLayoutProps` 把 `layout` 放外层；
+   弹窗路径此前把整个 `formLayout` 摊进 `formLayProps`（`layout` 会被 el-form 当未知
+   属性吞掉）——三端改为解构 `layout` 抬到 `layoutFormProps` 顶层，其余键原样透传。
+4. **Prompt 教学**：新增「分组容器」规则（type 由措辞选、key/label 归属、unstacked
+   兜底、查询面用顶层 / 弹窗面用 `dialogs[k].formLayout`），并把「`formLayout` 只承载
+   labelWidth/minFoldRows」更正为三键。
+5. **测试**：shared 新增 4 例（片段兄弟键发射、schema 透传、SFC 内联、compose 只认
+   表单面）；三端各 1 例 `CrudPage → EsForm.layoutFormProps.layout` 转接（vue3 52 /
+   vue2 9 / antdv 13 全绿）。四包全量：shared 1020 / vue3 723 / vue2 446 / antdv 772。
+6. **Golden 与公平性**：新增 `201-order-query-group-tabs`（查询页签分组，`formLayout`
+   维度整对象深等值天然覆盖 `layout`），公平性措辞表为 `formLayout` 补「页签 / 标签页 /
+   分步填写 / 分步表单 / 折叠面板」；`accuracy-baseline.json` 记录语料 225→226 /
+   heldout 201→202、`dataOptions` 122→123、`formLayout` 3→4，minApplicable 按
+   floor(n×0.9) 重算。
+7. **守卫适配**：`check-threeway` 探针补 `fields.group` 与 `formLayout.layout`，并为
+   layout 加值级等价断言（schema 透传 / SFC 内联都带 type+groups）；`ai:matrix` 重新生成。
+8. **验证**：`check:consistency` 140/141（唯一红 `check:eval-freshness`）；三端
+   typecheck 全绿；es-plus-docs 构建成功。
 
 ---
 

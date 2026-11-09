@@ -1,0 +1,38 @@
+{
+  "nl": "订单管理：查询区用页签分成「基础条件」和「高级筛选」两组——基础条件放订单号、客户名称，高级筛选放下单时间、订单状态（待付款/已付款/已发货）；表格展示订单号、客户名称、下单时间、订单状态；支持新增、编辑、删除。",
+  "nlEn": "Order management: the query area is split into two tabs, \"Basic conditions\" (order number, customer name) and \"Advanced filters\" (order time, order status — pending payment / paid / shipped); the table shows order number, customer name, order time and order status; supports add, edit and delete.",
+  "fixedFields": ["orderNo", "customerName", "orderTime", "status"],
+  "pinnedDims": ["propSet", "actions", "formLayout", "formtype:status", "dataOptions:status"],
+  "nlStatedDims": ["propSet", "actions", "formLayout", "formtype:status", "dataOptions:status"],
+  "config": {
+    "name": "OrderQueryManage",
+    "apiUrl": "/api/orders",
+    "formLayout": {
+      "layout": {
+        "type": "tabs",
+        "groups": [
+          { "key": "basic", "label": "基础条件" },
+          { "key": "advanced", "label": "高级筛选" }
+        ]
+      }
+    },
+    "fields": [
+      { "prop": "orderNo", "label": "订单号", "formtype": "Input", "group": "basic" },
+      { "prop": "customerName", "label": "客户名称", "formtype": "Input", "group": "basic" },
+      { "prop": "orderTime", "label": "下单时间", "formtype": "DatePicker", "group": "advanced" },
+      {
+        "prop": "status",
+        "label": "订单状态",
+        "formtype": "Select",
+        "group": "advanced",
+        "dataOptions": [
+          { "label": "待付款", "value": "pending" },
+          { "label": "已付款", "value": "paid" },
+          { "label": "已发货", "value": "shipped" }
+        ]
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "P1-3 第一期（分组容器）：查询表单页签分组。gold 用顶层 formLayout.layout（type:tabs + 两组声明）配字段级 group；两个键是同一条需求的两半，缺任一半运行时都退回平铺。判据复用既有 formLayout 维度（整对象深等值，layout 在对象内），无需新维度；NL 逐字给出两组标题与字段归属，公平性由 nlStatedDims=formLayout 承载。"
+}

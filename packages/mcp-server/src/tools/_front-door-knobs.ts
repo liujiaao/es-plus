@@ -161,11 +161,36 @@ export const tableOptionsSchema = z
   })
   .strict();
 
-/** 查询表单布局 —— 只有 labelWidth / minFoldRows；列数由字段级 querySpan/formSpan 决定。 */
+/** 查询表单布局 —— labelWidth / minFoldRows，外加分组容器（P1-3）；列数由字段级 querySpan/formSpan 决定。 */
 export const formLayoutSchema = z
   .object({
     labelWidth: z.union([z.string(), z.number()]).optional(),
     minFoldRows: z.number().int().optional(),
+    layout: z
+      .object({
+        type: z.enum(["tabs", "steps", "collapse"]).describe("tabs = panes, steps = one group at a time (built-in prev/next), collapse = panels."),
+        groups: z
+          .array(
+            z
+              .object({
+                key: z.string().min(1),
+                label: z.string().optional(),
+                labelKey: z.string().optional(),
+                description: z.string().optional(),
+              })
+              .strict()
+          )
+          .optional()
+          .describe("Declared groups in display order; undeclared groups are appended by first field appearance."),
+        ungrouped: z
+          .enum(["default", "first", "hidden"])
+          .optional()
+          .describe("Fields without `group`: 'default' = trailing bucket, 'first' = merge into the first group, 'hidden' = drop."),
+        defaultLabel: z.string().optional(),
+      })
+      .strict()
+      .optional()
+      .describe("Group containers for the QUERY form; fields reference them via their `group` key."),
   })
   .strict();
 

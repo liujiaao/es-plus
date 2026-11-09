@@ -421,6 +421,7 @@ export default defineComponent({
       if (!layout) return undefined
       return {
         rowLayProps: { gutter: 16 },
+        ...(layout.layout ? { layout: layout.layout } : {}),
         formLayProps: {
           // 与 vue3 同口径：顶层 labelWidth 是查询表单的 label 宽度，不是按钮行宽度。
           labelWidth: layout.labelWidth,
@@ -596,15 +597,18 @@ export default defineComponent({
                  * 但因为 useDialog 创建的是独立 vm，无法直接用字符串 ref 跨实例。
                  * 改为：在 mounted 钩子里通过 vnode.componentInstance 取到 EsForm 实例。
                  */
+                // `layout` 是 EsForm 顶层 prop，不是 el-form 的 formLayProps 键（同 vue3）。
+                const { layout: dialogGroupLayout, ...dialogFormLayProps } = dialogConfig.formLayout || {}
                 const vnode = h(EsForm, {
                   props: {
                     model: formData,
                     formItemList: dialogConfig.formItems,
                     layoutFormProps: {
                       rowLayProps: { gutter: 16 },
+                      ...(dialogGroupLayout ? { layout: dialogGroupLayout } : {}),
                       formLayProps: {
                         isBtnHidden: true,
-                        ...(dialogConfig.formLayout || {}),
+                        ...dialogFormLayProps,
                       },
                     },
                   },

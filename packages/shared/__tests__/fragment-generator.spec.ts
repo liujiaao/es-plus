@@ -132,6 +132,25 @@ describe('generateFormBlock — formLayout（Wave 4）', () => {
     })
     expect(code).toContain('return { model, formItems, formRef, validate, resetFields, configBtn, layoutFormProps }')
   })
+
+  it('P1-3：layout（分组容器）是 layoutFormProps 的兄弟键，不与 formLayProps 混层', () => {
+    // 字段级 `group` + 布局级 `layout` 是一对：前者只声明归属，容器类型/顺序由后者决定。
+    // 若把 layout 塞进 formLayProps，EsForm 读不到（它读 layoutFormProps.layout），
+    // 分组会静默退化回平铺 —— 这类"看起来发射了、运行时没有消费者"的键必须钉。
+    const { code } = generateFormBlock({
+      fields: [{ ...fields[0], group: 'basic' }, fields[1]],
+      buttons: 'query',
+      formLayout: {
+        labelWidth: '90px',
+        layout: { type: 'tabs', groups: [{ key: 'basic', label: '基础信息' }] },
+      },
+    })
+    expect(code).toContain(
+      'const layoutFormProps = { formLayProps: {"labelWidth":"90px"}, layout: {"type":"tabs","groups":[{"key":"basic","label":"基础信息"}]} }'
+    )
+    // 字段级 group 走 buildFormItem，与布局同批发射
+    expect(code).toContain('"group": "basic"')
+  })
 })
 
 const columns = [

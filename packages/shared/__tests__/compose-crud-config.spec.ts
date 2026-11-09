@@ -70,6 +70,25 @@ describe('composeCrudConfig — 固定优先级', () => {
     expect(name.querySpan).toBe(8)
     expect(name.formSpan).toBe(12)
   })
+
+  it('P1-3：group 只认表单面（query → form 首次胜出），table 面写了也丢弃', () => {
+    // group 是表单分组容器的归属键，表格是列不是容器 —— table 面写它没有消费者。
+    // 若把 table 面的 group 抄进去，同一字段会在查询表单里进一个没人声明的组。
+    const { config } = composeCrudConfig({
+      ...base,
+      query: [{ prop: 'name', label: '名称', formtype: 'Input', group: 'basic' }],
+      table: [{ prop: 'name', label: '名称', formtype: 'Input', group: 'wrong' }],
+      form: [{ prop: 'name', label: '名称', formtype: 'Input', group: 'other' }],
+    })
+    const name = config.fields.find((f) => f.prop === 'name')! as Record<string, unknown>
+    expect(name.group).toBe('basic')
+
+    const { config: onlyTable } = composeCrudConfig({
+      ...base,
+      table: [{ prop: 'createdAt', label: '创建时间', formtype: 'DatePicker', group: 'wrong' }],
+    })
+    expect(onlyTable.fields.find((f) => f.prop === 'createdAt')!.group).toBeUndefined()
+  })
 })
 
 describe('composeCrudConfig — 标识冲突告警(不静默改写)', () => {

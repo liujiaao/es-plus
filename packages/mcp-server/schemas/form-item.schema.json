@@ -49,6 +49,11 @@
       "default": 6,
       "description": "Grid column span (el-col span, 24-column layout)"
     },
+    "group": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Group key this field belongs to. Consumed by EsForm only when `layoutFormProps.layout` declares a container (`type: 'tabs' | 'steps' | 'collapse'`): the field is bucketed into the group whose `key` matches. Keys not declared in `layout.groups` are appended in first-appearance order; when no `layout` is set the key is ignored and the form renders flat. Query form and dialog forms only — table columns ignore it."
+    },
     "placeholder": {
       "type": "string",
       "description": "Shortcut for placeholder text. Automatically injected into attrs.placeholder; explicit attrs.placeholder takes priority."

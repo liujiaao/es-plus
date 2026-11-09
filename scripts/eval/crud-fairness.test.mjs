@@ -159,6 +159,8 @@ const fail = (msg) => {
     ['创建时间也要能当查询条件，按时间区间筛选，不只是在表格里看。', 'inQuery:createdAt'],
     ['表格支持行内编辑，单击单元格修改。', 'virtualScroll'],
     ['状态不是启用时隐藏备注。', 'isHidden:remark'],
+    // P1-3 分组容器：页签/分步/折叠是 formLayout.layout 的措辞依据（与标签宽度同维）
+    ['查询区用页签分成「基础条件」和「高级筛选」两组。', 'formLayout'],
   ]
   // 措辞表：否反例（认不出必须返回 false，不许「差不多就算」）
   const NO = [

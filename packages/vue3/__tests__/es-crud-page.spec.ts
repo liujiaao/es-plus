@@ -68,7 +68,7 @@ const mountCrudPage = (props: Record<string, unknown> = {}, options: Record<stri
         'es-form': {
           name: 'EsForm',
           template: `<div class="es-form-stub"></div>`,
-          props: ['model', 'formItemList', 'configBtn'],
+          props: ['model', 'formItemList', 'configBtn', 'layoutFormProps'],
           methods: {
             validate: vi.fn().mockResolvedValue(true),
             resetFields: vi.fn(),
@@ -103,7 +103,7 @@ const shallowMountCrudPage = (props: Record<string, unknown> = {}) =>
         'es-form': {
           name: 'EsForm',
           template: `<div class="es-form-stub"></div>`,
-          props: ['model', 'formItemList', 'configBtn']
+          props: ['model', 'formItemList', 'configBtn', 'layoutFormProps']
         }
       }
     }
@@ -199,6 +199,23 @@ describe('EsCrudPage', () => {
       const wrapper = mountCrudPage({ schema: schemaWithForm })
       const form = wrapper.findComponent({ name: 'EsForm' })
       expect(form.props('formItemList')).toEqual(schemaWithForm.formItems)
+    })
+
+    it('P1-3：schema.formLayout.layout 真到 EsForm.layoutFormProps.layout（不被重建时丢掉）', () => {
+      // EsCrudPage 是 schema → prop 的转接层：此前它只重建 labelWidth/minFoldRows，
+      // 其余键一律丢弃。分组容器必须在同一层透传，否则 AI 配置里的分组到运行时静默失效。
+      const schema: CrudPageSchema = {
+        columns: [{ prop: 'name', label: '姓名' }],
+        formItems: [{ prop: 'name', label: '姓名', formtype: 'Input', group: 'basic' }],
+        formLayout: { labelWidth: '90px', layout: { type: 'tabs', groups: [{ key: 'basic', label: '基础信息' }] } },
+      }
+      const wrapper = mountCrudPage({ schema })
+      const form = wrapper.findComponent({ name: 'EsForm' })
+      const props = form.props('layoutFormProps') as any
+      expect(props.layout).toEqual({ type: 'tabs', groups: [{ key: 'basic', label: '基础信息' }] })
+      expect(props.formLayProps.labelWidth).toBe('90px')
+      // 分组的另一半：字段归属必须随 formItems 一起到达
+      expect((form.props('formItemList') as any[])[0].group).toBe('basic')
     })
 
     it('initializes queryModel with form item props', async () => {

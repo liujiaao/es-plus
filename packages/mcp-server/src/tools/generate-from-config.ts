@@ -232,6 +232,13 @@ const FieldConfigSchema = z.object({
   inForm: z.boolean().default(true).describe("Show in the add/edit form"),
   querySpan: z.number().int().min(1).max(24).optional().describe('Grid width of this field in the query form (1-24; 2 columns = 12 each). Column count is set PER FIELD — `formLayout` has no span key.'),
   formSpan: z.number().int().min(1).max(24).optional().describe('Grid width of this field in the add/edit form (1-24; 2 columns = 12 each). Column count is set PER FIELD — `formLayout` has no span key.'),
+  group: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      "Form-group key for the FORM face. Fields sharing a key render inside that group's container; declare the containers in `formLayout.layout` (query form) or `dialogs[k].formLayout.layout` (dialog form). Ignored by the table column."
+    ),
   required: z.boolean().optional(),
   rules: z.array(FieldRuleSchema).optional(),
   attrs: z.record(z.string(), z.unknown()).optional().describe("Extra component props, e.g. { type: 'textarea', maxlength: 200 }"),
@@ -686,6 +693,25 @@ const configShape = {
     .object({
       labelWidth: z.union([z.string(), z.number()]).optional(),
       minFoldRows: z.number().int().optional(),
+      layout: z
+        .object({
+          type: z.enum(["tabs", "steps", "collapse"]),
+          groups: z
+            .array(
+              z.object({
+                key: z.string().min(1),
+                label: z.string().optional(),
+                labelKey: z.string().optional(),
+                description: z.string().optional(),
+              })
+            )
+            .optional(),
+          ungrouped: z.enum(["default", "first", "hidden"]).optional(),
+          defaultLabel: z.string().optional(),
+        })
+        .passthrough()
+        .optional()
+        .describe("Group containers for the QUERY form; fields reference them via their `group` key."),
     })
     .optional(),
   toolbarBtns: z.array(ToolbarBtnSchema).optional(),
@@ -735,6 +761,25 @@ const configShape = {
           .object({
             labelWidth: z.union([z.string(), z.number()]).optional(),
             minFoldRows: z.number().int().optional(),
+            layout: z
+              .object({
+                type: z.enum(["tabs", "steps", "collapse"]),
+                groups: z
+                  .array(
+                    z.object({
+                      key: z.string().min(1),
+                      label: z.string().optional(),
+                      labelKey: z.string().optional(),
+                      description: z.string().optional(),
+                    })
+                  )
+                  .optional(),
+                ungrouped: z.enum(["default", "first", "hidden"]).optional(),
+                defaultLabel: z.string().optional(),
+              })
+              .passthrough()
+              .optional()
+              .describe("Group containers for this dialog's form; fields reference them via their `group` key."),
           })
           .optional(),
         hasCustomRender: z

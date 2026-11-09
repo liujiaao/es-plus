@@ -12,6 +12,7 @@ import type {
   TableOptions,
   PaginationConfig,
   DialogOptions,
+  FormGroupLayout,
 } from '@es-plus/core'
 
 // ─── 核心 Schema ───
@@ -20,7 +21,7 @@ export interface CrudPageSchema {
   /** 查询表单字段配置 */
   formItems?: FormItemOption[]
   /** 表单布局配置 */
-  formLayout?: { labelWidth?: string | number; minFoldRows?: number }
+  formLayout?: { labelWidth?: string | number; minFoldRows?: number; layout?: FormGroupLayout }
   /** 工具栏按钮（显式声明，渲染在 EsForm 按钮区域） */
   toolbarBtns?: CrudBtnConfig[]
   /** 表格工具栏按钮（渲染在 EsTable 上方的 configBtn 区域） */
@@ -90,7 +91,7 @@ export interface CrudDialogConfig {
   title?: string | ((row?: Record<string, unknown>) => string)
   width?: string | number
   formItems?: FormItemOption[]
-  formLayout?: { labelWidth?: string | number }
+  formLayout?: { labelWidth?: string | number; layout?: FormGroupLayout }
   render?: (h: any, context: DialogRenderContext) => any
   configBtn?: DialogBtnConfig[]
   isDraggable?: boolean

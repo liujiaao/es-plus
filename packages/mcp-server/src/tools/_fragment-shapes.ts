@@ -146,6 +146,13 @@ export const surfaceFieldSchema = z.object({
     .describe(
       "Grid width of this field in the add/edit form (1-24; 2 columns = 12 each). Column count is set PER FIELD — there is no layout-level span key."
     ),
+  group: z
+    .string()
+    .min(1)
+    .optional()
+    .describe(
+      "Form-group key for the FORM face. Fields sharing a key render inside that group's container; declare the containers in `formLayout.layout`. Ignored by table columns. Omit to follow the layout's `ungrouped` strategy."
+    ),
   required: z.boolean().optional(),
   rules: z
     .array(FieldRuleSchema)
@@ -454,6 +461,33 @@ export const tablePaginationSchema = z.object({
 export const formLayoutSchema = z.object({
   labelWidth: z.union([z.string(), z.number()]).optional().describe("Label column width, e.g. '110px' (number → px)."),
   minFoldRows: z.number().int().optional().describe("Form collapses when the number of rows exceeds this value."),
+  layout: z
+    .object({
+      type: z
+        .enum(["tabs", "steps", "collapse"])
+        .describe("Container type: 'tabs' = tab panes, 'steps' = one group at a time with built-in prev/next, 'collapse' = panels (all expanded by default)."),
+      groups: z
+        .array(
+          z
+            .object({
+              key: z.string().min(1).describe("Group key that fields reference via their `group` value."),
+              label: z.string().optional().describe("Group title shown in the container header."),
+              labelKey: z.string().optional().describe("i18n key for the group title (takes precedence over `label`)."),
+              description: z.string().optional().describe("Step subtitle; `type:'steps'` only."),
+            })
+            .passthrough()
+        )
+        .optional()
+        .describe("Declared groups in display order; undeclared groups are appended by first field appearance."),
+      ungrouped: z
+        .enum(["default", "first", "hidden"])
+        .optional()
+        .describe("Where fields without `group` go: 'default' = trailing bucket, 'first' = merge into the first group, 'hidden' = drop."),
+      defaultLabel: z.string().optional().describe("Title of the fallback bucket (built-in default: 其他 / Other)."),
+    })
+    .passthrough()
+    .optional()
+    .describe("Group containers for this form (P1-3). Fields reference groups via their `group` key. Omit for a flat grid."),
 }).passthrough();
 
 /**

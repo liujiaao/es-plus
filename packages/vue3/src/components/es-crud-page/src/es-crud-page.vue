@@ -333,6 +333,7 @@ const formLayoutProps = computed(() => {
   if (!layout) return undefined
   return {
     rowLayProps: { gutter: 16 },
+    ...(layout.layout ? { layout: layout.layout } : {}),
     formLayProps: {
       // 顶层 `formLayout.labelWidth` 是**查询表单**的 label 宽度（AI prompt 的槽位
       // 约定）。es-form 用 formLayProps.labelWidth 渲染字段 label，按钮行则回落到它
@@ -551,15 +552,19 @@ function openDialog(key: string, row?: Record<string, unknown>) {
         }
       : dialogConfig.formItems
         ? (h: any, { registerRef }: any) => {
+            // `layout` 是 EsForm 顶层 prop（layoutFormProps.layout），不是 el-form 的
+            // formLayProps 键——分组容器必须抬到外层，其余键维持原样透传。
+            const { layout: dialogGroupLayout, ...dialogFormLayProps } = dialogConfig.formLayout || {}
             return h(EsForm, {
               ref: (el: any) => el && registerRef('dialogForm', el),
               model: formData,
               formItemList: dialogConfig.formItems,
               layoutFormProps: {
                 rowLayProps: { gutter: 16 },
+                ...(dialogGroupLayout ? { layout: dialogGroupLayout } : {}),
                 formLayProps: {
                   isBtnHidden: true,
-                  ...(dialogConfig.formLayout || {})
+                  ...dialogFormLayProps
                 }
               }
             })

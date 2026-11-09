@@ -88,7 +88,7 @@ const CORE_CONTRACTS = [
  * 端内联子类型（`interface X { prop?: { a?: …; b?: … } }`）也是真消费面。
  *
  * 为什么单独列：`formLayout` 的形状住在三端 `CrudPageSchema` 的**匿名内联对象类型**里
- * （`formLayout?: { labelWidth?: string | number; minFoldRows?: number }`），core 只有
+ * （`formLayout?: { labelWidth?: string | number; minFoldRows?: number; layout?: FormGroupLayout }`），core 只有
  * 另一套嵌套写法 `LayoutFormProps.formLayProps`，两者都不是具名 interface，`interfaceBody`
  * 切不到。运行时真读它：三端 `es-crud-page.vue` 把 `formLayout.labelWidth` 原样映射到
  * `formLayProps.labelWidth`（查询字段的 label 宽度）、`minFoldRows` 原样下传 ——
@@ -196,7 +196,7 @@ function constBlock(code, name) {
  * 「把每个 AI 键都设上」的探针配置。
  *
  * 为什么一份配置就够：本扫描比的是**键的存在性**，不是值的语义。一份全键配置同时
- * 覆盖 26 个 tableOptions 键、24 个 FieldConfig 键、formLayout 的 2 个键与 dialog 的
+ * 覆盖 26 个 tableOptions 键、24 个 FieldConfig 键、formLayout 的 3 个键与 dialog 的
  * 11 个键；它必须能过**真的** AI Zod（这本身就是第 0 条断言：AI 契约自洽）。
  *
  * 值取「各键的最通用合法值」，不与任何 AI 键同名词冲突；`inQuery/inTable/inForm` 全 true
@@ -212,6 +212,9 @@ const PROBE_FIELD = {
   inForm: true,
   querySpan: 12,
   formSpan: 12,
+  // P1-3 分组容器：字段归属键。必须在产物里出现（buildFormItem 发射），
+  // 否则「AI 契约声明、两模式都不发射」——宿主设了 group 会静默消失。
+  group: 'probe',
   required: true,
   rules: [{ message: 'probe rule', required: true }],
   attrs: { placeholder: 'probe-ph' },
@@ -251,7 +254,13 @@ const PROBE = {
   permissions: { add: 'probe:add', edit: 'probe:edit', delete: 'probe:delete', export: 'probe:export' },
   i18n: true,
   typescript: true,
-  formLayout: { labelWidth: '100px', minFoldRows: 2 },
+  formLayout: {
+    labelWidth: '100px',
+    minFoldRows: 2,
+    // P1-3：容器声明。两模式都必须发射（schema 原样透传 / SFC 内联成
+    // layoutFormProps.layout 兄弟键），故探针必须带上它，否则该键「声明未发射」不可见。
+    layout: { type: 'tabs', groups: [{ key: 'probe', label: 'PROBE' }] },
+  },
   toolbarBtns: [{ name: '新建', position: 'left', dialogKey: 'add' }],
   tableBtns: [{ name: '批量', position: 'left', code: 1 }],
   operationColumn: { label: '操作', btns: [{ name: '编辑', dialogKey: 'edit' }] },
@@ -737,7 +746,7 @@ async function main() {
     }
     for (const k of reach.tableOptionsKeys) checkDeclared('tableOptions', k, emittedTableOptions.has(k))
     for (const k of reach.fcKeys) checkDeclared('fields', k, emittedFieldKeys.has(k))
-    for (const fk of ['labelWidth', 'minFoldRows']) checkDeclared('formLayout', fk, emittedFormLayout.has(fk))
+    for (const fk of ['labelWidth', 'minFoldRows', 'layout']) checkDeclared('formLayout', fk, emittedFormLayout.has(fk))
     for (const dk of dialog.sharedDialogKeys) checkDeclared('dialogs', dk, emittedDialogKeys.has(dk))
 
     if (declaredNotEmitted.length) {
@@ -764,7 +773,7 @@ async function main() {
     if (!declaredNotEmitted.length && !staleRows.length && !badEvidence.length) {
       ok(
         `轴① 声明未发射：${reach.tableOptionsKeys.length} tableOptions + ${reach.fcKeys.length} FieldConfig + ` +
-          `2 formLayout + ${dialog.sharedDialogKeys.length} dialog 键全部有归宿（发射 ∪ ${Object.keys(DECLARED_NOT_EMITTED).length} 行登记，含 ${Object.values(DECLARED_NOT_EMITTED).filter((r) => r.emittedAs).length} 行改名/条件发射证据核对通过）`
+          `3 formLayout + ${dialog.sharedDialogKeys.length} dialog 键全部有归宿（发射 ∪ ${Object.keys(DECLARED_NOT_EMITTED).length} 行登记，含 ${Object.values(DECLARED_NOT_EMITTED).filter((r) => r.emittedAs).length} 行改名/条件发射证据核对通过）`
       )
     }
 
@@ -850,6 +859,21 @@ async function main() {
       )
     } else {
       ok('轴①d 顶层 formLayout 值级等价：schema / SFC 使用同一 labelWidth 键并绑定')
+    }
+    // P1-3：分组容器在两模式下的值级等价。键在但类型/分组丢了同样是静默失效。
+    if (schemaFormLayout.layout?.type !== 'tabs' || schemaFormLayout.layout?.groups?.[0]?.key !== 'probe') {
+      fail(
+        `schema 产物顶层 formLayout.layout 与配置不一致：期望 {type:'tabs', groups:[{key:'probe',…}]}，` +
+          `实得 ${JSON.stringify(schemaFormLayout.layout)}`
+      )
+    }
+    if (!formLayoutPropsBody.includes('"type":"tabs"') || !formLayoutPropsBody.includes('"key":"probe"')) {
+      fail(
+        `SFC 的 formLayoutProps 未携带配置的 layout（分组容器在 SFC 模式静默丢弃）：${formLayoutPropsBody || '(未找到)'}\n` +
+          '   layout 是 layoutFormProps 的兄弟键，不能塞进 formLayProps。'
+      )
+    } else {
+      ok('轴①d 顶层 formLayout.layout 值级等价：schema / SFC 都携带 type + groups')
     }
 
     // ── 轴②：发射未消费 ───────────────────────────────────────────

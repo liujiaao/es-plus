@@ -364,6 +364,7 @@ const formLayoutProps = computed(() => {
   if (!layout) return undefined
   return {
     rowLayProps: { gutter: 16 },
+    ...(layout.layout ? { layout: layout.layout } : {}),
     formLayProps: {
       // 与 vue3/vue2 同口径：顶层 labelWidth 落到**查询表单**（formLayProps.labelWidth），
       // 不是按钮行的 labelBtnWidth。
@@ -563,15 +564,18 @@ function openDialog(key: string, row?: Record<string, unknown>) {
         }
       : dialogConfig.formItems
         ? (hFn: typeof h, inst: any) => {
+            // `layout` 是 EsForm 顶层 prop，不是 el-form 的 formLayProps 键（同 vue3）。
+            const { layout: dialogGroupLayout, ...dialogFormLayProps } = dialogConfig.formLayout || {}
             return hFn(EsForm, {
               ref: (el: any) => el && inst.registerRef('dialogForm', el),
               model: formData,
               formItemList: dialogConfig.formItems,
               layoutFormProps: {
                 rowLayProps: { gutter: 16 },
+                ...(dialogGroupLayout ? { layout: dialogGroupLayout } : {}),
                 formLayProps: {
                   isBtnHidden: true,
-                  ...(dialogConfig.formLayout || {}),
+                  ...dialogFormLayProps,
                 },
               },
             } as any)
