@@ -54,6 +54,19 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 
 **验收**：fragment-runtime antdv 大数据运行时测试。
 
+**当前进度**：✅ 已实现（实施记录见下）。
+
+**实施记录（2026-11-09）**
+
+1. 告警点在 `packages/adapter-antdv/src/components/es-table/src/component.vue:1450-1471`：
+   watch `displayDataSource.length`（本地分页已切片、请求模式取 tableData）、
+   `immediate: true`（实测「一挂载就是 5k 行」也能抓）、每实例只告一次、
+   `isVxeEngine` 时静默。
+2. **与方案原文的差异**：没有用 `import.meta.env.DEV` 门控 —— 本包经 vite lib 构建，
+   DEV 在 dist 里被静态替换成 `false`，门控后的告警对使用者永远不会出现（实测 dist 里
+   门控告警串计数为 0）。改为无条件、阈值 1000 行。
+3. 用例：`packages/adapter-antdv/__tests__/es-table-runtime-warnings.spec.ts`。
+
 ---
 
 ## P0-3：import 按钮空壳
@@ -67,6 +80,19 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 - 中期：新增 `ImportConfig` 类型 + `parseCsv()` + 内置 `<input type="file">` 生命周期
 
 **验收**：三端 `es-crud-page` 单测覆盖 import 事件。
+
+**当前进度**：✅ 短期已实现（专用 `import` 事件，三端对齐 `export` 的探测-兜底设计）。
+
+**实施记录（2026-11-09）**
+
+1. 三端 `es-crud-page` 都声明并在点击时 `emit('import', { ...queryModel })`：
+   vue3 `es-crud-page.vue:69/392-394`、vue2 `:131/477-479`、antdv `:122/431-433`。
+2. 内置按钮只在宿主监听时才「有语义」：与 `export`（P2-2）同一套判定 —— 宿主有监听
+   就交给宿主，没监听时**不**自行下载/上传（该能力没有通用默认值）。
+3. 用例：vue3 `es-crud-page.spec.ts:687-699`（点击 import 按钮 → `import` 事件 1 次、
+   `btn-click('import')` 1 次）。
+4. 中期方案（`ImportConfig` + `parseCsv()` + 内置 `<input type="file">`）未实施：
+   上传目标 URL / 列映射 / 校验规则属宿主业务契约，没有合理的库默认值，留作按需扩展。
 
 ---
 
@@ -318,6 +344,14 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 
 **实施方案**：检查 schema `.describe()` + 补 2 条 fragment golden。
 
+**当前进度**：✅ 已实现（2026-11-09）。
+
+1. schema 教学面：`structured-config.schema.ts:721-724` 的 `localPagination` describe
+   写明语义（已取回数据在前端分页，而不是逐页请求）；`table-options.schema.json:215` 同源。
+2. fragment golden：`frag-table-02-{vue3,vue2,antdv}.json` 覆盖 `localPagination`。
+3. 运行时：三端 es-table 的 `displayDataSource` 按 `localPagination` 切片（本地分页 +
+   请求模式共存，P0-2 的告警判的就是切片后行数）。
+
 ---
 
 ## P2-1：TABLE_INTERNAL_KEYS 三端不对齐
@@ -390,8 +424,60 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 
 **实施方案**：Phase 2，全局配置改 reactive。3 人日，按需做。
 
+**当前进度**：✅ 已实现（2026-11-09）。方案原文的「全局配置改 reactive」拆成了**零依赖的
+通知层 + 各渲染器包的 ref 桥**——`@es-plus/core` 不能 import vue，直接 reactive 化会破坏
+core 的零依赖约束。
+
+**实施记录（2026-11-09）**
+
+1. **core 通知层（框架无关）**：`config.ts` 新增 `getLocaleVersion()` /
+   `subscribeLocaleChange(fn)` + 内部 `bumpLocaleVersion()`；`configureEsPlus` 只在
+   `options` 带了 `locale` / `messages` **且值真的变化**时 +1 并通知（`app.use()` 写其它
+   配置、重复写同一 locale 都不触发全树重算）；`resetGlobalConfig()` 在旧配置含
+   `locale`/`messages` 时也通知（测试间不泄漏旧语言）。订阅者异常被吞掉，不影响配置写入。
+2. **渲染器桥**：新增 `packages/{vue3,vue2,adapter-antdv}/src/locale.ts`：
+   `ref(getLocaleVersion())` + `subscribeLocaleChange` 更新版本号；导出的
+   `resolveBuiltinText` 先 `void localeTick.value` 再取 core 文案 —— 调用点只要在
+   computed / render / 模板里就自动建立依赖。vue2 用 `vue-compat` 的 ref
+   （2.7 原生 / 2.6 polyfill 自动分流）。
+3. **组件改从包内桥取文案**：三端 14 个文件（es-form / es-table / es-dialog /
+   es-crud-page 及虚拟 & vxe 引擎）的 `resolveBuiltinText` import 全部从 `@es-plus/core`
+   改到包内 `../../../locale`。**不换 import 的文件热切换对它无效**，这是本能力的接线口径。
+4. **快照点修复（vue2）**：`setup()` 返回值只求值一次，三处 `builtinEmptyText` /
+   `builtinLoadingText` / `builtinFullscreen|ExitFullscreen|Close` 由字符串快照改为
+   `computed(...)` —— 否则「热切换」在 vue2 端只对新挂载的组件生效。
+5. **测试**：core 5 例（版本号 +1 / messages 也算 / 重复或无关配置不通知 / reset 通知 /
+   退订与异常隔离）；三端 `a11y-cheap.spec.ts` 各 1 例「已挂载 → configureEsPlus →
+   nextTick → 文案变化 → 切回」。
+6. **站点示例**：三站各一处运行期切换演示 —— 文档站 `table/LocaleHotSwitch.vue`
+   （已登记 `component-doc.data.ts` 的 `table/20-locale-hot-switch` 与
+   `docs/ai/feature-coverage.json`，令牌 `hostOrchestration`（D 档：宿主编排））、
+   es-pc `views/es-table/LocaleHotSwitch.vue`（新 section `#locale-hot-switch`，进
+   `config` 分组）、es-eui 指南 i18n 页（切换按钮同时调 `configureEsPlus({ locale })`，
+   预览里的空表格即时换文案；离开页面恢复 zh-CN）。es-eui 该页原先「ES-Plus 自身不带
+   文案表」的说法已更正为「业务 label / 库内置字典 / Element UI el 三张表」。
+7. **文档**：`permission-i18n.md` 的「库内置文案」补 `fold/unfold/other/prev/next` 键，
+   新增「运行期热切换」小节（只有 locale/messages 真变才通知），并把过期的
+   「运行期热切换不在当前版本内」删掉。
+8. **验证**：core 536 / shared 1020 / vue3 724 / vue2 447 / antdv 773；四包 typecheck 全绿；
+   三站构建成功（es-eui 用 `--dest dist-verify` 后删除）；`check:consistency` 140/141
+   （唯一红 `check:eval-freshness`：P2-5 改了系统 prompt 指纹，需一次新的全量付费测量）。
+
 ---
 
 ## P2-5：propNameMatch 76.19%
 
 **实施方案**：统一 golden 语料 prop 命名规范（camelCase）+ prompt 加规则。
+
+**当前进度**：✅ 已实现（2026-11-09）。
+
+1. **观测量先落地**：`scripts/eval/align.mjs:251-254` 的 `propNameMatch(gold, pred)` ——
+   gold 字段里「被对齐到的 pred 字段 prop 写法也相同」的占比，进 `artifact.mjs` 的
+   指标清单、`run-metrics.mjs` 的 zh 汇总。它是**观测量，不进门禁**：prop 命名不同但
+   语义对齐正确（label 锚点相同）时不得扣分，与「en 腿身份锚点」是同一类问题。
+2. **语料规范**：`__tests__/golden/cases/*.json` 的 prop 全部为 camelCase ASCII
+   （`createdAt` / `userName` / `orderNo`），无 `snake_case`、无中文 prop。
+3. **prompt 规则**：`ai-nl-to-config-prompt.ts` 新增一条 —— prop 是数据模型绑定，
+   英文描述的字段名**逐字保留**（`userName` 不得改成 `user_name`/拼音），中文描述转
+   camelCase ASCII（`手机号` → `phone`），且永不放中文或 label 原文。
+   （属系统 prompt 指纹变更，`check:eval-freshness` 维持已知红，待一次付费全量测量。）
