@@ -156,7 +156,7 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 
 **当前进度**：✅ 第一期完成（2026-11-09）。运行时 + 站点示例见 P1-3a；AI 四份契约、
 生成器双模式发射、三端 schema→prop 转接、prompt 教学、golden 语料与守卫见 P1-3b。
-第二期（嵌套对象）/ 第三期（式数组子表单）未开始。
+✅ 第二期（嵌套对象，一层）完成（2026-11-09），见 P1-3c。第三期（数组子表单 `FormList`）未开始。
 
 **实施记录（P1-3 第一期 · 2026-11-09）**
 
@@ -231,6 +231,66 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
    layout 加值级等价断言（schema 透传 / SFC 内联都带 type+groups）；`ai:matrix` 重新生成。
 8. **验证**：`check:consistency` 140/141（唯一红 `check:eval-freshness`）；三端
    typecheck 全绿；es-plus-docs 构建成功。
+
+**实施记录（P1-3c · 嵌套对象 · 2026-11-09）**
+
+1. **运行时（core 单源）**：`FormItemOption.children?: FormItemOption[]`（**只一层**）；
+   新增 `packages/core/src/form-nested.ts`：`resolveNestedProp(container, child)`（相对
+   prop → `address.province`，已是绝对路径则原样）、`flattenFormItems(items)`（容器发整行
+   标题、子字段摊进同一网格；子字段缺省 span 按容器内数量自动算，显式 querySpan/formSpan/
+   span 优先；子字段继承父 `group`；容器不绑定数据、不派生表格列）、
+   `pruneEmptyNestedContainers(items)`（无子字段的容器整条丢弃）。更深层级只告警一次
+   （不递归渲染）。三端 `es-form.vue` 只调用这份摊平函数，不各自实现。
+2. **四份契约同批**：`structured-config.schema.ts` 拆 `FieldConfigBaseSchema`（无 children）
+   + `FieldConfigSchema = Base.extend({ children: z.array(Base).min(1).optional() })` ——
+   **一层是结构性的**（子字段类型本身没有 children），不是运行时校验；`formtype` 改为
+   `.default('Input')`（无控件容器可省略；输出类型不变）。`generate-from-config.ts`
+   （MCP 权威副本）与 `_front-door-knobs.ts` / `_fragment-shapes.ts` 镜像同批；片段面
+   `surfaceFieldSchema.formtype` **保持必填**，文案明确要求容器传 `formtype:'Input'`
+   （片段产物靠它选控件，容器上生成器会剥掉）。`form-item.schema.json` 补 `children`
+   （`items: {$ref:'#'}`）后 `schemas:sync`（21 处）+ `gen-doc-schemas`。
+3. **生成器双模式发射**：`buildFormItem` 容器分支剥掉 `formtype/attrs/formItemOptions`
+   （否则渲染出没有 model 路径的输入框）与容器/子字段的缺省 `span`（交给运行时
+   autoSpan）；`buildModelInitLiteral` 支持嵌套与点号 prop —— 修掉「最外层段也被包成
+   `{...}`」的真 bug（`reactive({ customerName:'', { address:{…} } })` 语法错误）；
+   `buildModelTypeMembers` 同批。
+4. **Prompt 教学**：`ai-nl-to-config-prompt.ts` 新增「嵌套对象」规则（措辞 → 容器；
+   一层；相对 prop；容器省略 formtype；永不进表格列；子字段继承 group；三面归属逐字段
+   声明；与 `formLayout.layout` 的分组不是一回事；数组子表单不在本期范围）。
+5. **三端运行时**：vue3 / vue2 / antdv 查询面 + 弹窗面均走 `flattenFormItems`；
+   antdv 的 `a-form-item` 用严格 `getPropByPath`，容器对象必须存在，故 renderer 在拿到
+   容器时补齐 `model.address = {}`（Element Plus / Element UI 无此要求，行为对齐后一致）。
+   站点示例的校验规则按路径写（`'address.detail'`）。
+6. **Golden 与评分**：新增 `202-customer-nested-address`（NL/EN，pinnedDims 含新维度
+   `fieldChildren`）；`scripts/eval/scorers.mjs` 新增 gold 驱动的 `fieldChildren`（容器对
+   容器、子字段 prop 序列逐位相等、gold 声明了 formtype 的子字段同名同型），并把容器
+   **排除**出 `formtype` / `membership` / `attrAcc` 三个判据 —— 容器不渲染控件、Zod 还会
+   给省略的 formtype 填 `'Input'`，不排除会把完美答案判负。公平性：`CONTAINER_EVIDENCE`
+   补措辞表，`crud-fairness.test.mjs` 增 YES/NO fixture；`accuracy-baseline.json`
+   语料 226→227 / heldout 202→203、`fieldChildren:1`、minApplicable 按 floor(n×0.9) 重算。
+7. **守卫适配（判据过期，不是实现错）**：`check-fragment-contract` /
+   `check-schema-contract` / `lib/entry-keys.mjs` 的文本锚点从单个 `z.object(` 改为
+   base + extend（+ legacy）块并集（`maybeSlice` 容忍旧锚点缺席）；`check-threeway` 增
+   **容器探针** —— 控件探针无法同时是容器（生成器见到 children 就剥 formtype），
+   `children` 只能由专用容器条目见证；`lib/front-door.mjs` 的 `fieldProjector`
+   对 `children` **递归投影**（config 子字段带三面标志，前门词汇里没有，否则被分层
+   未知键闸门判红）。`feature-coverage.json` 增 `form/23-form-nested`（A 档，
+   tokens: formtype/validation）并重跑 `sites:coverage:gen`、`ai:matrix`、`gen-llms`。
+8. **站点示例**：三站各增 `FormNested.vue`（两个容器、示例数据填充/清空/提交校验、
+   模型 JSON 预览；antdv 版说明容器对象补齐）；文档站示例列表 + `FormItemOption.children`
+   API 行；es-pc `EsForm.vue` 增 scene 段；es-eui 示例索引登记并重生成 raw-sources。
+9. **验证**：新增 spec —— core 17 / vue3 5 / vue2 3 / antdv 4 / shared 8（生成器）；
+   shared 35 文件 1028 例、mcp-server 25 文件 404 例全绿；三站构建成功（es-eui 用
+   `--dest dist-verify` 后删除）；`check:consistency` 140/141，唯一红仍是
+   `check:eval-freshness`（语料哈希与 system prompt 指纹都变了 ⟹ 必须一次新的全量付费
+   测量，不在本地伪造）。
+10. **偏离设计原文之处**：① `formtype` 在两份 Zod 里给了 `.default('Input')`（原文要求
+    容器可省略，只改输入侧即最小实现）；② 片段面 formtype 仍必填（片段不具备「无控件
+    容器」的语义，显式传 `'Input'` 比隐式默认更安全）；③ 加了设计外的
+    `pruneEmptyNestedContainers`（空容器会渲染成空标题）；④ antdv 侧补容器对象是端特化
+    约束，未上升到 core 契约；⑤ golden 容器写了 `formtype:'Input'` —— 前门
+    `surfaceFieldSchema` 是片段/CRUD 共用词汇、formtype 必填，gold 语料要能推出 surfaces
+    （往返腿）；模型省略同样满分（容器不参与 formtype 比较）。
 
 ---
 
