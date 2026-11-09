@@ -133,7 +133,9 @@ export default { name: 'EsDialog' }
 import { ref, reactive, computed, inject, watch, onMounted, onBeforeUnmount, provide, getCurrentInstance, type VNode } from 'vue'
 import { CloseOutlined, FullscreenOutlined, FullscreenExitOutlined } from '@ant-design/icons-vue'
 import { getGlobalConfig } from '../../../config'
-import { checkPermissionValue, resolveBuiltinText } from '@es-plus/core'
+import { checkPermissionValue } from '@es-plus/core'
+// locale 文案一律走包内桥（P2-4 热切换）
+import { resolveBuiltinText } from '../../../locale'
 import { mapButtonType, mapButtonDanger, mapSize } from '../../../utils/shared'
 import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
 import type { SizeType } from 'ant-design-vue/es/config-provider/context'

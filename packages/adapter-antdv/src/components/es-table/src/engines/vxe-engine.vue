@@ -46,7 +46,9 @@ import type { CellEditPayload, TableEngineExposed } from '@es-plus/core'
 import { getGlobalConfig } from '../../../../config'
 import RenderDomTb from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
-import { buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, resolveSortParam, wantsCrossPageSelection, mergeSelectedRows, resolveEditProp, snapshotEditRow, diffEditRow, resolveBuiltinText } from '@es-plus/core'
+import { buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, resolveSortParam, wantsCrossPageSelection, mergeSelectedRows, resolveEditProp, snapshotEditRow, diffEditRow } from '@es-plus/core'
+// locale 文案一律走包内桥（P2-4 热切换）
+import { resolveBuiltinText } from '../../../../locale'
 
 defineOptions({ inheritAttrs: false })
 

@@ -130,7 +130,9 @@ import EsForm from '../../es-form'
 import * as ElementPlusIconsVue from '@element-plus/icons-vue'
 import zhCn from 'element-plus/es/locale/lang/zh-cn'
 import { getGlobalConfig } from '../../../config'
-import { checkPermissionValue, resolveBuiltinText } from '@es-plus/core'
+import { checkPermissionValue } from '@es-plus/core'
+// locale 文案一律走包内桥（P2-4 热切换）
+import { resolveBuiltinText } from '../../../locale'
 import type { BtnConfig } from '../../../types'
 
 // 图标按钮的可访问名（locale 单源；弹窗头部只有图标，没有可见文字）。

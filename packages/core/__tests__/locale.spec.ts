@@ -7,7 +7,7 @@ import {
   getDefaultToolbarBtns,
   getDefaultRowBtns,
 } from '../src/locale'
-import { configureEsPlus, resetGlobalConfig } from '../src/config'
+import { configureEsPlus, resetGlobalConfig, getLocaleVersion, subscribeLocaleChange } from '../src/config'
 
 afterEach(() => resetGlobalConfig())
 
@@ -85,5 +85,76 @@ describe('默认按钮 getter（locale 感知）', () => {
     expect(tb.ADD.name).toBe('Add')
     expect(row.DELETE.name).toBe('Delete')
     expect(row.DELETE.confirm).toBe(EN_US_MESSAGES.deleteConfirm)
+  })
+})
+
+/**
+ * P2-4：locale 运行期热切换的**通知层**（框架无关）。
+ *
+ * 真正的重算发生在渲染器包（各自的 `locale.ts` 用 ref 桥接版本号）；这里只钉
+ * 「什么时候该通知 / 不该通知」的语义，避免 install 或无关配置把整棵树刷一遍。
+ */
+describe('locale 变更通知（P2-4）', () => {
+  it('locale 真的变化时版本号 +1，并同步通知订阅者', () => {
+    const before = getLocaleVersion()
+    const seen: number[] = []
+    const off = subscribeLocaleChange(() => seen.push(getLocaleVersion()))
+
+    configureEsPlus({ locale: 'en-US' })
+
+    expect(getLocaleVersion()).toBe(before + 1)
+    expect(seen).toEqual([before + 1])
+    off()
+  })
+
+  it('messages 覆盖也算 locale 变化（单键覆盖同样要重算）', () => {
+    const before = getLocaleVersion()
+    configureEsPlus({ messages: { operation: '操作列' } })
+    expect(getLocaleVersion()).toBe(before + 1)
+  })
+
+  it('重复写同一 locale、或写无关配置，不通知', () => {
+    configureEsPlus({ locale: 'en-US' })
+    const v = getLocaleVersion()
+    let calls = 0
+    const off = subscribeLocaleChange(() => {
+      calls += 1
+    })
+
+    configureEsPlus({ locale: 'en-US' })
+    configureEsPlus({ componentSize: 'small' })
+
+    expect(getLocaleVersion()).toBe(v)
+    expect(calls).toBe(0)
+    off()
+  })
+
+  it('resetGlobalConfig 回到默认中文并通知（避免测试间泄漏旧语言）', () => {
+    configureEsPlus({ locale: 'en-US' })
+    let calls = 0
+    const off = subscribeLocaleChange(() => {
+      calls += 1
+    })
+
+    resetGlobalConfig()
+
+    expect(calls).toBe(1)
+    expect(resolveBuiltinText('add')).toBe('新增')
+    off()
+  })
+
+  it('退订后不再收到通知；某个订阅者抛错不影响其它订阅者', () => {
+    const seen: string[] = []
+    const offBad = subscribeLocaleChange(() => {
+      throw new Error('boom')
+    })
+    const offGood = subscribeLocaleChange(() => seen.push('good'))
+
+    expect(() => configureEsPlus({ locale: 'en-US' })).not.toThrow()
+    offGood()
+    configureEsPlus({ locale: 'zh-CN' })
+
+    expect(seen).toEqual(['good'])
+    offBad()
   })
 })

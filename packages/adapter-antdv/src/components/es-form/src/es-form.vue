@@ -241,10 +241,11 @@ import {
   setNestedValue,
   looseEqual,
   checkPermissionValue,
-  resolveBuiltinText,
   resolveFormDetailText,
   groupFormItems,
 } from '@es-plus/core'
+// locale 文案一律走包内桥（P2-4 热切换）
+import { resolveBuiltinText } from '../../../locale'
 import { mapButtonType, mapButtonDanger, mapSize, getNestedValue, isObject } from '../../../utils/shared'
 import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
 import type { SizeType } from 'ant-design-vue/es/config-provider/context'

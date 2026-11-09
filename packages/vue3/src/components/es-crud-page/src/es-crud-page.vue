@@ -34,7 +34,9 @@ import EsForm from '../../es-form/src/es-form.vue'
 import EsTable from '../../es-table/src/component.vue'
 import EsErrorBoundary from '../../es-error-boundary/src/es-error-boundary.vue'
 import useDialog from '../../es-dialog/src/use-dialog'
-import { getNestedValue, setNestedValue, resolveCrudActions, resolveBuiltinText } from '@es-plus/core'
+import { getNestedValue, setNestedValue, resolveCrudActions } from '@es-plus/core'
+// locale 文案一律走包内桥（P2-4 热切换）；直接读 core 会拿到静态函数，切换语言不重算
+import { resolveBuiltinText } from '../../../locale'
 import type { CellEditPayload } from '@es-plus/core'
 import type {
   CrudPageSchema,

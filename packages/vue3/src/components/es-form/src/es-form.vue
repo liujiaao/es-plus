@@ -219,10 +219,11 @@ import {
   setNestedValue,
   looseEqual,
   checkPermissionValue,
-  resolveBuiltinText,
   resolveFormDetailText,
   groupFormItems,
 } from '@es-plus/core'
+// locale 文案一律走包内桥（P2-4 热切换）
+import { resolveBuiltinText } from '../../../locale'
 
 const props = withDefaults(
   defineProps<{

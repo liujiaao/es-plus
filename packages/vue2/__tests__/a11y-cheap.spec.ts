@@ -82,6 +82,19 @@ describe('EsTable（vue2）可访问性', () => {
     const vm = mountTable()
     expect(vm.$el.querySelector('.es-empty')?.textContent).toContain('No data')
   })
+
+  it('P2-4：已挂载后 configureEsPlus({ locale }) 热切换（computed 桥，不是字符串快照）', async () => {
+    const vm = mountTable()
+    expect(vm.$el.querySelector('.es-empty')?.textContent).toContain('暂无数据')
+
+    configureEsPlus({ locale: 'en-US' })
+    await Vue.nextTick()
+    expect(vm.$el.querySelector('.es-empty')?.textContent).toContain('No data')
+
+    configureEsPlus({ locale: 'zh-CN' })
+    await Vue.nextTick()
+    expect(vm.$el.querySelector('.es-empty')?.textContent).toContain('暂无数据')
+  })
 })
 
 describe('EsDialog（vue2）图标按钮可访问性', () => {

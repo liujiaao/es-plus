@@ -228,7 +228,6 @@ import {
   buildSortParams,
   checkPermissionValue,
   exportTableCsv,
-  resolveBuiltinText,
   buildColumnFilterMethod,
   withAutoFilters,
   hasColumnFilters,
@@ -242,6 +241,8 @@ import {
   warnVxeOnlyKeysOutsideVxe,
   BASE_TABLE_INTERNAL_KEYS,
 } from '@es-plus/core'
+// locale 文案一律走包内桥（P2-4 热切换）
+import { resolveBuiltinText } from '../../locale'
 import ColumnItem from './column-item.vue'
 import TableBtns from './table-btns.vue'
 import VxeEngine from './engines/vxe-engine.vue'
@@ -1683,9 +1684,10 @@ export default defineComponent({
       tableId,
       tableData,
       effectiveDataSource,
-      // W3-1：内置空态/加载文案（locale 单源；tableOptions.emptyText 仍是逐表覆盖）
-      builtinEmptyText: resolveBuiltinText('emptyText'),
-      builtinLoadingText: resolveBuiltinText('loading'),
+      // W3-1：内置空态/加载文案（locale 单源；tableOptions.emptyText 仍是逐表覆盖）。
+      // P2-4：用 computed 保留热切换 —— setup() 返回值只求值一次，字符串快照会冻住语言。
+      builtinEmptyText: computed(() => resolveBuiltinText('emptyText')),
+      builtinLoadingText: computed(() => resolveBuiltinText('loading')),
       // state
       loadStatus,
       paginationConfig,

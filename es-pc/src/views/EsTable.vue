@@ -231,6 +231,17 @@
       </CodeDemo>
     </section>
 
+    <a-divider v-if="isActive('config')" />
+
+    <!-- 内置文案运行期热切换 -->
+    <section v-if="isActive('config')" id="locale-hot-switch">
+      <h2>内置文案与运行期切换</h2>
+      <p>空态、加载中、自动派生按钮名、操作列标题、删除确认这些<strong>库自己产生</strong>的文案走内置字典，与业务 <code>label</code> 无关；<code>configureEsPlus({ locale })</code> 与 <code>app.use(ESPlus, { locale })</code> 等价，因此已挂载的表格可以随时换语言，不需要刷新页面。</p>
+            <CodeDemo :source="rawSFCs['./es-table/LocaleHotSwitch.vue']">
+        <EsTableLocaleHotSwitch />
+      </CodeDemo>
+    </section>
+
     <a-divider />
 
     <h2>API / 属性</h2>
@@ -316,6 +327,7 @@ import EsTableQueryTable from './es-table/QueryTable.vue'
 import EsTableCallbackPipeline from './es-table/CallbackPipeline.vue'
 import EsTableCodeLabel from './es-table/CodeLabel.vue'
 import EsTablePerformanceWarn from './es-table/PerformanceWarn.vue'
+import EsTableLocaleHotSwitch from './es-table/LocaleHotSwitch.vue'
 
 const rawSFCs = import.meta.glob('./es-table/*.vue', { query: '?raw', import: 'default', eager: true })
 
@@ -335,7 +347,7 @@ const SECTION_GROUPS = [
   { key: 'editing', name: '编辑、排序与选中', ids: ['edit', 'sort', 'current-row'] },
   { key: 'layout', name: '尺寸与数据源', ids: ['fixed', 'remote', 'height'] },
   { key: 'render', name: '结构与渲染', ids: ['group', 'expand', 'cell-merge', 'dynamic-columns'] },
-  { key: 'config', name: '配置化查询与码值', ids: ['query-table', 'callback-pipeline', 'code-label', 'performance-warn'] },
+  { key: 'config', name: '配置化查询与码值', ids: ['query-table', 'callback-pipeline', 'code-label', 'performance-warn', 'locale-hot-switch'] },
 ]
 
 const route = useRoute()

@@ -70,7 +70,9 @@ import type {
   DialogActionContext,
 } from './types'
 import type { BtnConfig, CellEditPayload, TableColumn } from '@es-plus/core'
-import { getNestedValue, setNestedValue, parsePathSegments, resolveCrudActions, resolveBuiltinText } from '@es-plus/core'
+import { getNestedValue, setNestedValue, parsePathSegments, resolveCrudActions } from '@es-plus/core'
+// locale 文案一律走包内桥（P2-4 热切换）
+import { resolveBuiltinText } from '../../locale'
 
 /**
  * AI-27：弹窗底座键的**显式白名单**（逐键转发给 `dialog()`）。

@@ -45,7 +45,9 @@
 // 等 API 在 TypeScript 严格模式下无法完整类型化，保留 nocheck 以避免误报
 import { defineComponent, ref, computed, inject, getCurrentInstance } from '../../../vue-compat'
 import type { CellEditPayload, TableColumn, TableOptions, TableEngineExposed } from '@es-plus/core'
-import { getGlobalConfig, buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, resolveSortParam, wantsCrossPageSelection, mergeSelectedRows, resolveEditProp, snapshotEditRow, diffEditRow, resolveBuiltinText } from '@es-plus/core'
+import { getGlobalConfig, buildFirstClassGridOptions, buildRowSpanMethod, resolveMergeConfig, resolveSortParam, wantsCrossPageSelection, mergeSelectedRows, resolveEditProp, snapshotEditRow, diffEditRow } from '@es-plus/core'
+// locale 文案一律走包内桥（P2-4 热切换）
+import { resolveBuiltinText } from '../../../locale'
 import RenderDomTb, { RenderSlotBridge } from './render-dom-tb'
 import { useVxeColumnAdapter } from './use-vxe-column-adapter'
   import type { RenderSlotColumn } from './use-vxe-column-adapter'
@@ -474,7 +476,8 @@ export default defineComponent({
       namedParentSlots,
       normalizeSlotProps,
       // W3-1：空态文案走 locale 单源；options.emptyText 仍是逐表覆盖的最高优先级。
-      builtinEmptyText: resolveBuiltinText('emptyText'),
+      // P2-4：computed 保留热切换（setup() 返回值只求值一次）。
+      builtinEmptyText: computed(() => resolveBuiltinText('emptyText')),
       handleCheckboxChange,
       handleCheckboxAll,
       handleSortChange,

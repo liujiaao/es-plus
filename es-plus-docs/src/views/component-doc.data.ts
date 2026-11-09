@@ -251,6 +251,7 @@ export const docsData: Record<string, any> = {
       // 不是交互；700px 也是交互组里最重的一块。
       { group: '结构与展示', key: 'table-height', title: '自适应容器高度', description: 'heightType: height 继承父容器高度 + ResizeObserver 自动计算，容器变表格自适应。', component: getComponent('table/18-table-height'), code: code('table/18-table-height') },
       { group: '结构与展示', key: 'code-label', title: '码值列：零 render 出标签', description: '状态是 0/1/2 这样的码值，列上写一份 dataOptions 就得到中文标签与语义色 —— 三端各自渲染原生标签（ElTag / el-tag / a-tag），没有一个 render 函数。未命中显示原值，空值走 emptyPlaceholder。', component: getComponent('table/19-code-label'), code: code('table/19-code-label') },
+      { group: '交互与数据', key: 'locale-hot-switch', title: '内置文案与运行期切换', description: '空态/加载中/自动派生按钮名走库内置字典；configureEsPlus({ locale }) 与安装时等价，已挂载表格切换语言后立即重算。', component: getComponent('table/20-locale-hot-switch'), code: code('table/20-locale-hot-switch') },
     ],
     api: {
       props: [

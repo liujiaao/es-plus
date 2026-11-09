@@ -229,11 +229,12 @@ import {
   synthesizeLeadingColumns,
   checkPermissionValue,
   exportTableCsv,
-  resolveBuiltinText,
   warnVxeOnlyKeysOutsideVxe,
   BASE_TABLE_INTERNAL_KEYS,
   withAutoFilters,
 } from '@es-plus/core'
+// locale 文案一律走包内桥（P2-4 热切换）
+import { resolveBuiltinText } from '../../../locale'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
 import type { CellEditPayload, TableSortState, FieldOutputProvider, CsvColumnLike } from '@es-plus/core'

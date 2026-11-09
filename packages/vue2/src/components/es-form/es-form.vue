@@ -189,9 +189,10 @@ import {
   collectReactionDependencies,
   checkPermissionValue,
   resolveFormDetailText,
-  resolveBuiltinText,
   groupFormItems,
 } from '@es-plus/core'
+// locale 文案一律走包内桥（P2-4 热切换）
+import { resolveBuiltinText } from '../../locale'
 import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData, FieldOutputProvider, ConfigFormFieldOut, FormGroupLayout, ResolvedFormGroup } from '@es-plus/core'
 
 // 弃用告警去重：错拼 `isHiden` 每字段只提示一次，避免响应式重算刷屏

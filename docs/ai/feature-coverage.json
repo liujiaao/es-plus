@@ -421,6 +421,14 @@
       ]
     },
     {
+      "id": "table/20-locale-hot-switch",
+      "group": "es-table",
+      "title": "内置文案与运行期切换",
+      "tokens": [
+        "hostOrchestration"
+      ]
+    },
+    {
       "id": "vxe-table/16-engine-warning",
       "group": "vxe-table",
       "title": "vxe 三件套：漏写 engine 会被告警",
@@ -1959,7 +1967,7 @@
     {
       "site": "es-pc",
       "root": "es-pc/src/views",
-      "refs": 100,
+      "refs": 101,
       "uncovered": 31,
       "cases": [
         {
@@ -2886,6 +2894,14 @@
             "columnGroups"
           ],
           "tier": "B"
+        },
+        {
+          "id": "es-table/LocaleHotSwitch",
+          "demo": "table/20-locale-hot-switch",
+          "tokens": [
+            "hostOrchestration"
+          ],
+          "tier": "D"
         },
         {
           "id": "es-table/Pagination",

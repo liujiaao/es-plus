@@ -50,7 +50,9 @@ import EsTable from '../../es-table/src/component.vue'
 import EsErrorBoundary from '../../es-error-boundary/src/es-error-boundary.vue'
 import { useDialog } from '../../es-dialog/src/use-dialog'
 import { getNestedValue, setNestedValue } from '../../../utils/shared'
-import { resolveCrudActions, resolveBuiltinText } from '@es-plus/core'
+import { resolveCrudActions } from '@es-plus/core'
+// locale 文案一律走包内桥（P2-4 热切换）
+import { resolveBuiltinText } from '../../../locale'
 import type { CellEditPayload } from '@es-plus/core'
 import type {
   CrudPageSchema,

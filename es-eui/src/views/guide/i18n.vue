@@ -231,6 +231,16 @@ new Vue({
             <p class="preview-label">
               当前语言: {{ currentLang }}
             </p>
+            <div class="preview-table">
+              <es-table
+                :data-source="[]"
+                :columns="builtinColumns"
+                :options="{ border: true }"
+              />
+            </div>
+            <p class="preview-label">
+              表格空态是 ES-Plus 的内置文案（不是 Element UI 的 el.table.emptyText）——切换语言后直接变化
+            </p>
           </div>
         </div>
 
@@ -265,6 +275,8 @@ new Vue({
 &lt;/template&gt;
 
 &lt;script&gt;
+import { configureEsPlus } from '@es-plus/vue2'
+
 export default {
   data() {
     return {
@@ -274,6 +286,9 @@ export default {
   methods: {
     handleLangChange(lang) {
       this.$i18n.locale = lang
+      // ES-Plus 的库内置文案（空态 / 加载中 / 自动按钮名 / 操作列标题 / 删除确认…）
+      // 走独立字典，要在同一个入口同步切换；已挂载组件会立即重算
+      configureEsPlus({ locale: lang === 'en' ? 'en-US' : 'zh-CN' })
       localStorage.setItem('es-lang', lang)
       this.$message.success(lang === 'zh-CN' ? '语言切换成功' : 'Language switched')
     }
@@ -357,7 +372,7 @@ Vue.use(EsPlus, {
 
       <div class="tip-box info">
         <i class="el-icon-info-filled" />
-        <p><strong>提示</strong>：ES-Plus 自身不带文案表 —— 组件里的中文标签一律来自配置（<code>label</code>）或 <code>labelKey</code> + 全局 <code>t</code> 函数；Element UI 的按钮/空数据文案则走它自己的 <code>el</code> 命名空间。业务文案按需并入即可。</p>
+        <p><strong>提示</strong>：ES-Plus 有<strong>两张</strong>文案表 —— 业务标签走 <code>label</code> 或 <code>labelKey</code> + 全局 <code>t</code> 函数；库自己产生的文案（空态、加载中、CRUD 自动派生按钮名、操作列标题、删除确认、弹窗取消/确定）走内置字典 <code>locale</code> / <code>messages</code>，与语言包在同一个入口切换。Element UI 的按钮/空数据文案则走它自己的 <code>el</code> 命名空间，三张表互不干扰。</p>
       </div>
     </section>
 
@@ -664,6 +679,8 @@ const columns = [
 </template>
 
 <script>
+import { configureEsPlus } from '@es-plus/vue2'
+
 export default {
   name: 'GuideI18n',
   data() {
@@ -671,7 +688,9 @@ export default {
       currentLang: 'zh-CN',
       currentLangText: '语言',
       previewText: '欢迎使用',
-      activeTab: 'template'
+      activeTab: 'template',
+      // 列名是业务配置（不随库语言变），表格留空是为了让「空态」成为唯一可见的内置文案
+      builtinColumns: [{ prop: 'orderNo', label: '订单号', minWidth: 160 }]
     }
   },
   created() {
@@ -679,12 +698,23 @@ export default {
     this.currentLang = savedLang
     this.currentLangText = savedLang === 'zh-CN' ? '语言' : 'Language'
     this.previewText = savedLang === 'zh-CN' ? '欢迎使用' : 'Welcome'
+    this.syncBuiltinLocale(savedLang)
+  },
+  beforeDestroy() {
+    // 示例改的是全局配置：离开页面恢复默认，避免影响其它示例
+    configureEsPlus({ locale: 'zh-CN' })
   },
   methods: {
+    syncBuiltinLocale(lang) {
+      // 运行期热切换：与 Vue.use(EsPlus, { locale }) 写的是同一个全局配置。
+      // 已挂载的 es-table / es-form / es-dialog 会重算内置文案（空态、加载中、自动按钮名…）。
+      configureEsPlus({ locale: lang === 'en' ? 'en-US' : 'zh-CN' })
+    },
     switchLang(lang) {
       this.currentLang = lang
       this.currentLangText = lang === 'zh-CN' ? '语言' : 'Language'
       this.previewText = lang === 'zh-CN' ? '欢迎使用' : 'Welcome'
+      this.syncBuiltinLocale(lang)
       localStorage.setItem('es-lang', lang)
       this.$message.success(lang === 'zh-CN' ? '已切换到简体中文' : 'Switched to English')
     },
@@ -1036,6 +1066,11 @@ export default {
   .preview-label {
     font-size: 12px;
     color: #909399;
+  }
+
+  .preview-table {
+    margin-top: 16px;
+    text-align: left;
   }
 }
 

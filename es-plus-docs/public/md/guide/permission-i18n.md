@@ -212,10 +212,30 @@ app.use(ESPlus, {
 
 字典键：`emptyText` / `loading` / `add` / `edit` / `view` / `delete` / `export` / `import` /
 `query` / `reset` / `operation` / `cancel` / `ok` / `confirm` / `tip` / `deleteConfirm` /
-`confirmAction` / `fullscreen` / `exitFullscreen` / `close`。
+`confirmAction` / `fullscreen` / `exitFullscreen` / `close` / `fold` / `unfold` /
+`other` / `prev` / `next`。
 
-> `locale` / `messages` 在 `app.use()` 时读取：请在首屏渲染前完成安装（一直是这个要求）。
-> 运行期热切换不在当前版本内。
+### 运行期热切换
+
+`configureEsPlus` 与 `app.use()` 写入的是同一个全局配置，因此**已挂载的组件**也可以随时换语言，
+不必刷新页面：
+
+```typescript
+import { configureEsPlus } from '@es-plus/vue3'
+
+// 之后任何时刻切换（组件内部从包内 locale 桥读文案，会立即重算）
+configureEsPlus({ locale: 'en-US' })
+configureEsPlus({ locale: 'zh-CN' })
+```
+
+只有 `locale` / `messages` **真的变化**时才会通知组件重算；`app.use()` 里的其它配置
+（`httpRequest` / `permission` / 组件级默认值）不会触发这次重渲染。
+
+<demo name="table-locale-hot-switch" title="运行期切换内置文案" description="切换语言后，已挂载表格的空态文案直接变化（由库内置字典提供，不是 emptyText 选项）。" />
+
+> 组件侧的实现：core 层维护 locale 版本号 + 订阅器（零依赖），三个渲染器包用自家的 `ref`
+> 桥接版本号，`resolveBuiltinText` 在 computed / 模板里被调用时读一次版本号建立依赖。
+> 这也是为什么「切换后立即生效」不需要宿主做额外接线。
 
 ---
 

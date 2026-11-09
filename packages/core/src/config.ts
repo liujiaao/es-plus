@@ -229,6 +229,44 @@ export function normalizeEsPlusOptions(
  */
 let globalConfig: EsPlusGlobalConfig = {}
 
+// ─── locale 运行期热切换（P2-4）─────────────────────────────────
+// 组件在 computed / render 里读 `resolveBuiltinText`，而它读的是上面这个**普通**单例；
+// 单例不是响应式的，所以 `configureEsPlus({ locale })` 之后已挂载的组件不会重算。
+// 这里提供一个与框架无关的版本号 + 订阅器：各渲染器包用自家的 `ref` 桥接
+// （vue3/antdv: `ref`；vue2: `vue-compat` 的 ref），调用点读一次版本号即可建立依赖。
+let localeVersion = 0
+const localeSubscribers = new Set<() => void>()
+
+/** 当前 locale 版本号（每次 locale / messages 生效变化 +1）。 */
+export function getLocaleVersion(): number {
+  return localeVersion
+}
+
+/**
+ * 订阅 locale 变化，返回退订函数。
+ *
+ * 刻意**不**暴露给宿主业务代码以外的场景：这是渲染器包的桥接点，
+ * 宿主想换语言请调用 `configureEsPlus({ locale })`（或 `app.use(EsPlus, { locale })`）。
+ */
+export function subscribeLocaleChange(fn: () => void): () => void {
+  localeSubscribers.add(fn)
+  return () => {
+    localeSubscribers.delete(fn)
+  }
+}
+
+function bumpLocaleVersion(): void {
+  localeVersion += 1
+  // 复制一份再遍历：订阅者回调里可能退订/再订阅（修改正在遍历的 Set 会漏发）。
+  for (const fn of [...localeSubscribers]) {
+    try {
+      fn()
+    } catch {
+      // 订阅者异常不得让配置写入失败（配置已落盘，别的订阅者仍应收到通知）
+    }
+  }
+}
+
 /**
  * 写入/合并全局配置
  *
@@ -238,7 +276,14 @@ let globalConfig: EsPlusGlobalConfig = {}
  * 写入前先归一（展平 methods / 剥 `$` / 改名），于是**单例里永远只有一种形状**。
  */
 export function configureEsPlus(options: EsPlusGlobalConfig): void {
+  const prev = globalConfig
   globalConfig = { ...globalConfig, ...normalizeEsPlusOptions(options) }
+  // 只有 locale / messages **真的变了**才通知：`app.use()` 连其它配置一起写、
+  // 同一份 locale 重复写，都不该让整棵树重算（热切换是低频操作，但不能让 `install` 变贵）。
+  const touchesLocale = 'locale' in options || 'messages' in options
+  if (touchesLocale && (globalConfig.locale !== prev.locale || globalConfig.messages !== prev.messages)) {
+    bumpLocaleVersion()
+  }
 }
 
 /**
@@ -255,7 +300,10 @@ export function getGlobalConfig(): EsPlusGlobalConfig {
  * 会读到旧值，造成不一致。
  */
 export function resetGlobalConfig(): void {
+  const prev = globalConfig
   globalConfig = {}
+  // 测试之间重置也要通知：否则上个用例挂载的组件会继续显示旧 locale 文案。
+  if (prev.locale !== undefined || prev.messages !== undefined) bumpLocaleVersion()
 }
 
 /**

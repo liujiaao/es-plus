@@ -181,7 +181,6 @@ import {
   buildSortParams,
   checkPermissionValue,
   exportTableCsv,
-  resolveBuiltinText,
   buildColumnFilterMethod,
   withAutoFilters,
   columnFilterKey,
@@ -189,6 +188,8 @@ import {
   warnVxeOnlyKeysOutsideVxe,
   BASE_TABLE_INTERNAL_KEYS,
 } from '@es-plus/core'
+// locale 文案一律走包内桥（P2-4 热切换）
+import { resolveBuiltinText } from '../../../locale'
 import type { TableSortState, FieldOutputProvider, CsvColumnLike } from '@es-plus/core'
 import type { TableColumn, PaginationConfig, VxeExportConfig } from '../../../types'
 

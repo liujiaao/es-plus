@@ -173,7 +173,9 @@ import {
   onMounted,
 } from '../../vue-compat'
 import type { PropType } from '../../vue-compat'
-import { getGlobalConfig, checkPermissionValue, resolveBuiltinText, type BtnConfig } from '@es-plus/core'
+import { getGlobalConfig, checkPermissionValue, type BtnConfig } from '@es-plus/core'
+// locale 文案一律走包内桥（P2-4 热切换）
+import { resolveBuiltinText } from '../../locale'
 import RenderJsx from './render-jsx.vue'
 import { getCompIcon } from '../../utils/icon'
 
@@ -624,10 +626,11 @@ export default defineComponent({
       isFullscreen,
       lyFormInstance,
       renderBodyRefsObject,
-      // 图标按钮的可访问名（locale 单源；弹窗头部只有图标，没有可见文字）
-      builtinFullscreen: resolveBuiltinText('fullscreen'),
-      builtinExitFullscreen: resolveBuiltinText('exitFullscreen'),
-      builtinClose: resolveBuiltinText('close'),
+      // 图标按钮的可访问名（locale 单源；弹窗头部只有图标，没有可见文字）。
+      // 用 computed 而非字符串快照：setup() 的返回值只求值一次，快照会让热切换失效。
+      builtinFullscreen: computed(() => resolveBuiltinText('fullscreen')),
+      builtinExitFullscreen: computed(() => resolveBuiltinText('exitFullscreen')),
+      builtinClose: computed(() => resolveBuiltinText('close')),
       // computeds
       isDrawer,
       hostBindings,

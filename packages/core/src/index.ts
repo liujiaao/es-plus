@@ -39,6 +39,8 @@ export {
   configureEsPlus,
   getGlobalConfig,
   resetGlobalConfig,
+  getLocaleVersion,
+  subscribeLocaleChange,
   httpRequest,
   resolveHttpRequest,
   resolveComponentConfig,

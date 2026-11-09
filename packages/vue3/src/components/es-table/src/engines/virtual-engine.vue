@@ -52,7 +52,9 @@ import { useColumnAdapter } from './use-column-adapter'
 import { useVirtualSelection } from './use-virtual-selection'
 import { useVirtualSort } from './use-virtual-sort'
 import type { TableEngineExposed } from './types'
-import { getGlobalConfig, resolveBuiltinText } from '@es-plus/core'
+import { getGlobalConfig } from '@es-plus/core'
+// locale 文案一律走包内桥（P2-4 热切换）
+import { resolveBuiltinText } from '../../../../locale'
 
 const props = defineProps<{
   columns: TableColumn[]

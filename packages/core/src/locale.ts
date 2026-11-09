@@ -15,8 +15,13 @@
  *   - 本模块的字典是**库的契约**：键由库定义、值可被 `messages` 单键覆盖，缺省 zh-CN。
  *
  * Phase 1 是**安装时静态**语义：`resolveBuiltinText` 在渲染/求值时读全局单例，因此
- * `app.use(EsPlus, { locale })` 必须在首屏渲染前完成（一直是这个要求）。运行期热切换
- * 需要订阅器 + 组件内版本号，属 Phase 2，不在本期。
+ * `app.use(EsPlus, { locale })` 必须在首屏渲染前完成（一直是这个要求）。
+ *
+ * Phase 2（P2-4）已提供**运行期热切换**，但桥接点在渲染器包：core 暴露与框架无关的
+ * 版本号 + 订阅器（见 `config.ts` 的 `getLocaleVersion` / `subscribeLocaleChange`），
+ * 各包用自家的 `ref` 把版本号变成响应式依赖，并让组件从**包内**的 `locale.ts` 取
+ * `resolveBuiltinText`。core 本模块仍是普通函数 —— `core` 是零依赖包，不能 import vue。
+ * 于是 `configureEsPlus({ locale: 'en-US' })` 之后，已挂载组件的 computed / 模板会重算。
  */
 import { getGlobalConfig } from './config.js'
 

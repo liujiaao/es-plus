@@ -77,6 +77,19 @@ describe('EsTable（antdv）可访问性', () => {
     const wrapper = mountTable()
     expect(wrapper.find('.es-table__empty').text()).toBe('No data')
   })
+
+  it('P2-4：已挂载后 configureEsPlus({ locale }) 热切换，无需重新挂载', async () => {
+    const wrapper = mountTable()
+    expect(wrapper.find('.es-table__empty').text()).toBe('暂无数据')
+
+    configureEsPlus({ locale: 'en-US' })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.es-table__empty').text()).toBe('No data')
+
+    configureEsPlus({ locale: 'zh-CN' })
+    await wrapper.vm.$nextTick()
+    expect(wrapper.find('.es-table__empty').text()).toBe('暂无数据')
+  })
 })
 
 describe('EsDialog（antdv）图标按钮可访问性', () => {
