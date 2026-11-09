@@ -88,7 +88,7 @@
                     style="padding-left: 0; border: none"
                     @click="changeFolded"
                   >
-                    {{ folded ? '展开' : '收起' }}
+                    {{ folded ? resolveBuiltinText('fold') : resolveBuiltinText('unfold') }}
                   </el-button>
                 </el-form-item>
               </div>
@@ -124,7 +124,7 @@
                   style="padding-left: 0; border: none"
                   @click="changeFolded"
                 >
-                  {{ folded ? '展开' : '收起' }}
+                  {{ folded ? resolveBuiltinText('fold') : resolveBuiltinText('unfold') }}
                 </el-button>
               </div>
             </el-form-item>
@@ -180,6 +180,7 @@ import {
   collectReactionDependencies,
   checkPermissionValue,
   resolveFormDetailText,
+  resolveBuiltinText,
 } from '@es-plus/core'
 import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData, FieldOutputProvider, ConfigFormFieldOut } from '@es-plus/core'
 
@@ -927,6 +928,7 @@ export default defineComponent({
       clearValidate,
       validateField,
       scrollToField,
+      resolveBuiltinText,
     }
   },
 })

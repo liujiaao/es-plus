@@ -48,6 +48,8 @@ export type BuiltinTextKey =
   | 'fullscreen'
   | 'exitFullscreen'
   | 'close'
+  | 'fold'
+  | 'unfold'
 
 /** 简体中文（缺省）。**值即 v1.5 三个渲染器里原有的字面量**，默认行为逐字节不变。 */
 export const ZH_CN_MESSAGES: Record<BuiltinTextKey, string> = {
@@ -72,6 +74,8 @@ export const ZH_CN_MESSAGES: Record<BuiltinTextKey, string> = {
   fullscreen: '全屏',
   exitFullscreen: '退出全屏',
   close: '关闭',
+  fold: '展开',
+  unfold: '收起',
 }
 
 /** English. */
@@ -96,6 +100,8 @@ export const EN_US_MESSAGES: Record<BuiltinTextKey, string> = {
   fullscreen: 'Fullscreen',
   exitFullscreen: 'Exit fullscreen',
   close: 'Close',
+  fold: 'Expand',
+  unfold: 'Collapse',
 }
 
 /**

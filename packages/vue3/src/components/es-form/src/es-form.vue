@@ -73,7 +73,7 @@
                     style="padding-left: 0; border: none"
                     @click="changeFolded"
                   >
-                    {{ folded ? '展开' : '收起' }}
+                    {{ folded ? resolveBuiltinText('fold') : resolveBuiltinText('unfold') }}
                   </el-button>
                   <el-dropdown placement="bottom-start" v-if="getSetOptionsStatus">
                     <el-button
@@ -122,7 +122,7 @@
                   style="padding-left: 0; border: none"
                   @click="changeFolded"
                 >
-                  {{ folded ? '展开' : '收起' }}
+                  {{ folded ? resolveBuiltinText('fold') : resolveBuiltinText('unfold') }}
                 </el-button>
                 <el-dropdown placement="bottom-start" v-if="getSetOptionsStatus">
                   <el-button

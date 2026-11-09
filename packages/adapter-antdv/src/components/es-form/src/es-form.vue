@@ -100,7 +100,7 @@
                     type="link"
                     @click="changeFolded"
                   >
-                    {{ folded ? '展开' : '收起' }}
+                    {{ folded ? resolveBuiltinText('fold') : resolveBuiltinText('unfold') }}
                     <DownOutlined v-if="folded" />
                     <UpOutlined v-else />
                   </a-button>
@@ -153,7 +153,7 @@
                   type="link"
                   @click="changeFolded"
                 >
-                  {{ folded ? '展开' : '收起' }}
+                  {{ folded ? resolveBuiltinText('fold') : resolveBuiltinText('unfold') }}
                   <DownOutlined v-if="folded" />
                   <UpOutlined v-else />
                 </a-button>
