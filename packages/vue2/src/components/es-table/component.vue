@@ -230,6 +230,7 @@ import {
   exportTableCsv,
   resolveBuiltinText,
   buildColumnFilterMethod,
+  withAutoFilters,
   hasColumnFilters,
   columnFilterKey,
   type TableColumn,
@@ -821,7 +822,7 @@ export default defineComponent({
       // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（声明了门但宿主没配 permission() 时按 fail-closed 拒绝）。
       const originals = columnRowList.value.filter((item) => !item.hidCol && checkPermission(item.permissionValue))
       const list = originals.map((el) => {
-        const col = withColumnFilters(withDataOptions({ ...el } as TableColumn))
+        const col = withColumnFilters(withDataOptions(withAutoFilters({ ...el } as TableColumn)))
         // 已有自定义单元格（dataOptions 注入的 render / 用户 render / 插槽）时不注入 formatter：
         // 三端引擎都按 render > slot > formatter 取用，注入的 formatter 永远轮不到，只会误导排错。
         if (

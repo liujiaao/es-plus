@@ -75,6 +75,47 @@ export function hasColumnFilters(col: Pick<TableColumn, 'prop' | 'key' | 'filter
 }
 
 /**
+ * P2-3：`autoFilters` → 从 `dataOptions` 合成 `filters`（单源，三端只调用不重写）。
+ *
+ * 规则：
+ *   - 显式 `filters` 永远优先（用户写的那份是权威）；
+ *   - `autoFilters !== true` 或 `dataOptions` 为空时原样返回；
+ *   - 分组列递归处理子列（筛选按钮挂在各自子列上）；
+ *   - 非数据列（`type: index/selection/expand`）不合成 —— 它们没有可筛选字段。
+ *
+ * 虚拟引擎没有筛选 UI，调用方应跳过本函数（否则会触发「filters 不会渲染」的告警）。
+ *
+ * 入参用结构最小面（而非 core `TableColumn`）：三端各有更宽的列类型，泛型返回
+ * 让调用方保持本端类型，列在 `withDataOptions` / `withColumnFilters` 链上不必来回强转。
+ */
+interface AutoFilterColumn {
+  type?: unknown
+  groups?: readonly AutoFilterColumn[]
+  filters?: readonly unknown[]
+  dataOptions?: readonly { label?: unknown; value?: unknown }[]
+  autoFilters?: boolean
+}
+
+export function withAutoFilters<T extends AutoFilterColumn>(col: T): T {
+  if (Array.isArray(col.groups) && col.groups.length) {
+    return {
+      ...col,
+      groups: col.groups.map((g) => withAutoFilters(g)),
+    } as unknown as T
+  }
+  if (col.type) return col
+  if (Array.isArray(col.filters) && col.filters.length > 0) return col
+  if (col.autoFilters !== true) return col
+  const options = Array.isArray(col.dataOptions) ? col.dataOptions : []
+  if (!options.length) return col
+  return {
+    ...col,
+    filters: options.map((o) => ({ text: o.label as string, value: o.value })),
+  } as unknown as T
+}
+
+
+/**
  * 合成「本地筛选」谓词：`(filterValue, row) => boolean`。
  *
  * 三端引擎的适配：

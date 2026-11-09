@@ -79,6 +79,7 @@ type: 'component'
 | emptyPlaceholder | string | - | 空值占位文本，默认 "-" |
 | dataOptions | TableColumnDataOption[] | - | 码值映射 [{ label, value, tagType? }]：命中显示 label，tagType 渲染 ElTag；未命中原值。render / formatter 优先 |
 | filters | Array<{ text, value }> | - | 列筛选选项（纯 JSON）。默认引擎（el-table / element-ui / a-table）与 engine: "vxe" 渲染表头漏斗并本地过滤；虚拟引擎无筛选 UI（DEV 告警并点名这些列） |
+| autoFilters | boolean | false | 由本列 dataOptions 自动派生 filters（label→text、value→value）。显式 filters 优先；dataOptions 为空或虚拟引擎时不合成 |
 | filterMultiple | boolean | true | 列筛选是否可多选 |
 | filterMode | 'equals' \| 'includes' | 'equals' | 本地比较语义：equals = 值相等（数字/字符串宽松比较，1 命中 "1"）；includes = 单元格文本包含选中值。三端同一实现（core 的 table-filter） |
 | filterMethod | Function \| undefined | - | (value, row, column?) => boolean，自定义筛选谓词（Tier C 扩展点，优先级高于 filterMode）；不进 AI 配置契约 |

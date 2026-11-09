@@ -2258,6 +2258,8 @@ export function pushSfcColumn(
   }
   bool('filterMultiple')
   str('filterMode')
+  // P2-3：autoFilters 是布尔开关（纯 JSON），与 filterMultiple 同路发射。
+  bool('autoFilters')
   // `x-*` 是有意的扩展元数据（`sanitizeExplicitColumns` 明确保留）。SFC/片段路径
   // 此前只发白名单键，于是同一份列在 schema 模式里保留、在 SFC 里静默消失 ——
   // 这里按 JSON 数据发射，三种模式回到同一口径。

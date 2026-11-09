@@ -232,6 +232,7 @@ import {
   resolveBuiltinText,
   warnVxeOnlyKeysOutsideVxe,
   BASE_TABLE_INTERNAL_KEYS,
+  withAutoFilters,
 } from '@es-plus/core'
 import { adaptColumn, createSnAdvColumn } from './column-adapter'
 import type { TableColumn, PaginationConfig } from '../../../types'
@@ -645,7 +646,7 @@ const filteredColumns = computed(() => {
   // 拷贝一层：`withDataOptions` 会写 render，绝不能落到父组件传入的列对象上。
   return columnRowList.value
     .filter((item) => !item.hidCol && checkPermission(item.permissionValue))
-    .map((item) => withDataOptions({ ...item } as TableColumn))
+    .map((item) => withDataOptions(withAutoFilters({ ...item } as TableColumn)))
 })
 
 // M-4: vxe 引擎专用列（注入 operate 列的 btns→render；普通列注入 emptyPlaceholder formatter，对齐 a-table 路径行为）

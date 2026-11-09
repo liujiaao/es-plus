@@ -122,3 +122,44 @@ describe('antdv vxe 适配器 — 列筛选', () => {
     expect(c.filterMethod).toBeUndefined()
   })
 })
+
+/**
+ * P2-3：`autoFilters` —— dataOptions 自动派生筛选面板（合成单源在 core，
+ * 组件在把列交给 column-adapter 之前完成合成）。
+ */
+describe('EsTable(antdv) — autoFilters 从 dataOptions 派生', () => {
+  const autoColumns: TableColumn[] = [
+    {
+      prop: 'status',
+      label: '状态',
+      autoFilters: true,
+      dataOptions: [
+        { label: '启用', value: 1 },
+        { label: '停用', value: 0 },
+      ],
+    },
+  ]
+
+  const mountAuto = (columns: TableColumn[] = autoColumns) =>
+    mount(EsTable, {
+      props: { dataSource: [{ status: 1 }], columns, options: {} as any, pagination: { total: 1 } },
+    })
+
+  it('a-table 列拿到 { text, value } + onFilter（宽松相等）', () => {
+    const wrapper = mountAuto()
+    const cols = wrapper.findComponent({ name: 'ATable' }).props('columns') as any[]
+    const status = cols.find((c) => c.dataIndex === 'status')!
+    expect(status.filters).toEqual([
+      { text: '启用', value: 1 },
+      { text: '停用', value: 0 },
+    ])
+    expect(status.onFilter(1, { status: '1' })).toBe(true)
+    expect(status.onFilter(0, { status: 1 })).toBe(false)
+  })
+
+  it('显式 filters 优先于 dataOptions', () => {
+    const wrapper = mountAuto([{ ...autoColumns[0], filters: [{ text: '手写', value: 9 }] }])
+    const cols = wrapper.findComponent({ name: 'ATable' }).props('columns') as any[]
+    expect(cols.find((c) => c.dataIndex === 'status')!.filters).toEqual([{ text: '手写', value: 9 }])
+  })
+})

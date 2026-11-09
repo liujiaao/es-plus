@@ -284,6 +284,28 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 
 **实施方案**：`TableColumn.autoFilters?: boolean`，列适配器自动合成 `filters`。
 
+**当前进度**：✅ 已实现（实施记录见下）。
+
+**实施记录（2026-11-09）**
+
+1. **合成单源**：core `table-filter.ts` 新增 `withAutoFilters(col)` —— 显式 `filters` 优先；
+   `autoFilters === true` 且 `dataOptions` 非空时把 `label/value` 映射成 `text/value`；
+   分组列递归；`type: index/selection/expand` 非数据列不合成。入参用结构最小面 +
+   泛型返回，三端列类型不必来回强转。
+2. **三端接线**：都在**列归一化的同一处**调用（先合成 filters，再由既有的
+   `withColumnFilters` 生成谓词）：
+   - vue3 `filteredColumns`（虚拟引擎跳过 —— 无筛选 UI，合成只会触发 DEV 告警）；
+   - vue2 `filteredColumns`（默认 + vxe 两条引擎路径共用）；
+   - antdv `filteredColumns`（a-table 列适配与 vxe 适配器共用）。
+3. **AI 契约同批**：`ColumnSchema.autoFilters`（shared Zod + mcp 内联副本）、
+   `table-column.schema.json` 单源（`schemas:sync` 分发三份）、生成器
+   `bool('autoFilters')`、文档站 `TableColumn` API 表。
+4. **守卫**：`check:contract` 把 `TableColumn.autoFilters` 登记进 ALLOWLIST
+   （消费点在 core，与 filterMode 同因）；`check:exports` 要求 vue3/antdv 的
+   `TableColumn` 副本同批补成员 —— 都已补齐。
+5. **测试**：core 纯函数 5 例（映射 / 优先级 / 非数据列 / 分组递归 / 谓词生效）；
+   vue3、vue2、antdv 各 2 例（默认引擎拿到 filters + `filterMethod`、显式 filters 优先）。
+
 ---
 
 ## P2-4：locale 运行期热切换

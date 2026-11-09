@@ -346,6 +346,12 @@ export const ColumnSchema: z.ZodType<any> = z.lazy(() =>
       .describe(
         "Local comparison for `filters` (default 'equals'): 'equals' = value equality (booleans/numbers compare loosely against strings), 'includes' = the cell text CONTAINS the selected option value (text search)."
       ),
+    autoFilters: z
+      .boolean()
+      .optional()
+      .describe(
+        "Derive `filters` from this column's `dataOptions` (P2-3). When true and `filters` is omitted, each `dataOptions` entry's label/value becomes a filter option ({text, value}). Explicit `filters` always wins; no-op when dataOptions is empty or the engine is vue3 virtual (no filter UI)."
+      ),
     permissionValue: z.string().optional().describe('Permission code; the column is not rendered without it'),
     groups: z
       .array(ColumnSchema)

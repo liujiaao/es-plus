@@ -5,7 +5,9 @@ import {
   columnFilterKey,
   hasColumnFilters,
   buildColumnFilterMethod,
+  withAutoFilters,
 } from '../src/table-filter'
+import type { TableColumn } from '../src/types'
 
 /**
  * 列筛选语义（W3-2）—— core 纯函数。
@@ -127,5 +129,58 @@ describe('buildColumnFilterMethod — 合成引擎谓词', () => {
   it('没声明 filters（或没有可绑定字段）→ undefined', () => {
     expect(buildColumnFilterMethod({ prop: 'status' })).toBeUndefined()
     expect(buildColumnFilterMethod({ filters: [{ text: 'x', value: 1 }] })).toBeUndefined()
+  })
+})
+
+/**
+ * P2-3：`autoFilters` → 从 dataOptions 派生 filters（三端唯一的合成点）。
+ */
+describe('withAutoFilters — dataOptions 自动派生 filters', () => {
+  const col: TableColumn = {
+    prop: 'status',
+    dataOptions: [
+      { label: '启用', value: 1 },
+      { label: '停用', value: 0 },
+    ],
+  }
+
+  it('autoFilters 开启时把 label/value 映射成 text/value', () => {
+    const out: TableColumn = withAutoFilters({ ...col, autoFilters: true })
+    expect(out.filters).toEqual([
+      { text: '启用', value: 1 },
+      { text: '停用', value: 0 },
+    ])
+  })
+
+  it('缺省 / false / 无 dataOptions / 显式 filters 都不合成', () => {
+    const omitted: TableColumn = withAutoFilters({ ...col })
+    const disabled: TableColumn = withAutoFilters({ ...col, autoFilters: false })
+    const noOptions: TableColumn = withAutoFilters({ prop: 'status', autoFilters: true })
+    expect(omitted.filters).toBeUndefined()
+    expect(disabled.filters).toBeUndefined()
+    expect(noOptions.filters).toBeUndefined()
+    const explicit = [{ text: '别人写的', value: 9 }]
+    const out: TableColumn = withAutoFilters({ ...col, autoFilters: true, filters: explicit })
+    expect(out.filters).toBe(explicit)
+  })
+
+  it('非数据列不合成；分组列递归到子列', () => {
+    const indexCol: TableColumn = withAutoFilters({ type: 'index', autoFilters: true, ...col })
+    expect(indexCol.filters).toBeUndefined()
+    const grouped = withAutoFilters({
+      label: '分组',
+      groups: [{ ...col, autoFilters: true }],
+    } as TableColumn)
+    expect((grouped.groups as TableColumn[])[0].filters).toEqual([
+      { text: '启用', value: 1 },
+      { text: '停用', value: 0 },
+    ])
+  })
+
+  it('合成后 hasColumnFilters / buildColumnFilterMethod 立即生效', () => {
+    const out: TableColumn = withAutoFilters({ ...col, autoFilters: true })
+    expect(hasColumnFilters(out)).toBe(true)
+    expect(buildColumnFilterMethod(out)!('1', { status: 1 })).toBe(true)
+    expect(buildColumnFilterMethod(out)!('0', { status: 1 })).toBe(false)
   })
 })

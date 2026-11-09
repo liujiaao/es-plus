@@ -296,6 +296,8 @@ export interface TableColumn {
   dataOptions?: TableColumnDataOption[]
   /** 列筛选（W3-2）：纯 JSON 选项，`value` 为行数据存储值 */
   filters?: TableColumnFilterOption[]
+  /** P2-3：由同列 dataOptions 自动派生 filters（显式 filters 优先；虚拟引擎不合成） */
+  autoFilters?: boolean
   /** 筛选是否多选（缺省 true，三端显式对齐） */
   filterMultiple?: boolean
   /** 本地匹配模式，缺省 `'equals'` */

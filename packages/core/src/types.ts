@@ -587,6 +587,16 @@ export interface TableColumn {
    * - 本地匹配语义见 core `table-filter.ts`（默认 `equals`，number ↔ string 宽松相等）。
    */
   filters?: TableColumnFilterOption[]
+  /**
+   * 从同列的 `dataOptions` 自动派生 `filters`（P2-3）。
+   *
+   * 缺省 `false`。开启且本列未声明 `filters` 时，列适配器把 `dataOptions` 的
+   * `label/value` 映射成筛选面板的 `text/value` —— 「表单用下拉、筛选面板却要手写一份
+   * 同样的选项」这种重复配置消失。显式 `filters` 永远优先；`dataOptions` 为空则不合成。
+   * 已开启时 `filterMode` / `filterMultiple` / `filterMethod` 照常生效。
+   * 虚拟引擎（vue3 `engine:'virtual'`）无筛选 UI，不会合成。
+   */
+  autoFilters?: boolean
   /** 是否多选（缺省 true，三端显式对齐，不依赖各引擎默认值） */
   filterMultiple?: boolean
   /** 本地匹配模式，缺省 `'equals'`；`'includes'` 为字符串包含 */

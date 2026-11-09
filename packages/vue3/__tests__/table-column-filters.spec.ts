@@ -184,3 +184,47 @@ describe('vxe 适配器 — 列筛选（W3-2）', () => {
     expect(col.filterMethod).toBeUndefined()
   })
 })
+
+/**
+ * P2-3：`autoFilters` —— dataOptions 自动派生筛选面板。
+ *
+ * 合成点只有一处（core `withAutoFilters`），本端只验证「默认引擎的列真的拿到了
+ * filters + filterMethod」，以及「显式 filters 不被覆盖」。
+ */
+describe('EsTable 默认引擎 — autoFilters 从 dataOptions 派生', () => {
+  const autoColumns: TableColumn[] = [
+    {
+      prop: 'status',
+      label: '状态',
+      autoFilters: true,
+      dataOptions: [
+        { label: '启用', value: 1 },
+        { label: '停用', value: 0 },
+      ],
+    },
+  ]
+
+  const mountAuto = (columns: TableColumn[] = autoColumns) =>
+    mount(EsTable, {
+      props: { dataSource: [{ status: 1 }, { status: 0 }], columns },
+      global: { components: globalComponents },
+    })
+
+  it('labels → text，values 原样；filterMethod 一并合成', () => {
+    const wrapper = mountAuto()
+    const col = wrapper.findAllComponents(ElTableColumn).find((c) => c.props('prop') === 'status')
+    expect(col!.props('filters')).toEqual([
+      { text: '启用', value: 1 },
+      { text: '停用', value: 0 },
+    ])
+    expect(typeof col!.props('filterMethod')).toBe('function')
+  })
+
+  it('显式 filters 优先于 dataOptions', () => {
+    const wrapper = mountAuto([
+      { ...autoColumns[0], filters: [{ text: '手写', value: 9 }] },
+    ])
+    const col = wrapper.findAllComponents(ElTableColumn).find((c) => c.props('prop') === 'status')
+    expect(col!.props('filters')).toEqual([{ text: '手写', value: 9 }])
+  })
+})

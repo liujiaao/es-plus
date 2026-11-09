@@ -212,6 +212,11 @@
       "default": "equals",
       "description": "Local comparison for `filters`: 'equals' = value equality (booleans/numbers compare loosely against strings), 'includes' = the cell text CONTAINS the selected option value (text search)"
     },
+    "autoFilters": {
+      "type": "boolean",
+      "default": false,
+      "description": "Derive `filters` from this column's `dataOptions`: each entry's label/value becomes a filter option ({text, value}). Explicit `filters` always wins; no-op when dataOptions is empty or the engine is vue3 virtual (no filter UI)"
+    },
     "editRender": {
       "type": "object",
       "description": "Column-level inline editor (AI-09 子项④). vxe engine only — requires tableOptions.editConfig AND tableOptions.engine: 'vxe'. Marks THIS column editable and picks its editor; a column without `editRender` is not editable. Function-valued fields (events) and custom-registered renderers are out of scope.",

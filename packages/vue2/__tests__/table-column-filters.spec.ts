@@ -153,3 +153,41 @@ describe('vue2 vxe 适配器 — 列筛选', () => {
     expect(c.filterMethod).toBeUndefined()
   })
 })
+
+/**
+ * P2-3：`autoFilters` —— dataOptions 自动派生筛选面板（合成单源在 core）。
+ */
+describe('EsTable(vue2) — autoFilters 从 dataOptions 派生', () => {
+  const autoColumns: TableColumn[] = [
+    {
+      prop: 'status',
+      label: '状态',
+      autoFilters: true,
+      dataOptions: [
+        { label: '启用', value: 1 },
+        { label: '停用', value: 0 },
+      ],
+    },
+  ]
+
+  it('filteredColumns 拿到派生 filters，并合成 filterMethod（宽松相等）', async () => {
+    const vm = mountTable(autoColumns)
+    await vm.$nextTick()
+    const cols = valueOf(tableOf(vm).filteredColumns) as TableColumn[]
+    const col = cols.find((c) => c.prop === 'status')!
+    expect(col.filters).toEqual([
+      { text: '启用', value: 1 },
+      { text: '停用', value: 0 },
+    ])
+    const fn = col.filterMethod as (v: unknown, row: Record<string, unknown>) => boolean
+    expect(fn(1, { status: '1' })).toBe(true)
+    expect(fn(0, { status: 1 })).toBe(false)
+  })
+
+  it('显式 filters 优先于 dataOptions', async () => {
+    const vm = mountTable([{ ...autoColumns[0], filters: [{ text: '手写', value: 9 }] }])
+    await vm.$nextTick()
+    const cols = valueOf(tableOf(vm).filteredColumns) as TableColumn[]
+    expect(cols.find((c) => c.prop === 'status')!.filters).toEqual([{ text: '手写', value: 9 }])
+  })
+})

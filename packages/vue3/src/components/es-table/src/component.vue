@@ -183,6 +183,7 @@ import {
   exportTableCsv,
   resolveBuiltinText,
   buildColumnFilterMethod,
+  withAutoFilters,
   columnFilterKey,
   hasColumnFilters,
   warnVxeOnlyKeysOutsideVxe,
@@ -569,7 +570,11 @@ const filteredColumns = computed(() => {
   // 列级 permissionValue 与 hidCol 同层过滤：无权限的列直接不渲染（声明了门但宿主没配 permission() 时按 fail-closed 拒绝）。
   const list = columnRowList.value
     .filter((item) => !item.hidCol && checkPermission(item.permissionValue))
-    .map((item) => withColumnFilters(withDataOptions({ ...item })))
+    // P2-3：autoFilters 从 dataOptions 派生 filters。虚拟引擎没有筛选 UI，
+    // 合成只会触发「filters 不会渲染」的 DEV 告警 —— 这里按引擎跳过。
+    .map((item) =>
+      withColumnFilters(withDataOptions(isVirtual.value ? { ...item } : withAutoFilters({ ...item })))
+    )
   list.forEach((el) => {
     // 已有自定义单元格（dataOptions 注入的 render / 用户 render / 插槽）时不注入 formatter：
     // 三端引擎都按 render > slot > formatter 取用，注入的 formatter 永远轮不到，只会误导排错。

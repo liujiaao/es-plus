@@ -223,6 +223,7 @@ export {
   matchesColumnFilter,
   columnFilterKey,
   hasColumnFilters,
+  withAutoFilters,
   buildColumnFilterMethod,
 } from './table-filter.js'
 

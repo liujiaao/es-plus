@@ -276,6 +276,7 @@ export const docsData: Record<string, any> = {
         { name: 'emptyPlaceholder', type: 'string', default: '-', desc: '空值占位文本，默认 "-"' },
         { name: 'dataOptions', type: 'TableColumnDataOption[]', default: '-', desc: '码值映射 [{ label, value, tagType? }]：命中显示 label，tagType 渲染 ElTag；未命中原值。render / formatter 优先' },
         { name: 'filters', type: 'Array<{ text, value }>', default: '-', desc: '列筛选选项（纯 JSON）。默认引擎（el-table / element-ui / a-table）与 engine: "vxe" 渲染表头漏斗并本地过滤；虚拟引擎无筛选 UI（DEV 告警并点名这些列）' },
+        { name: 'autoFilters', type: 'boolean', default: 'false', desc: '由本列 dataOptions 自动派生 filters（label→text、value→value）。显式 filters 优先；dataOptions 为空或虚拟引擎时不合成' },
         { name: 'filterMultiple', type: 'boolean', default: 'true', desc: '列筛选是否可多选' },
         { name: 'filterMode', type: "'equals' | 'includes'", default: "'equals'", desc: "本地比较语义：equals = 值相等（数字/字符串宽松比较，1 命中 \"1\"）；includes = 单元格文本包含选中值。三端同一实现（core 的 table-filter）" },
         { name: 'filterMethod', type: 'Function | undefined', default: '-', desc: '(value, row, column?) => boolean，自定义筛选谓词（Tier C 扩展点，优先级高于 filterMode）；不进 AI 配置契约' },
