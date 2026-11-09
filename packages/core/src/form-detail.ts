@@ -10,8 +10,10 @@
  *   1. 取 `model[prop]`（支持 `a.b` / `list[0].name` 嵌套路径）；
  *   2. 空值（`null` / `undefined` / `''` / 空数组）→ `item.emptyPlaceholder`，缺省 `'-'`；
  *   3. 数组值：Cascader 的层级路径（options 带 `children`）逐层取标签后用 ` / ` 连接；
- *      其余（多选 / Checkbox 组 / Transfer）逐项映射标签后用 `、` 连接；
+ *      TreeSelect 多选时逐项在**整棵树**里找节点、取标签后用 `、` 连接；
+ *      其余（多选 / Checkbox 组 / Transfer / Autocomplete）逐项映射标签后用 `、` 连接；
  *   4. 标量值命中 `dataOptions` → 选项 `label`（`looseEqual` 宽松比较，1 命中 "1"）；
+ *      TreeSelect 的标量值在整棵树里递归查找（节点不在第一层）；
  *   5. 未命中 → 标量字符串化（`Date` 格式化为 `YYYY-MM-DD[ HH:mm:ss]`）。
  *
  * 未命中**不回退成占位符**：没登记的新码值仍要能看见，与表格单元格同规。
@@ -53,6 +55,28 @@ function findOption(options: readonly FormDataOption[] | undefined, value: unkno
 const hasChildren = (options: readonly FormDataOption[] | undefined): boolean =>
   Array.isArray(options) && options.some((o) => !!o && Array.isArray(o.children) && o.children.length > 0)
 
+/**
+ * 在整棵树里找命中值的节点。
+ *
+ * TreeSelect 的值是**节点值**，节点可能在任何一层（不像 Cascader 那样值是「根→叶」的路径数组），
+ * 故不能只用 `findOption` 查第一层。先查本层再递归子层，命中即返回（同值多处出现时取先序第一个，
+ * 与 `Array.prototype.find` 的语义一致）。
+ */
+function findOptionDeep(
+  options: readonly FormDataOption[] | undefined,
+  value: unknown
+): FormDataOption | undefined {
+  if (!Array.isArray(options) || options.length === 0) return undefined
+  const hit = findOption(options, value)
+  if (hit) return hit
+  for (const option of options) {
+    if (!option) continue
+    const deep = findOptionDeep(option.children, value)
+    if (deep) return deep
+  }
+  return undefined
+}
+
 /** Cascader 值路径 → 各层标签（` / ` 连接）。任一层未命中则返回 undefined。 */
 function resolveTreePath(options: readonly FormDataOption[], path: readonly unknown[]): string | undefined {
   let level: readonly FormDataOption[] | undefined = options
@@ -67,10 +91,13 @@ function resolveTreePath(options: readonly FormDataOption[], path: readonly unkn
 }
 
 /**
- * 详情解析只依赖这三个键 —— 三个渲染端的 `FormItemOption` 是 shape-compatible 的副本，
+ * 详情解析只依赖这四个键 —— 三个渲染端的 `FormItemOption` 是 shape-compatible 的副本，
  * 用 `Pick` 收窄入参，避免调用方为了满足整份接口做转型。
+ *
+ * `formtype` 只在「值怎么映射成标签」上被读（Cascader 走路径、TreeSelect 走全树递归）；
+ * 缺省时退回历史行为（有 children 的数组值按路径解析），存量调用点不必补这个键。
  */
-export type FormDetailItem = Pick<FormItemOption, 'prop' | 'dataOptions' | 'emptyPlaceholder'>
+export type FormDetailItem = Pick<FormItemOption, 'prop' | 'formtype' | 'dataOptions' | 'emptyPlaceholder'>
 
 /**
  * 把表单项的 model 值解析成详情态展示文本。
@@ -84,8 +111,12 @@ export function resolveFormDetailText(item: FormDetailItem, model: ModelData | u
   if (value === null || value === undefined || value === '') return empty
 
   const options = item.dataOptions
+  const isTreeSelect = item?.formtype === 'TreeSelect'
   if (Array.isArray(value)) {
     if (value.length === 0) return empty
+    if (isTreeSelect) {
+      return value.map((v) => findOptionDeep(options, v)?.label ?? formatScalar(v)).join('、')
+    }
     if (hasChildren(options)) {
       const tree = resolveTreePath(options as FormDataOption[], value)
       if (tree !== undefined) return tree
@@ -93,5 +124,6 @@ export function resolveFormDetailText(item: FormDetailItem, model: ModelData | u
     return value.map((v) => findOption(options, v)?.label ?? formatScalar(v)).join('、')
   }
 
+  if (isTreeSelect) return findOptionDeep(options, value)?.label ?? formatScalar(value)
   return findOption(options, value)?.label ?? formatScalar(value)
 }

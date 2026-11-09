@@ -638,7 +638,7 @@ See [packages/mcp-server/src/tools/index.ts](../packages/mcp-server/src/tools/in
 | `generate_crud_page` / `generate_crud_schema` | **LEGACY FALLBACK**: natural language → full .vue / CrudPageSchema | ⚠️ **No-LLM fallback**: local regex / keyword parsing (`crud-engine.ts`), limited coverage — only for hosts that can't reason |
 | `validate_config` | zod-validates a config | Bad AI output is caught and retried instantly |
 | `refine_config` | One corrective pass over a pinned config, echoing the diff | Convergence loop: deterministic validate + diff, no model round-trip |
-| `list_form_types` | Returns the 14 formtypes + descriptions | AI no longer guesses which control names are valid |
+| `list_form_types` | Returns the 16 formtypes + descriptions | AI no longer guesses which control names are valid |
 | `get_component_api` | Returns a component's props / events / slots | What the AI sees is protocol-level API docs |
 | `scaffold_page` | Multi-page scaffold | Creates a related group of pages at once |
 | `ingest_schema` | Existing schema → drafted config (needs human review) | Starting point for legacy projects |

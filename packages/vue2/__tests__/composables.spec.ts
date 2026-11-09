@@ -487,6 +487,34 @@ describe('useFormInputs — formInputComponents 分支', () => {
     expect((vnode as any).tag).toBe('el-cascader')
   })
 
+  it('TreeSelect → el-cascader（checkStrictly + emitPath:false）', () => {
+    const item = {
+      formtype: 'TreeSelect',
+      prop: 'dept',
+      dataOptions: [{ label: '技术中心', value: 'tech', children: [{ label: '前端组', value: 'fe' }] }],
+    }
+    const renderer = formInputComponents(item as any)
+    const vnode = renderer(mockH as any, { dept: 'fe' } as any, { row: item as any }) as any
+    expect(vnode.tag).toBe('el-cascader')
+    // 值语义 = 节点 value（不是路径数组）——由这两个 props 决定
+    expect(vnode.data.props.props).toMatchObject({ checkStrictly: true, emitPath: false })
+    expect(vnode.data.props.options).toEqual(item.dataOptions)
+  })
+
+  it('Autocomplete → el-select（filterable）+ el-option 子节点', () => {
+    const item = {
+      formtype: 'Autocomplete',
+      prop: 'city',
+      dataOptions: [{ label: '杭州', value: 'hz' }, { label: '上海', value: 'sh' }],
+    }
+    const renderer = formInputComponents(item as any)
+    const vnode = renderer(mockH as any, { city: 'sh' } as any, { row: item as any }) as any
+    expect(vnode.tag).toBe('el-select')
+    expect(vnode.data.props.filterable).toBe(true)
+    expect(vnode.children).toHaveLength(2)
+    expect(vnode.children[0].data.props).toMatchObject({ value: 'hz', label: '杭州' })
+  })
+
   it('Radio → el-radio-group + el-radio 子节点', () => {
     const item = {
       formtype: 'Radio',

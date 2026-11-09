@@ -332,9 +332,12 @@ function main() {
       // 该端若对该 formtype 已登记 deviation（有意的差异/降级实现），豁免此项 ——
       // 差异实现天然可能引用别的控件，这是既有且已文档化的机制，不再另立登记表。
       if (entry.deviation && entry.deviation[name]) continue
+      // overlaps：两个 formtype 有意共用同一底座组件（Autocomplete→Select、vue2 TreeSelect→el-cascader）。
+      // 只豁免登记过的那一对，其余交叉引用仍按「控件被换掉」报错。
+      const overlapped = new Set((entry.overlaps && entry.overlaps[name]) || [])
       const foreign = []
       for (const other of contractKeys) {
-        if (other === key) continue
+        if (other === key || overlapped.has(other)) continue
         for (const t of FORM_RENDER_CONTRACT[other][name] || []) {
           if (tokenRe(t).test(win)) foreign.push(`${other}(${t})`)
         }

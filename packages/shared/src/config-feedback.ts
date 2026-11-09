@@ -56,9 +56,13 @@ export function buildSemanticWarnings(config: any): string[] {
     }
   }
 
-  // Select/Cascader with neither static nor remote options.
+  // Option-backed controls with neither static nor remote options.
   for (const f of fields) {
-    const needsOptions = f.formtype === 'Select' || f.formtype === 'Cascader'
+    const needsOptions =
+      f.formtype === 'Select' ||
+      f.formtype === 'Autocomplete' ||
+      f.formtype === 'Cascader' ||
+      f.formtype === 'TreeSelect'
     const hasOptions =
       (Array.isArray(f.dataOptions) && f.dataOptions.length > 0) || !!f.apiParams
     if (needsOptions && !hasOptions) {

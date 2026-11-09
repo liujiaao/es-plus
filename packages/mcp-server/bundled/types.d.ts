@@ -118,7 +118,7 @@ export interface FormItemOption {
   prop: string
   label: string
   labelKey?: string
-  formtype?: 'Input' | 'InputNumber' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
+  formtype?: 'Input' | 'InputNumber' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'TreeSelect' | 'Autocomplete' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
   span?: number
   /** Shortcut: auto-injected into attrs.placeholder */
   placeholder?: string

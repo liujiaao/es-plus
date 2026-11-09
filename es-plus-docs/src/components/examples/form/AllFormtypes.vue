@@ -12,7 +12,7 @@
 import { ref } from 'vue'
 import { EsForm } from '@es-plus/vue3'
 
-// 一次覆盖 formtype 的全部 14 种取值：每个控件都是一行配置，没有手写 <el-xxx> 模板。
+// 一次覆盖 formtype 的全部 16 种取值：每个控件都是一行配置，没有手写 <el-xxx> 模板。
 const formModel = ref({
   name: '',
   age: 18,
@@ -23,6 +23,8 @@ const formModel = ref({
   themeColor: '#409eff',
   members: [],
   region: [],
+  dept: '',
+  cityKeyword: '',
   gender: '',
   hobbies: [],
   enabled: true,
@@ -79,15 +81,19 @@ const formItems = [
   { prop: 'members', label: '成员', formtype: 'Transfer', span: 12, dataOptions: memberOptions, attrs: { titles: ['待选', '已选'] } },
   // ⑨ Cascader
   { prop: 'region', label: '区域', formtype: 'Cascader', span: 12, attrs: { options: regionOptions, placeholder: '请选择区域', props: { emitPath: false } } },
-  // ⑩ Radio
+  // ⑩ TreeSelect（树形数据、可选任意层级；值 = 节点 value）
+  { prop: 'dept', label: '所属部门', formtype: 'TreeSelect', span: 12, dataOptions: regionOptions, attrs: { placeholder: '请选择部门', clearable: true } },
+  // ⑪ Autocomplete（在选项集上边输边筛；存 option.value）
+  { prop: 'cityKeyword', label: '城市检索', formtype: 'Autocomplete', span: 12, dataOptions: cityOptions, attrs: { placeholder: '输入关键字筛选城市', clearable: true } },
+  // ⑫ Radio
   { prop: 'gender', label: '性别', formtype: 'Radio', span: 12, dataOptions: [{ label: '男', value: 'male' }, { label: '女', value: 'female' }] },
-  // ⑪ Checkbox
+  // ⑬ Checkbox
   { prop: 'hobbies', label: '爱好', formtype: 'Checkbox', span: 12, dataOptions: [{ label: '阅读', value: 'read' }, { label: '运动', value: 'sport' }, { label: '音乐', value: 'music' }] },
-  // ⑫ Switch
+  // ⑭ Switch
   { prop: 'enabled', label: '启用', formtype: 'Switch', span: 12, attrs: { activeText: '开', inactiveText: '关' } },
-  // ⑬ Rate
+  // ⑮ Rate
   { prop: 'score', label: '评分', formtype: 'Rate', span: 12, attrs: { showScore: true } },
-  // ⑭ Upload（演示用：不真实上传）
+  // ⑯ Upload（演示用：不真实上传）
   { prop: 'attachments', label: '附件', formtype: 'Upload', span: 24, props: { autoUpload: false, limit: 3, listType: 'text' } }
 ]
 </script>

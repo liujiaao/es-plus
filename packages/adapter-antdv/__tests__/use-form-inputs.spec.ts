@@ -4,7 +4,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { h } from 'vue'
 import dayjs from 'dayjs'
-import { Input, RangePicker, TimeRangePicker } from 'ant-design-vue'
+import { Input, RangePicker, TimeRangePicker, Select, TreeSelect } from 'ant-design-vue'
 import { useFormInputs } from '../src/composables/use-form-inputs'
 import type { FormItemOption } from '../src/types'
 
@@ -27,7 +27,7 @@ describe('useFormInputs — 控件类型存在性', () => {
   const validTypes = [
     'Input', 'Select', 'datePicker', 'DatePicker',
     'timePicker', 'TimePicker', 'Slider', 'ColorPicker',
-    'Transfer', 'Cascader', 'Radio', 'Checkbox', 'Switch', 'Rate', 'Upload',
+    'Transfer', 'Cascader', 'TreeSelect', 'Autocomplete', 'Radio', 'Checkbox', 'Switch', 'Rate', 'Upload',
   ]
 
   validTypes.forEach((t) => {
@@ -223,6 +223,36 @@ describe('useFormInputs — 各控件渲染 VNode', () => {
       index: 0,
     })
     expect(vnode).toBeTruthy()
+  })
+
+  it('TreeSelect — a-tree-select + fieldNames 映射到 label/value/children', () => {
+    const dataOptions = [
+      { label: '技术中心', value: 'tech', children: [{ label: '前端组', value: 'fe' }] },
+    ]
+    const item = makeItem('TreeSelect', { dataOptions: dataOptions as any })
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel('fe'), { row: item, index: 0 })
+    expect(vnode.type).toBe(TreeSelect)
+    expect(vnode.props?.treeData).toBe(dataOptions)
+    expect(vnode.props?.fieldNames).toEqual({ label: 'label', value: 'value', children: 'children' })
+    expect(vnode.props?.value).toBe('fe')
+  })
+
+  it('Autocomplete — a-select + showSearch，按 label 过滤', () => {
+    const dataOptions = [
+      { label: '杭州', value: 'hz' },
+      { label: '上海', value: 'sh' },
+    ]
+    const item = makeItem('Autocomplete', { dataOptions: dataOptions as any })
+    const renderFn = formInputComponents(item)!
+    const vnode = renderFn(h, makeModel('sh'), { row: item, index: 0 })
+    expect(vnode.type).toBe(Select)
+    expect(vnode.props?.showSearch).toBe(true)
+    expect(vnode.props?.value).toBe('sh')
+    // ADV 默认按 value 过滤；这里必须按 label 过滤，否则中文输入筛不出选项
+    const filterOption = vnode.props?.filterOption as (input: string, option?: Record<string, unknown>) => boolean
+    expect(filterOption('杭', { label: '杭州' })).toBe(true)
+    expect(filterOption('沪', { label: '杭州' })).toBe(false)
   })
 
   it('Upload — 正确渲染', () => {

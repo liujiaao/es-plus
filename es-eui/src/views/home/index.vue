@@ -51,7 +51,7 @@
                  渲染端数取自三站切换器的 SITES 数组；表单控件数取自 core 的 VALID_FORM_TYPES；
                  代码降幅取自品牌单源 docs/brand/one-config-diff.json 的实测值。
                  由 scripts/check-site-claims.mjs 守住（此前这里写的是 5 / 20 / 80%，
-                 其中控件数与降幅都与源码不符，且本站介绍页自己写的是 14）。 -->
+                 其中控件数与降幅都与源码不符，且本站介绍页自己写的是 16 种）。 -->
             <div class="hero-stats">
               <div class="stat-item">
                 <span
@@ -63,7 +63,7 @@
               <div class="stat-item">
                 <span
                   class="stat-number"
-                  data-count="14"
+                  data-count="16"
                 >0</span> 种
                 <span class="stat-label">表单控件</span>
               </div>
@@ -425,7 +425,7 @@ export default {
       // 降幅写 76.5% 而不是取整的 77%：三站必须显示同一组数字（审计 P0-3）。
       advantages: [
         { number: '76.5%', label: '模板与事件胶水代码减少', desc: '查询 / 重置 / 翻页 / 取数全部由配置接管' },
-        { number: '14', label: '表单控件', desc: '与 Vue 3 / Ant Design Vue 端共用同一份配置与同一套字段' },
+        { number: '16', label: '表单控件', desc: '与 Vue 3 / Ant Design Vue 端共用同一份配置与同一套字段' },
         { number: '3', label: '渲染端共用一份配置', desc: 'Vue 2 + Element UI、Vue 3 + Element Plus、Vue 3 + Ant Design Vue' },
         { number: '0', label: '联动链路事件代码', desc: 'triggerEvent 自动接管，只剩编辑 / 删除两个业务动作需要手写' }
       ],
@@ -439,7 +439,7 @@ export default {
         {
           icon: 'el-icon-s-order',
           title: 'EsForm 表单',
-          desc: '配置化表单生成，支持14种控件类型，自动验证，大幅提升表单开发效率',
+          desc: '配置化表单生成，支持16种控件类型，自动验证，大幅提升表单开发效率',
           color: 'purple'
         },
         {

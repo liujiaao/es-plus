@@ -142,6 +142,43 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 3. `form-detail.ts` 展示规则（TreeSelect 复用 Cascader 路径，Autocomplete 走标量）
 4. 四份契约同批 + golden 各 2 例
 
+**当前进度**：✅ 已全部实现（实施记录见下）。
+
+**实施记录（2026-11-09）**
+
+1. **契约与类型**：`VALID_FORM_TYPES` 14→16（`TreeSelect` / `Autocomplete`，顺序与
+   `shared/src/contract.ts` 逐字一致，`check:schema` 深比对）；`core/src/types.ts` 的
+   `FormType` 联合 + 三处内联联合（vue3 / antdv 的 `types/index.ts`、mcp-server
+   `resources/types.ts`）同批补齐；`form-item.schema.json` 枚举 + `schemas:sync` 三份副本。
+2. **四份契约同批**：Zod（`structured-config.schema.ts` 的 describe 指明
+   「任意层级可选 → TreeSelect / 边输边筛 → Autocomplete」）、MCP 前门 knobs、
+   生成器 `configShape`、片段 shape 均同批更新；`FORM_TYPES` 补说明与示例。
+3. **三端渲染**：
+   - vue3 `ElTreeSelect`；`Autocomplete` = `ElSelect` + `filterable` + `ElOption` 子节点。
+   - vue2 `TreeSelect` **降级为 `el-cascader` + `props.props:{checkStrictly:true, emitPath:false}`**
+     （Element UI 无树选择器；值语义 = 节点 value，而非路径）。
+   - antdv `TreeSelect`（`treeData` + `fieldNames`）；`Autocomplete` = `Select` + `showSearch`
+     + 按 label 的 `filterOption`。
+   - **偏离说明**：`Autocomplete` 刻意不用三库各自的 `AutoComplete` 组件 —— 它们的 model
+     是「输入文本」，与 `dataOptions` 的 value 契约冲突；统一为「选项集上的可搜索选择」。
+4. **守卫**：`FORM_RENDER_CONTRACT` 新增两项；`check-renderer-parity` 的反向断言会把
+   `Autocomplete` 的 `ElSelect`/`el-select`/`Select` 误判为 `Select` 分支串味，故引入
+   `overlaps` 白名单（只豁免已登记的两两配对，不关闭整条反向检查）；vue2 的
+   `Cascader ↔ TreeSelect`（同为 `el-cascader`）同样登记。
+5. **展示与生成**：`form-detail.ts` 的 `TreeSelect` 走**递归** `findOptionDeep`（任意层级
+   label 可解析，多选逐项映射）；`Autocomplete` 走标量。`inferTsType` / 必填消息 /
+   `config-feedback` 的 needsOptions、`crud-engine` 关键词与 `nl-evidence` 词表同步。
+6. **语料**：`199-org-tree-select.json`（部门树 + 任意层级 + apiParams）、
+   `200-customer-autocomplete.json`（联想输入 + dataOptions）；语料 223→225 crud /
+   199→201 heldout，`accuracy-baseline.json` 的 `applicableCounts`（apiParams 9→10、
+   dataOptions 121→122）与 `minApplicable` 同批重算。
+7. **站点案例**：es-plus-docs `AllFormtypes.vue`（⑩ TreeSelect / ⑪ Autocomplete，其余顺延至 ⑯）、
+   es-pc 新增 `views/es-form/TreeSelectAutocomplete.vue` 并注册进 `EsForm.vue` 的 `tools` 分组、
+   es-eui `examples/form/Controls.vue` 增两例；三站文档的「16 种」口径与 README 计数同步。
+8. **验证**：`check:consistency` 140/141（唯一红 = `check:eval-freshness`：formtype 枚举属系统
+   prompt 指纹，新增类型必然使既有准确率产物失效，需一次新的全量付费测量才能回绿，不在本地伪造）；
+   四包单测全绿（core 512 / vue2 438 / vue3 711 / antdv 764）；三站构建均成功。
+
 ---
 
 ## P1-5：fold/unfold 未接 locale

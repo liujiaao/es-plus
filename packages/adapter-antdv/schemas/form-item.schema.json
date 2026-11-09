@@ -30,6 +30,8 @@
         "ColorPicker",
         "Transfer",
         "Cascader",
+        "TreeSelect",
+        "Autocomplete",
         "Radio",
         "Checkbox",
         "Switch",

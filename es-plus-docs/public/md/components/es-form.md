@@ -20,7 +20,7 @@ type: 'component'
 ## 示例
 
 - 最简表单 —— 三个字段、零事件代码：formItemList 声明字段即得完整表单。
-- 14 种表单控件一览 —— Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / Radio / Checkbox / Switch / Rate / Upload —— 全部来自 formItemList，没有一行手写控件。
+- 16 种表单控件一览 —— Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / TreeSelect / Autocomplete / Radio / Checkbox / Switch / Rate / Upload —— 全部来自 formItemList，没有一行手写控件。
 - 布局与折叠 —— 24 栅格布局 + 自动折叠展开，支持响应式自适应。
 - 条件联动表单 —— 模型驱动字段显隐。这里是「回调」对照写法：声明式解法（reactions + JSON 表达式，0 个函数）见下方『报销单：零回调联动』。
 - 报销单：零回调联动 —— 省 → 市 → 门店三级下拉；选了城市才要求发票号；大区自动等于省份且锁定；金额 > 5000 才要求说明；非部分退款时隐藏退款原因 —— 全部来自一份纯 JSON（reactions + JSON 表达式），示例里 0 个函数。

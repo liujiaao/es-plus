@@ -8,6 +8,8 @@ export const FORM_TYPES = [
   { type: 'ColorPicker', description: '颜色选择器', example: '主题色、标签颜色' },
   { type: 'Transfer', description: '穿梭框 — 左右列表选择', example: '权限分配、人员分配' },
   { type: 'Cascader', description: '级联选择器 — 多级联动', example: '省市区、部门层级' },
+  { type: 'TreeSelect', description: '树选择器 — 树形数据中选值（可选任意层级）', example: '部门/组织、分类树、权限树' },
+  { type: 'Autocomplete', description: '联想输入 — 在选项集里边输边筛（存选项 value）', example: '客户名称、城市、商品' },
   { type: 'Radio', description: '单选框组', example: '性别、是否启用' },
   { type: 'Checkbox', description: '多选框组', example: '兴趣爱好、功能模块' },
   { type: 'Switch', description: '开关 — 布尔切换', example: '启用/禁用、显示/隐藏' },

@@ -146,6 +146,16 @@
 
     <a-divider v-if="isActive('tools')" />
 
+    <section v-if="isActive('tools')" id="tree-select-autocomplete">
+      <h2>树选择与联想输入</h2>
+      <p>TreeSelect 在树形数据里选任意层级（值为节点 value）；Autocomplete 在选项集上边输边筛（同样是 value 语义）。</p>
+            <CodeDemo :source="rawSFCs['./es-form/TreeSelectAutocomplete.vue']">
+        <EsFormTreeSelectAutocomplete />
+      </CodeDemo>
+    </section>
+
+    <a-divider v-if="isActive('tools')" />
+
     <section v-if="isActive('tools')" id="datetime-range">
       <h2>日期时间范围</h2>
       <p>完整覆盖日期、时间、日期时间范围选择场景。</p>
@@ -298,6 +308,7 @@ import EsFormPreferences from './es-form/Preferences.vue'
 import EsFormSearchForm from './es-form/SearchForm.vue'
 import EsFormAdvancedButtons from './es-form/AdvancedButtons.vue'
 import EsFormCascader from './es-form/Cascader.vue'
+import EsFormTreeSelectAutocomplete from './es-form/TreeSelectAutocomplete.vue'
 import EsFormDateTimeRange from './es-form/DateTimeRange.vue'
 import EsFormDynamic from './es-form/Dynamic.vue'
 import EsFormComputedFields from './es-form/ComputedFields.vue'
@@ -309,7 +320,7 @@ import EsFormGroupLayout from './es-form/GroupLayout.vue'
 const rawSFCs = import.meta.glob('./es-form/*.vue', { query: '?raw', import: 'default', eager: true })
 
 /**
- * 分组声明：19 个 section 原本一条长列表（12,961px），按主题切成 5 组，
+ * 分组声明：20 个 section 原本一条长列表（12,961px），按主题切成 5 组，
  * 同一时刻只挂当前组。`ids` 必须与模板 `<section id>` 一一对应 ——
  * 漏写、写错 key、id 撞车由 `scripts/check-section-groups.mjs` 静态拦下
  * （模板里每个 section 的 `v-if="isActive('<key>')"` 也要同 key）。
@@ -321,7 +332,7 @@ const SECTION_GROUPS = [
   {
     key: 'tools',
     name: '选择、运行期与按钮',
-    ids: ['advanced-buttons', 'cascader', 'datetime-range', 'dynamic', 'custom-button'],
+    ids: ['advanced-buttons', 'cascader', 'tree-select-autocomplete', 'datetime-range', 'dynamic', 'custom-button'],
   },
   { key: 'scenes', name: '业务场景', ids: ['detail', 'upload', 'search', 'dialog', 'file-upload', 'form-group'] },
 ]
@@ -408,7 +419,7 @@ const formItemOptions = [
   { key: '1', prop: 'prop', type: 'string', default: '-', desc: '字段名（必填，支持 user.name 这类嵌套路径）' },
   { key: '2', prop: 'label', type: 'string', default: '-', desc: '标签文本' },
   { key: '3', prop: 'labelKey', type: 'string', default: '-', desc: '国际化 key，配置了全局 t 函数时优先于 label' },
-  { key: '4', prop: 'formtype', type: 'string', default: '-', desc: '控件类型：Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / Radio / Checkbox / Switch / Rate / Upload' },
+  { key: '4', prop: 'formtype', type: 'string', default: '-', desc: '控件类型：Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / TreeSelect / Autocomplete / Radio / Checkbox / Switch / Rate / Upload' },
   { key: '5', prop: 'span', type: 'number', default: '6', desc: '栅格占位（1-24）' },
   { key: '6', prop: 'placeholder', type: 'string', default: '-', desc: '占位文本快捷方式，自动注入 attrs.placeholder（attrs 同名优先）' },
   { key: '6.1', prop: 'emptyPlaceholder', type: 'string', default: "'-'", desc: '详情模式（mode="detail"）下空值的展示文本；编辑模式不消费' },
@@ -417,7 +428,7 @@ const formItemOptions = [
   { key: '9', prop: 'attrs', type: 'object', default: '-', desc: '透传给控件的属性袋；与 props 合并后交给底层组件' },
   { key: '10', prop: 'props', type: 'object', default: '-', desc: '透传给控件的组件 props 袋（与 attrs 合并）' },
   { key: '11', prop: 'on', type: 'object', default: '-', desc: '事件监听，如 { change: (val) => {} }' },
-  { key: '12', prop: 'dataOptions', type: 'Array<{ label, value }>', default: '-', desc: '静态选项（Select / Radio / Checkbox / Cascader）' },
+  { key: '12', prop: 'dataOptions', type: 'Array<{ label, value }>', default: '-', desc: '静态选项（Select / Autocomplete / Radio / Checkbox / Cascader / TreeSelect）' },
   { key: '13', prop: 'isHidden', type: 'Function | 声明式条件', default: '-', desc: '返回 true 表示隐藏该字段；(model, item, formProps) => boolean，也可写 JSON 条件' },
   { key: '14', prop: 'reactions', type: 'FieldReaction[]', default: '-', desc: '声明式字段联动（纯 JSON）：选项 / 必填 / 禁用 / 值由其他字段决定' },
   { key: '15', prop: 'render', type: 'Function', default: '-', desc: '自定义渲染 (h, model, { row, index }) => VNode' },

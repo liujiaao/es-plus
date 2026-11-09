@@ -12,11 +12,23 @@
  *   - antdv 的 DatePicker/TimePicker 经渲染函数间接实现，token 声明为函数名
  *
  * deviation：该端为有意的降级/差异实现，必须写明原因（文档化强制）。
+ *
+ * overlaps：该 formtype 与**另一个 formtype 共用同一个底座组件**时逐端登记（如
+ * Autocomplete 复用 Select、vue2 的 TreeSelect 降级为 el-cascader）。反向断言
+ * （「本分支不得出现别的 formtype 的组件」）会因此网开一面，且只对登记过的那一对生效 ——
+ * 比给整个分支挂 deviation 更窄（其余交叉引用仍会被抓住）。
  */
 export const FORM_RENDER_CONTRACT = {
   Input: { vue3: ['ElInput'], vue2: ['el-input'], antdv: ['InputComp', 'Input'] },
   InputNumber: { vue3: ['ElInputNumber'], vue2: ['el-input-number'], antdv: ['InputNumber'] },
-  Select: { vue3: ['ElSelect'], vue2: ['el-select'], antdv: ['Select'] },
+  Select: {
+    vue3: ['ElSelect'],
+    vue2: ['el-select'],
+    antdv: ['Select'],
+    // Autocomplete 是「选项集上边输边筛的 Select」，三端共用同一底座组件；
+    // 故 Select 的分支窗口里出现 Autocomplete 的 token 是**预期**，不是控件被换掉。
+    overlaps: { vue3: ['Autocomplete'], vue2: ['Autocomplete'], antdv: ['Autocomplete'] },
+  },
   DatePicker: { vue3: ['ElDatePicker'], vue2: ['el-date-picker'], antdv: ['renderDatePicker'] },
   TimePicker: { vue3: ['ElTimePicker'], vue2: ['el-time-picker'], antdv: ['renderTimePicker'] },
   Slider: { vue3: ['ElSlider'], vue2: ['el-slider'], antdv: ['Slider'] },
@@ -29,7 +41,42 @@ export const FORM_RENDER_CONTRACT = {
     },
   },
   Transfer: { vue3: ['ElTransfer'], vue2: ['el-transfer'], antdv: ['Transfer'] },
-  Cascader: { vue3: ['ElCascader'], vue2: ['el-cascader'], antdv: ['Cascader'] },
+  Cascader: {
+    vue3: ['ElCascader'],
+    vue2: ['el-cascader'],
+    antdv: ['Cascader'],
+    // vue2 的 TreeSelect 降级实现就是 el-cascader（checkStrictly + emitPath:false），
+    // 两个 formtype 的 token 在 vue2 必然同名。
+    overlaps: { vue2: ['TreeSelect'] },
+  },
+  TreeSelect: {
+    vue3: ['ElTreeSelect'],
+    vue2: ['el-cascader'],
+    antdv: ['TreeSelect'],
+    deviation: {
+      vue2:
+        'Element UI 无树选择器：降级为 el-cascader + props.checkStrictly/emitPath:false —— ' +
+        '同一份「树形数据 + 可选任意层级 + 值是该节点 value」语义由 el-cascader 提供；' +
+        '差异是展开交互按级联列而非树节点展示（数据结构与 v-model 语义一致）。',
+    },
+  },
+  Autocomplete: {
+    vue3: ['ElSelect'],
+    vue2: ['el-select'],
+    antdv: ['Select'],
+    deviation: {
+      vue3:
+        'Autocomplete 的语义是「在选项集上边输边筛、model 存选中项的 value」——与 Select 完全一致，' +
+        '故复用 ElSelect + filterable，而不是 ElAutocomplete（后者的 model 是显示文本，' +
+        '会让 dataOptions 的 value 语义在三端分叉）。',
+      vue2:
+        '同 vue3：复用 el-select + filterable（Element UI 2.x 没有 el-autocomplete，' +
+        '而 el-select 的过滤语义与 dataOptions 的 value 契约一致）。',
+      antdv:
+        '同 vue3：复用 a-select + showSearch（a-auto-complete 的 model 是输入文本，' +
+        '与 dataOptions 的 value 契约冲突）。',
+    },
+  },
   Radio: { vue3: ['ElRadioGroup'], vue2: ['el-radio-group'], antdv: ['RadioGroup'] },
   Checkbox: { vue3: ['ElCheckboxGroup'], vue2: ['el-checkbox-group'], antdv: ['CheckboxGroup'] },
   Switch: { vue3: ['ElSwitch'], vue2: ['el-switch'], antdv: ['Switch'] },

@@ -1942,7 +1942,7 @@
       "site": "es-pc",
       "root": "es-pc/src/views",
       "refs": 99,
-      "uncovered": 30,
+      "uncovered": 31,
       "cases": [
         {
           "id": "Advanced",
@@ -2732,6 +2732,15 @@
             "formLayout"
           ],
           "tier": "A"
+        },
+        {
+          "id": "es-form/TreeSelectAutocomplete",
+          "demo": null,
+          "tokens": [
+            "siteUncovered"
+          ],
+          "tier": "D",
+          "reason": "站点骨架 / 未收录视图：非单配置页（首页、指南、工具页）或尚无同名单源演示"
         },
         {
           "id": "es-form/Upload",

@@ -39,6 +39,8 @@ export const VALID_FORM_TYPES = [
   'ColorPicker',
   'Transfer',
   'Cascader',
+  'TreeSelect',
+  'Autocomplete',
   'Radio',
   'Checkbox',
   'Switch',

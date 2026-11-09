@@ -52,13 +52,13 @@ describe('BUILT_IN_BTN_KEYS', () => {
 
 // ─── VALID_FORM_TYPES ─────────────────────────────────────────────────────────
 describe('VALID_FORM_TYPES', () => {
-  it('包含 14 种表单类型', () => {
-    expect(VALID_FORM_TYPES).toHaveLength(14)
+  it('包含 16 种表单类型', () => {
+    expect(VALID_FORM_TYPES).toHaveLength(16)
   })
 
   it.each([
     'Input', 'InputNumber', 'Select', 'DatePicker', 'TimePicker', 'Slider',
-    'ColorPicker', 'Transfer', 'Cascader', 'Radio', 'Checkbox',
+    'ColorPicker', 'Transfer', 'Cascader', 'TreeSelect', 'Autocomplete', 'Radio', 'Checkbox',
     'Switch', 'Rate', 'Upload',
   ])('包含 "%s"', (type) => {
     expect(VALID_FORM_TYPES).toContain(type as any)

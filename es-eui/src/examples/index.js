@@ -228,7 +228,7 @@ export function getRawCode(category, key) {
 
 export const formExamples = [
   { key: 'Basic', title: '基础表单', description: '最简单的表单配置，只需定义 formItemList 和 model 即可快速生成表单。' },
-  { key: 'Controls', title: '常用控件展示', description: '14 种控件类型，通过 formtype 配置即可切换：Input、Radio、Select、Checkbox、Switch、DatePicker、Rate 等。' },
+  { key: 'Controls', title: '常用控件展示', description: '16 种控件类型，通过 formtype 配置即可切换：Input、Radio、Select、Checkbox、Switch、DatePicker、Rate 等。' },
   { key: 'Layout', title: '栅格布局与折叠', description: '通过 layoutFormProps 配置栅格布局，minFoldRows 实现折叠展开效果。' },
   { key: 'Validation', title: '表单验证', description: '内置规则 required / min / max / pattern / email，外加 validator 跨字段校验（确认密码）；configBtn 提交即触发校验。' },
   { key: 'DynamicField', title: '动态字段显示', description: '通过 isHidden 函数根据其他字段值动态显示/隐藏表单项。' },

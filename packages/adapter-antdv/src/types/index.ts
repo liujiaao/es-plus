@@ -98,7 +98,7 @@ export interface FormItemOption {
   prop: string
   label: string
   labelKey?: string
-  formtype?: 'Input' | 'InputNumber' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
+  formtype?: 'Input' | 'InputNumber' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'TreeSelect' | 'Autocomplete' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
   span?: number
   placeholder?: string
   /** 详情模式（EsForm mode="detail"）下空值的展示文本，默认 '-' */

@@ -307,6 +307,70 @@ export function useFormInputs() {
       ],
 
       // ─────────────────────────────────────────────────────────────────
+      // TreeSelect - 树形选择
+      // Element UI 无专用树选择器：el-cascader 的 checkStrictly + emitPath:false
+      // 提供同语义（树数据、任意层级可选、值 = 该节点 value）；交互按级联列展开。
+      // 差异已登记在 scripts/renderer-contract.mjs 的 deviation。
+      // ─────────────────────────────────────────────────────────────────
+      [
+        'TreeSelect',
+        (h, model, { row }) => {
+          const attrs = resolveAttrs(row)
+          const value = getNestedValue(model, row.prop)
+          const dataOptions = resolveDataOptions(row.dataOptions as never)
+          const handlers = buildEventHandlers(row, (val) => setNestedValue(model, row.prop, val))
+          const cascaderProps = (attrs.props as Record<string, unknown>) || {}
+          return h('el-cascader', {
+            // key 强制 dataOptions 变化时重渲染（Element UI 内部 cache 否则不刷新）
+            key: JSON.stringify(dataOptions),
+            attrs,
+            props: {
+              value,
+              options: dataOptions,
+              ...row.props,
+              props: {
+                ...cascaderProps,
+                // 这两个键定义 TreeSelect 的值语义：任意层级可选、值 = 节点 value（不是路径数组）
+                checkStrictly: true,
+                emitPath: false,
+              },
+            },
+            on: handlers,
+          })
+        },
+      ],
+
+      // ─────────────────────────────────────────────────────────────────
+      // Autocomplete - 在选项集上边输边筛的选值控件
+      // Element UI 2.x 无 el-autocomplete：复用 el-select + filterable；
+      // model 存选中项 value（不是输入文本），与 dataOptions 契约一致。
+      // ─────────────────────────────────────────────────────────────────
+      [
+        'Autocomplete',
+        (h, model, { row }) => {
+          const attrs = resolveAttrs(row)
+          const value = getNestedValue(model, row.prop)
+          const dataOptions = resolveDataOptions(row.dataOptions as never)
+          const handlers = buildEventHandlers(row, (val) => setNestedValue(model, row.prop, val))
+          return h(
+            'el-select',
+            {
+              attrs,
+              // filterable 默认打开；row.props 显式配置仍可覆盖
+              props: { value, filterable: true, ...row.props },
+              on: handlers,
+            },
+            dataOptions.map((opt, idx) =>
+              h('el-option', {
+                key: idx,
+                props: { value: opt.value, label: opt.label, disabled: opt.disabled },
+              })
+            )
+          )
+        },
+      ],
+
+      // ─────────────────────────────────────────────────────────────────
       // Radio - 单选组
       // ─────────────────────────────────────────────────────────────────
       [

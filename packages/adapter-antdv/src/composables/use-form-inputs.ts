@@ -43,6 +43,7 @@ import {
   Slider,
   Transfer,
   Cascader,
+  TreeSelect,
   RadioGroup,
   Radio,
   CheckboxGroup,
@@ -475,6 +476,49 @@ export function useFormInputs() {
             }
           }
           return hFn(Cascader, props)
+        },
+      ],
+
+      // ─── TreeSelect — 树形数据、任意层级可选、值 = 节点 value ──
+      [
+        'TreeSelect',
+        (hFn, model, { row }: FormInputCtx) => {
+          const props: Record<string, unknown> = {
+            value: getNestedValue(model, row.prop),
+            treeData: row.dataOptions,
+            // ADV 默认把节点文案读 `title`；es-plus 的 dataOptions 统一是 label/value/children
+            fieldNames: { label: 'label', value: 'value', children: 'children' },
+            ...rowPassThrough(row),
+            'onUpdate:value': (val: unknown) => { setNestedValue(model, row.prop, val) },
+          }
+          return hFn(TreeSelect, props)
+        },
+      ],
+
+      // ─── Autocomplete — 在选项集上边输边筛（值 = option.value）──
+      [
+        'Autocomplete',
+        (hFn, model, { row }: FormInputCtx) => {
+          return hFn(
+            Select as any,
+            {
+              value: getNestedValue(model, row.prop),
+              showSearch: true,
+              // ADV 默认按 value 过滤；es-plus 的选项文案在 label 上，按 label 过滤才符合直觉
+              filterOption: (input: string, option?: Record<string, unknown>) =>
+                String(option?.label ?? '').toLowerCase().includes(String(input ?? '').toLowerCase()),
+              ...rowPassThrough(row),
+              'onUpdate:value': (val: unknown) => { setNestedValue(model, row.prop, val) },
+            },
+            () =>
+              row.dataOptions?.map((opt, idx) =>
+                hFn(
+                  SelectOption,
+                  { key: idx, value: opt.value, label: opt.label, disabled: opt.disabled },
+                  () => opt.label ?? String(opt.value),
+                ),
+              ),
+          )
         },
       ],
 

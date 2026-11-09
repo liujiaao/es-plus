@@ -16,7 +16,7 @@
 <sub>两个徽章都来自夜间 Layer-2 评估对 golden 语料**留出集**（few-shot 未见域、已排除近变体）的实测，**不是营销数字**。徽章 label 里标着测量所用的模型：读数随模型变化，**不同模型之间不可横向比较**，也不与历史读数拼成一条曲线。<br>
 第一个是**门禁口径**：in-schema intent 命中率 = 「零编辑 **∨** 3 轮内收敛」—— 模型首轮就给出可零改合并的配置，**或**在至多 3 轮自然语言修正内收敛到同一份配置，都算命中（[定义](docs/internal/wave-2-production-trust-design.md)）。<br>
 第二个是其中更严的一半：**只算首轮零编辑**，不给收敛机会，用来分辨「一次就对」和「改几轮才对」。<br>
-语料目前 223 例（留出 199 例），是回归哨兵而非统计显著的 benchmark，提升靠补语料而非调口径；门禁目标 ≥95%，当前实测以上方徽章为准（由夜间 eval 从 `__tests__/golden/last-accuracy.json` 生成）。</sub>
+语料目前 225 例（留出 201 例），是回归哨兵而非统计显著的 benchmark，提升靠补语料而非调口径；门禁目标 ≥95%，当前实测以上方徽章为准（由夜间 eval 从 `__tests__/golden/last-accuracy.json` 生成）。</sub>
 
 **[在线文档](https://main.esplus-ai.com/)** · **[Playground](https://main.esplus-ai.com/#/playground)** · **[AI CRUD 生成器](https://main.esplus-ai.com/#/ai-crud)** · **[更新日志](https://github.com/liujiaao/es-plus/releases)** · **[v1.4 迁移指南](./docs/migrate-v1.4.md)**
 
@@ -59,7 +59,7 @@ ES-Plus 把这件事反过来做：**让 LLM 只做它擅长的语义推理（�
 - **配置驱动** — JSON 配置生成表单、表格、弹窗，替代大量模板代码
 - **全链路联动** — EsForm 嵌套在 EsTable 中，查询/重置/分页全自动联动
 - **编程式弹窗** — `useDialog()` 命令式调用，JSX 渲染，表单验证集成
-- **14 种表单控件** — Input、InputNumber、Select、DatePicker、TimePicker、Cascader、Radio、Checkbox、Switch、Slider、Rate、ColorPicker、Transfer、Upload
+- **16 种表单控件** — Input、InputNumber、Select、DatePicker、TimePicker、Cascader、TreeSelect、Autocomplete、Radio、Checkbox、Switch、Slider、Rate、ColorPicker、Transfer、Upload
 - **自适应高度** — ResizeObserver 自动重算表格高度
 - **跨页选择** — `cachePageSelection` 分页切换保留勾选
 - **任意后端适配** — `configTableOut` 配置化映射 API 响应字段
@@ -259,7 +259,7 @@ const formItems = [
 |------|------|------|
 | `prop` | `string` | 字段名（必填） |
 | `label` | `string` | 标签（必填） |
-| `formtype` | `string` | 控件类型（14 种） |
+| `formtype` | `string` | 控件类型（16 种） |
 | `span` | `number` | 栅格列宽（1-24） |
 | `attrs` | `object` | 透传到 Element Plus 组件 |
 | `dataOptions` | `array` | Select/Radio/Checkbox 选项 |

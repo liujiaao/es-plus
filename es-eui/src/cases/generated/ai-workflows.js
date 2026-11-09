@@ -336,9 +336,9 @@ export const AI_WORKFLOWS = {
           "jsonArgs": [
             "config"
           ],
-          "result": "✗ Configuration has errors:\n\n  - /fields/2/formtype: Invalid option: expected one of \"Input\"|\"InputNumber\"|\"Select\"|\"DatePicker\"|\"TimePicker\"|\"Slider\"|\"ColorPicker\"|\"Transfer\"|\"Cascader\"|\"Radio\"|\"Checkbox\"|\"Switch\"|\"Rate\"|\"Upload\"|\"datePicker\"|\"timePicker\"\n  - /formFields: 未知键 \"formFields\"（该层没有相近的已知键；拼写错误或放错了层级）\nSuggestions:\n  → Valid values for /fields/2/formtype: Input, InputNumber, Select, DatePicker, TimePicker, Slider, ColorPicker, Transfer, Cascader, Radio, Checkbox, Switch, …",
+          "result": "✗ Configuration has errors:\n\n  - /fields/2/formtype: Invalid option: expected one of \"Input\"|\"InputNumber\"|\"Select\"|\"DatePicker\"|\"TimePicker\"|\"Slider\"|\"ColorPicker\"|\"Transfer\"|\"Cascader\"|\"TreeSelect\"|\"Autocomplete\"|\"Radio\"|\"Checkbox\"|\"Switch\"|\"Rate\"|\"Upload\"|\"datePicker\"|\"timePicker\"\n  - /formFields: 未知键 \"formFields\"（该层没有相近的已知键；拼写错误或放错了层级）\nSuggestions:\n  → Valid values for /fields/2/formtype: Input, InputNumber, Select, DatePicker, TimePicker, Slider, ColorPicker, Transfer, Cascader, TreeSelect, Autocomplete, Radio, …",
           "truncated": false,
-          "bytes": 545
+          "bytes": 581
         },
         {
           "tool": "refine_config",
@@ -791,9 +791,9 @@ export const AI_WORKFLOWS = {
           "expect": "ok",
           "ok": true,
           "args": {},
-          "result": "# es-plus Form Types (formtype)\n\nAvailable types for the `formtype` property in `FormItemOption`.\n\nThe enum is shared by @es-plus/vue3, @es-plus/vue2 and @es-plus/adapter-antdv;\nonly the underlying UI component differs per target.\n\n1. **Input** — 输入框 — 文本/数字/密码输入\n   Example: 姓名、手机号、邮箱\n2. **InputNumber** — 数字输入框 — 数值/金额输入\n   Example: 年龄、价格、库存数量\n3. **Select** — 下拉选择器 — 单选/多选\n   Example: 状态、类型、分类\n4. **DatePicker** — 日期选择器 — 日期/日期范围\n   Example: 创建时间、日期范围\n5. **TimePicker** — 时间选择器 — 时间/时间范围\n   Example: 开始时间、结束时间\n6. **Slider** — 滑块 — 数值区间选择\n   Example: 价格区间、进度\n7. **ColorPicker** — 颜色选择器\n   Example: 主题色、标签颜色\n8. **Transfer** — 穿梭框 — 左右列表选择\n   Example: 权限分配、人员分配\n9. **Cascader** — 级联选择器 — 多级联动\n   Example: 省市区、部门层级\n10. **Radio** — 单选框组\n   Example: 性别、是否启用\n11. **Checkbox** — 多选框组\n   Example: 兴趣爱好、功能模块\n12. **Switch** — 开关 — 布尔切换\n   Example: 启用/禁用、显示/隐藏\n13. **Rate** — 评分 — 星级评分\n   Example: 满意度、评分\n14. **Upload** — 上传 — 文件/图片上传\n   Example: 头像、附件、证件照\n\n---\nUsage in config:\n```json\n{ \"prop\": \"status\", \"label\": \"状态\", \"formtype\": \"Select\", \"dataOptions\": [...] }\n```",
+          "result": "# es-plus Form Types (formtype)\n\nAvailable types for the `formtype` property in `FormItemOption`.\n\nThe enum is shared by @es-plus/vue3, @es-plus/vue2 and @es-plus/adapter-antdv;\nonly the underlying UI component differs per target.\n\n1. **Input** — 输入框 — 文本/数字/密码输入\n   Example: 姓名、手机号、邮箱\n2. **InputNumber** — 数字输入框 — 数值/金额输入\n   Example: 年龄、价格、库存数量\n3. **Select** — 下拉选择器 — 单选/多选\n   Example: 状态、类型、分类\n4. **DatePicker** — 日期选择器 — 日期/日期范围\n   Example: 创建时间、日期范围\n5. **TimePicker** — 时间选择器 — 时间/时间范围\n   Example: 开始时间、结束时间\n6. **Slider** — 滑块 — 数值区间选择\n   Example: 价格区间、进度\n7. **ColorPicker** — 颜色选择器\n   Example: 主题色、标签颜色\n8. **Transfer** — 穿梭框 — 左右列表选择\n   Example: 权限分配、人员分配\n9. **Cascader** — 级联选择器 — 多级联动\n   Example: 省市区、部门层级\n10. **TreeSelect** — 树选择器 — 树形数据中选值（可选任意层级）\n   Example: 部门/组织、分类树、权限树\n11. **Autocomplete** — 联想输入 — 在选项集里边输边筛（存选项 value）\n   Example: 客户名称、城市、商品\n12. **Radio** — 单选框组\n   Example: 性别、是否启用\n13. **Checkbox** — 多选框组\n   Example: 兴趣爱好、功能模块\n14. **Switch** — 开关 — 布尔切换\n   Example: 启用/禁用、显示/隐藏\n15. **Rate** — 评分 — 星级评分\n   Example: 满意度、评分\n16. **Upload** — 上传 — 文件/图片上传\n   Example: 头像、附件、证件照\n\n---\nUsage in config:\n```json\n{ \"prop\": \"status\", \"label\": \"状态\", \"formtype\": \"Select\", \"dataOptions\": [...] }\n```",
           "truncated": false,
-          "bytes": 1573
+          "bytes": 1843
         },
         {
           "tool": "get_component_api",

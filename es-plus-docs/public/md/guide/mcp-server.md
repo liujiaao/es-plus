@@ -463,7 +463,7 @@ mcp-server-es-plus --help        # 用法说明
 |------|------|------|
 | `prop` | string | 后端字段名 |
 | `label` | string | 显示标签 |
-| `formtype` | string | 表单类型（14 种，见 `list_form_types`） |
+| `formtype` | string | 表单类型（16 种，见 `list_form_types`） |
 | `inQuery` | boolean | 是否在查询表单中显示（默认 true） |
 | `inTable` | boolean | 是否在表格中显示（默认 true） |
 | `inForm` | boolean | 是否在弹窗表单中显示（默认 true） |
@@ -570,7 +570,7 @@ AI：[调用 validate_config]
 
 ### list_form_types
 
-**功能**：列出三端（vue3 / vue2 / antdv）共享的全部 14 种表单字段类型
+**功能**：列出三端（vue3 / vue2 / antdv）共享的全部 16 种表单字段类型
 
 **输入参数**：无
 
@@ -586,7 +586,7 @@ AI：[调用 list_form_types]
     2. InputNumber — 数字输入框
     3. Select — 下拉选择器（单选/多选）
     4. DatePicker — 日期选择器
-    ...共 14 种
+    ...共 16 种
 ```
 
 ### get_component_api

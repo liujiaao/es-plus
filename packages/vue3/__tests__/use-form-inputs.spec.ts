@@ -11,6 +11,7 @@ import {
   ElColorPicker,
   ElTransfer,
   ElCascader,
+  ElTreeSelect,
   ElRadioGroup,
   ElCheckboxGroup,
   ElSwitch,
@@ -422,6 +423,53 @@ describe('useFormInputs', () => {
       expect(vnode.type).toBe(ElCascader)
       expect(vnode.props?.modelValue).toEqual(['a'])
       expect(vnode.props?.options).toBe(options)
+    })
+  })
+
+  describe('TreeSelect', () => {
+    it('should render ElTreeSelect with tree data and node value', () => {
+      const options = [
+        { label: 'Tech', value: 'tech', children: [{ label: 'FE', value: 'fe' }] },
+      ]
+      const item: FormItemOption = {
+        prop: 'dept',
+        label: 'Dept',
+        formtype: 'TreeSelect',
+        dataOptions: options,
+      }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, { dept: 'fe' }, { row: item, index: 0 })
+      expect(vnode.type).toBe(ElTreeSelect)
+      expect(vnode.props?.modelValue).toBe('fe')
+      expect(vnode.props?.data).toBe(options)
+    })
+  })
+
+  describe('Autocomplete', () => {
+    it('should render ElSelect with filterable and the option list', () => {
+      const options = [
+        { label: '杭州', value: 'hz' },
+        { label: '上海', value: 'sh' },
+      ]
+      const item: FormItemOption = {
+        prop: 'city',
+        label: 'City',
+        formtype: 'Autocomplete',
+        dataOptions: options,
+      }
+      const renderFn = formInputComponents(item)
+      const vnode = renderFn(h, { city: 'sh' }, { row: item, index: 0 })
+      expect(vnode.type).toBe(ElSelect)
+      expect(vnode.props?.filterable).toBe(true)
+      expect(vnode.props?.modelValue).toBe('sh')
+      // 选项经默认插槽渲染（ElOption），文案与值都来自 dataOptions
+      const slot =
+        typeof vnode.children === 'function'
+          ? vnode.children
+          : (vnode.children as any)?.default
+      const children = typeof slot === 'function' ? slot() : slot
+      expect(children).toHaveLength(2)
+      expect(children[0].props).toMatchObject({ value: 'hz', label: '杭州' })
     })
   })
 

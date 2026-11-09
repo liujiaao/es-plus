@@ -8,7 +8,7 @@
       </div>
       <h1 class="hero-title">EsForm 表单组件</h1>
       <p class="hero-desc">
-        企业级表单解决方案，通过 JSON 配置即可生成复杂表单，支持 14 种表单控件，
+        企业级表单解决方案，通过 JSON 配置即可生成复杂表单，支持 16 种表单控件，
         让表单开发从小时级降至分钟级
       </p>
     </section>
@@ -152,8 +152,8 @@
           <tr>
             <td>formtype</td>
             <td>
-              控件类型（14 种）：Input / InputNumber / Select / DatePicker / TimePicker /
-              Cascader / Radio / Checkbox / Switch / Slider / Rate / ColorPicker / Transfer / Upload
+              控件类型（16 种）：Input / InputNumber / Select / DatePicker / TimePicker /
+              Cascader / TreeSelect / Autocomplete / Radio / Checkbox / Switch / Slider / Rate / ColorPicker / Transfer / Upload
             </td>
             <td>String</td>
           </tr>

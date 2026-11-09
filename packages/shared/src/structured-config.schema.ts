@@ -48,7 +48,7 @@ const DataOptionSchema: z.ZodType<any> = z.lazy(() =>
  * 三端 `use-form-inputs` 都先过 `normalizeFormType`（core 单源）再查组件表，
  * `form-item.schema.json` 的 describe 也写明 "deprecated but still accepted"。
  *
- * 校验侧必须与运行时一致。只用 `VALID_FORM_TYPES`（14 项 PascalCase）会拒绝一个
+ * 校验侧必须与运行时一致。只用 `VALID_FORM_TYPES`（16 项 PascalCase）会拒绝一个
  * 实际可用的写法 —— 在 `generateFromConfig` 加了入口校验（A5）之后，这直接表现为
  * 「旧写法过去能生成、现在抛错」的回归，而报错文案只说"枚举不含它"，看不出别名本该被接受。
  */
@@ -220,7 +220,7 @@ const FieldConfigSchema = z.object({
     "i18n label key for this field's column/form label (used with a global t() function; takes precedence over `label`). When omitted, i18n mode derives one as `field.<prop>`. NOTE: it only takes effect once the HOST entry assembles the plugin with a `t` option (otherwise the runtime falls back to `label`)."
   ),
   formtype: z.enum(formTypeEnum).describe(
-    "Pick by the field's MEANING, not by keyword matching: status/type/enum/gender → Select; date/time → DatePicker/TimePicker; image/avatar/attachment/file → Upload; long text/remark/description → Input (attrs.type:'textarea'); boolean on/off → Switch; single-choice small set → Radio; multi-choice → Checkbox; region/category tree → Cascader; score → Rate. Default to Input for plain text."
+    "Pick by the field's MEANING, not by keyword matching: status/type/enum/gender → Select; date/time → DatePicker/TimePicker; image/avatar/attachment/file → Upload; long text/remark/description → Input (attrs.type:'textarea'); boolean on/off → Switch; single-choice small set → Radio; multi-choice → Checkbox; region/category tree → Cascader; department/org/permission tree where ANY level is selectable → TreeSelect; type-to-filter over a known option set → Autocomplete; score → Rate. Default to Input for plain text."
   ),
   inQuery: z.boolean().default(true).describe('Show as a query/filter field above the table'),
   inTable: z.boolean().default(true).describe('Show as a table column'),
@@ -230,13 +230,13 @@ const FieldConfigSchema = z.object({
   required: z.boolean().optional(),
   rules: z.array(FieldRuleSchema).optional(),
   attrs: z.record(z.string(), z.unknown()).optional().describe("Extra component props, e.g. { type: 'textarea', maxlength: 200 }"),
-  dataOptions: z.array(DataOptionSchema).optional().describe('Static options for Select/Radio/Checkbox/Cascader. Use this for known fixed enums.'),
+  dataOptions: z.array(DataOptionSchema).optional().describe('Static options for Select/Radio/Checkbox/Cascader/TreeSelect/Autocomplete. Use this for known fixed enums.'),
   apiParams: z.object({
     url: z.string(),
     method: z.enum(['GET', 'POST']).optional(),
     labelField: z.string().optional(),
     valueField: z.string().optional(),
-  }).optional().describe('Remote options source for Select/Cascader — use instead of dataOptions when options come from an API.'),
+  }).optional().describe('Remote options source for Select/Cascader/TreeSelect — use instead of dataOptions when options come from an API.'),
   width: z.union([z.number(), z.string()]).optional(),
   minWidth: z.union([z.number(), z.string()]).optional(),
   align: z.enum(['left', 'center', 'right']).optional(),

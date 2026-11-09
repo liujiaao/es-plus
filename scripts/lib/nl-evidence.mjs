@@ -80,6 +80,8 @@ const FORM_TYPE_CUES = {
   ColorPicker: /颜色选择/,
   Transfer: /穿梭/,
   Cascader: /级联/,
+  TreeSelect: /树选择|树形选择|树状选择|树形下拉|组织树|部门树/,
+  Autocomplete: /联想|自动补全|输入建议|边输边筛|可搜索选择/,
   Rate: /评分|星级/,
   Upload: /上传/,
 }

@@ -109,6 +109,8 @@ export interface ApiParams {
  * - 'ColorPicker'  → ElColorPicker / el-color-picker
  * - 'Transfer'     → ElTransfer / el-transfer
  * - 'Cascader'     → ElCascader / el-cascader
+ * - 'TreeSelect'   → ElTreeSelect / el-cascader(checkStrictly) / a-tree-select（树形数据、可选任意层级）
+ * - 'Autocomplete' → 选项集上边输边筛的选择控件（三端复用 Select 的 filterable/showSearch；value 语义）
  * - 'Radio'        → ElRadioGroup
  * - 'Checkbox'     → ElCheckboxGroup
  * - 'Switch'       → ElSwitch
@@ -125,6 +127,8 @@ export type FormType =
   | 'ColorPicker'
   | 'Transfer'
   | 'Cascader'
+  | 'TreeSelect'
+  | 'Autocomplete'
   | 'Radio'
   | 'Checkbox'
   | 'Switch'

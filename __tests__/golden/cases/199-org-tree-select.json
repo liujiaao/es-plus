@@ -1,0 +1,48 @@
+{
+  "nl": "组织架构管理：所属部门用树形选择（部门树，支持选中任意层级，候选数据来自 /api/orgs/tree）；表格展示部门名称、负责人、排序、创建时间；支持新增、编辑、删除。",
+  "nlEn": "Organization management: the department field is a tree select (department tree, any level selectable, options from /api/orgs/tree); the table shows department name, owner, sort order and creation time; supports add, edit and delete.",
+  "fixedFields": ["name", "owner", "sortOrder", "dept", "createdAt"],
+  "pinnedDims": ["propSet", "actions", "formtype:dept"],
+  "nlStatedDims": ["propSet", "actions", "formtype:dept", "apiParams:dept"],
+  "config": {
+    "name": "OrgManage",
+    "apiUrl": "/api/orgs",
+    "fields": [
+      {
+        "prop": "name",
+        "label": "部门名称",
+        "formtype": "Input"
+      },
+      {
+        "prop": "owner",
+        "label": "负责人",
+        "formtype": "Input"
+      },
+      {
+        "prop": "sortOrder",
+        "label": "排序",
+        "formtype": "InputNumber",
+        "inQuery": false
+      },
+      {
+        "prop": "dept",
+        "label": "所属部门",
+        "formtype": "TreeSelect",
+        "inTable": false,
+        "apiParams": {
+          "url": "/api/orgs/tree",
+          "labelField": "name",
+          "valueField": "id"
+        }
+      },
+      {
+        "prop": "createdAt",
+        "label": "创建时间",
+        "formtype": "DatePicker",
+        "inForm": false
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "TreeSelect（P1-4）：树形数据 + 任意层级可选 + 值 = 节点 value；与 Cascader（值 = 路径）的关键区分点。"
+}

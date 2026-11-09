@@ -55,7 +55,7 @@ ES-Plus 配套一个 MCP Server。你在 Claude Code / Cursor 里接上它，宿
 
 这份配置先过一道 zod + JSON Schema 校验。非法的东西**在编译前**就被挡回去，而不是编译成一个带 bug 的页面让你上线后才发现：
 
-- `formtype` 必须是 14 个合法控件之一（`Input`/`Select`/`DatePicker`/…）。LLM 幻觉出一个 `"dropdown"`？直接拒绝。
+- `formtype` 必须是 16 个合法控件之一（`Input`/`Select`/`DatePicker`/…）。LLM 幻觉出一个 `"dropdown"`？直接拒绝。
 - `prop` 不许带路径分隔符、不许是 `__proto__`/`constructor`/`prototype`——它会变成生成文件的成员名和核心插槽名，含注入字符的直接拒绝。
 - 必填项缺失（表格列没有 `prop`、弹窗没有 `title`）当场报错，带明细。
 

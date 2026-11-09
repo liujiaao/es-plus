@@ -1,0 +1,36 @@
+{
+  "nl": "客户回访管理：客户名称用联想输入（可搜索选择已有客户：北京华信、上海联创、广州明远）；表格展示客户名称、回访日期、负责人；支持新增、编辑、删除。",
+  "nlEn": "Customer follow-up management: the customer name uses an autocomplete (type to search existing customers: 北京华信, 上海联创, 广州明远); the table shows customer name, visit date and owner; supports add, edit and delete.",
+  "fixedFields": ["customerName", "visitDate", "owner"],
+  "pinnedDims": ["propSet", "actions", "formtype:customerName", "dataOptions:customerName"],
+  "nlStatedDims": ["propSet", "actions", "formtype:customerName", "dataOptions:customerName"],
+  "config": {
+    "name": "CustomerVisit",
+    "apiUrl": "/api/customer-visits",
+    "fields": [
+      {
+        "prop": "customerName",
+        "label": "客户名称",
+        "formtype": "Autocomplete",
+        "dataOptions": [
+          { "label": "北京华信", "value": "bj-huaxin" },
+          { "label": "上海联创", "value": "sh-lianchuang" },
+          { "label": "广州明远", "value": "gz-mingyuan" }
+        ]
+      },
+      {
+        "prop": "visitDate",
+        "label": "回访日期",
+        "formtype": "DatePicker",
+        "inQuery": false
+      },
+      {
+        "prop": "owner",
+        "label": "负责人",
+        "formtype": "Input"
+      }
+    ],
+    "actions": ["add", "edit", "delete"]
+  },
+  "notes": "Autocomplete（P1-4）：在选项集上边输边筛，model 存选中项的 value（不是输入文本）；三端复用 Select 的 filterable/showSearch。"
+}

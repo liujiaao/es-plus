@@ -5566,7 +5566,9 @@ export default {
         city: '',
         date: '',
         rate: 3,
-        content: ''
+        content: '',
+        dept: '',
+        citySearch: ''
       },
       layoutProps: {
         formLayProps: { labelWidth: '100px', size: 'small' },
@@ -5636,6 +5638,40 @@ export default {
           span: 12,
           formtype: 'Rate',
           attrs: { max: 5 }
+        },
+        {
+          prop: 'dept',
+          label: '树形选择',
+          span: 8,
+          formtype: 'TreeSelect',
+          attrs: { placeholder: '请选择部门' },
+          dataOptions: [
+            {
+              label: '技术中心',
+              value: 'tech',
+              children: [
+                { label: '前端组', value: 'fe' },
+                { label: '后端组', value: 'be' }
+              ]
+            },
+            {
+              label: '产品中心',
+              value: 'product',
+              children: [{ label: '设计组', value: 'design' }]
+            }
+          ]
+        },
+        {
+          prop: 'citySearch',
+          label: '联想输入',
+          span: 8,
+          formtype: 'Autocomplete',
+          attrs: { placeholder: '输入关键字筛选' },
+          dataOptions: [
+            { label: '北京', value: 'bj' },
+            { label: '上海', value: 'sh' },
+            { label: '广州', value: 'gz' }
+          ]
         }
       ]
     }

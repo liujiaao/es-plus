@@ -366,7 +366,7 @@ ES-Plus 的解法是 **拆出 `@es-plus/core` + 三个渲染器**：
 
 ## 五、核心能力深度解析
 
-### 5.1 EsForm —— 14 种控件 × 4 种数据来源 × 条件显隐
+### 5.1 EsForm —— 16 种控件 × 4 种数据来源 × 条件显隐
 
 ```typescript
 const formItems = [
@@ -628,7 +628,7 @@ ES-Plus 的差异化：**Schema 跨 Vue 2 / Vue 3 / AntDV 共享 + AI 原生工�
 | `generate_crud_page` / `generate_crud_schema` | **LEGACY FALLBACK**：自然语言 → 完整 .vue / CrudPageSchema | ⚠️ **无 LLM 回退**：本地正则/关键词解析（`crud-engine.ts`），覆盖有限，仅适合不能推理的宿主 |
 | `validate_config` | zod 校验配置 | AI 生成错配置立即拦截，自动重试 |
 | `refine_config` | 对已定配置做一轮纠正并回显 diff | 收敛回路：确定性校验 + diff，不回灌模型 |
-| `list_form_types` | 返回 14 种 formtype 清单 + 说明 | AI 不再猜哪些控件名合法 |
+| `list_form_types` | 返回 16 种 formtype 清单 + 说明 | AI 不再猜哪些控件名合法 |
 | `get_component_api` | 返回组件的 prop / event / slot | AI 看到的就是协议级 API 文档 |
 | `scaffold_page` | 多页面脚手架生成 | 一次性创建一组关联页面 |
 | `ingest_schema` | 既有 Schema → 草拟配置（需人审） | 存量项目起步 |

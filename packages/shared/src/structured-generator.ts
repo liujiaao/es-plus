@@ -2018,7 +2018,7 @@ export function buildFormItem(field: FieldConfig, context: 'query' | 'form', i18
   if (context === 'form') {
     const rules: any[] = []
     if (field.required) {
-      const isSelectType = ['Select', 'Radio', 'Checkbox', 'Cascader', 'DatePicker', 'TimePicker', 'Switch'].includes(field.formtype)
+      const isSelectType = ['Select', 'Autocomplete', 'Radio', 'Checkbox', 'Cascader', 'TreeSelect', 'DatePicker', 'TimePicker', 'Switch'].includes(field.formtype)
       rules.push({
         required: true,
         message: `请${isSelectType ? '选择' : '输入'}${field.label}`,
@@ -2371,10 +2371,13 @@ export function inferTsType(field: FieldConfig): string {
     case 'Checkbox':
     case 'Transfer': return 'any[]'
     case 'Cascader': return 'any[]'
+    // TreeSelect 的模型是**节点值**（不是路径数组）：单选是标量、多选是数组，取 any 最稳
+    case 'TreeSelect': return 'any'
     case 'DatePicker':
     case 'TimePicker':
       return field.attrs?.type?.toString().includes('range') ? 'string[]' : 'string'
     case 'Select':
+    case 'Autocomplete':
       return "string | number | ''"
     default: return 'string'
   }

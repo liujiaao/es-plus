@@ -72,6 +72,70 @@ describe('resolveFormDetailText', () => {
     expect(resolveFormDetailText(it0, { area: ['zj', 'nope'] })).toBe('浙江、nope')
   })
 
+  it('TreeSelect 的标量值在整棵树里递归查找（节点不在第一层）', () => {
+    const it0 = item({
+      prop: 'dept',
+      formtype: 'TreeSelect',
+      dataOptions: [
+        {
+          label: '技术中心',
+          value: 'tech',
+          children: [
+            { label: '前端组', value: 'fe', children: [{ label: '组件小队', value: 'fe-ui' }] },
+            { label: '后端组', value: 'be' },
+          ],
+        },
+      ],
+    })
+    expect(resolveFormDetailText(it0, { dept: 'fe-ui' })).toBe('组件小队')
+    expect(resolveFormDetailText(it0, { dept: 'be' })).toBe('后端组')
+    // 未命中节点仍要看得见原值（与其它控件同规）
+    expect(resolveFormDetailText(it0, { dept: 'gone' })).toBe('gone')
+  })
+
+  it('TreeSelect 多选（数组值）逐项在整棵树里找标签', () => {
+    const it0 = item({
+      prop: 'dept',
+      formtype: 'TreeSelect',
+      dataOptions: [
+        {
+          label: '技术中心',
+          value: 'tech',
+          children: [
+            { label: '前端组', value: 'fe' },
+            { label: '后端组', value: 'be' },
+          ],
+        },
+      ],
+    })
+    expect(resolveFormDetailText(it0, { dept: ['fe', 'be'] })).toBe('前端组、后端组')
+    // 数组值不会被误当成「层级路径」去拼 ` / `
+    expect(resolveFormDetailText(it0, { dept: ['tech', 'fe'] })).toBe('技术中心、前端组')
+  })
+
+  it('Autocomplete 是标量选值，按选项 label 展示', () => {
+    const it0 = item({
+      prop: 'city',
+      formtype: 'Autocomplete',
+      dataOptions: [
+        { label: '杭州', value: 'hz' },
+        { label: '上海', value: 'sh' },
+      ],
+    })
+    expect(resolveFormDetailText(it0, { city: 'sh' })).toBe('上海')
+  })
+
+  it('显式 formtype:Cascader 仍按路径解析（不受 TreeSelect 分支影响）', () => {
+    const it0 = item({
+      prop: 'area',
+      formtype: 'Cascader',
+      dataOptions: [
+        { label: '浙江', value: 'zj', children: [{ label: '杭州', value: 'hz' }] },
+      ],
+    })
+    expect(resolveFormDetailText(it0, { area: ['zj', 'hz'] })).toBe('浙江 / 杭州')
+  })
+
   it('Date 值格式化，字符串原样保留', () => {
     expect(resolveFormDetailText(item({ prop: 'd' }), { d: new Date(2026, 10, 8) })).toBe('2026-11-08')
     expect(resolveFormDetailText(item({ prop: 'd' }), { d: '2026-11-08' })).toBe('2026-11-08')

@@ -34,6 +34,10 @@ const TYPE_RULES: Array<{ keywords: string[]; type: string; attrs?: Record<strin
   // Slider 提前到 Cascader 之前：'价格区间'/'区间' 含 '区'，若 Cascader 先命中会被误判为级联
   { keywords: ['进度', 'slider', '价格区间', '区间', '范围'], type: 'Slider' },
   { keywords: ['省', '市', '区', '省市', '城市', '地区', 'cascader', '层级', '区域', '级联'], type: 'Cascader' },
+  // TreeSelect 的语义是「树形数据里选任意层级」；与 Cascader（值 = 路径）不同，值 = 节点
+  { keywords: ['树形选择', '树选择', '树状选择', '部门树', '组织树', '权限树', 'treeselect'], type: 'TreeSelect' },
+  // Autocomplete = 在选项集上边输边筛；必须在 Select 的通用关键词之前，避免被吞成下拉
+  { keywords: ['联想', '自动补全', '输入建议', '可搜索', 'autocomplete'], type: 'Autocomplete' },
   // status BEFORE plain 状态/type/分类 so 'status' wins over generic 'Select'
   // '文件类型'/'图片类型' 含 '类型' 但语义是 Upload，需在 Select 之前命中
   { keywords: ['文件类型', '图片类型'], type: 'Upload' },
@@ -139,7 +143,9 @@ function getDataOptions(fieldName: string): any[] | undefined {
 function defaultPlaceholder(label: string, formtype: string): string {
   switch (formtype) {
     case 'Select':
+    case 'Autocomplete':
     case 'Cascader':
+    case 'TreeSelect':
     case 'Radio':
     case 'Checkbox':
     case 'Transfer':
@@ -454,7 +460,7 @@ function detectFeatures(input: string): {
  */
 function normalizeSpans(formItems: any[]): void {
   if (formItems.length === 0) return
-  const wantsWide = formItems.some((f) => f.formtype === 'DatePicker' || f.formtype === 'TimePicker' || f.formtype === 'Cascader')
+  const wantsWide = formItems.some((f) => f.formtype === 'DatePicker' || f.formtype === 'TimePicker' || f.formtype === 'Cascader' || f.formtype === 'TreeSelect')
   const baseSpan = wantsWide ? 8 : 6
   const perRow = 24 / baseSpan  // 3 or 4
 

@@ -10,6 +10,7 @@ import {
   ElColorPicker,
   ElTransfer,
   ElCascader,
+  ElTreeSelect,
   ElRadioGroup,
   ElRadio,
   ElCheckboxGroup,
@@ -183,6 +184,44 @@ export function useFormInputs() {
               setNestedValue(model, row.prop, val)
             }
           })
+        }
+      ],
+      [
+        'TreeSelect',
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
+          // ElTreeSelect 的默认字段映射就是 value/label/children，与 dataOptions 同形；
+          // 值默认取节点的 value（node-key），可选任意层级（checkStrictly 由宿主按需透传）。
+          return hFn(ElTreeSelect, {
+            modelValue: getNestedValue(model, row.prop) as any,
+            data: row.dataOptions as any,
+            ...rowPassThrough(row),
+            'onUpdate:modelValue': (val: unknown) => {
+              setNestedValue(model, row.prop, val)
+            }
+          })
+        }
+      ],
+      [
+        'Autocomplete',
+        (hFn: typeof h, model: Record<string, unknown>, { row }: FormInputCtx) => {
+          // 语义 = 「在选项集上边输边筛的选值控件」：复用 ElSelect + filterable，
+          // model 存选中项的 value（不是输入文本）。不用 ElAutocomplete 的原因见
+          // scripts/renderer-contract.mjs 的 deviation 登记。
+          return hFn(
+            ElSelect,
+            {
+              modelValue: getNestedValue(model, row.prop) as any,
+              filterable: true,
+              ...rowPassThrough(row),
+              'onUpdate:modelValue': (val: unknown) => {
+                setNestedValue(model, row.prop, val)
+              }
+            },
+            () =>
+              row.dataOptions?.map((opt, idx) =>
+                hFn(ElOption, { key: idx, value: opt.value as string, label: opt.label, disabled: opt.disabled })
+              )
+          )
         }
       ],
       [
