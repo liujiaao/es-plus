@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
+import type { MockInstance } from 'vitest'
 import {
   VXE_ONLY_TABLE_KEYS,
   findVxeOnlyKeysOutsideVxe,
@@ -7,7 +8,9 @@ import {
 } from '../src/table-engine-keys'
 
 describe('table-engine-keys（P0-1 运行时告警）', () => {
-  let warn: ReturnType<typeof vi.spyOn>
+  // 显式参数/返回类型：`ReturnType<typeof vi.spyOn>` 会落到默认泛型 `MockInstance<unknown[], unknown>`，
+  // 与 console.warn 的实参签名不兼容（TS2322）。
+  let warn: MockInstance<[message?: any, ...optionalParams: any[]], void>
   beforeEach(() => {
     __resetVxeOnlyWarnings()
     warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
