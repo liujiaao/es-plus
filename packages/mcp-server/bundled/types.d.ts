@@ -514,6 +514,25 @@ export interface DialogOptions {
   [key: string]: unknown
 }
 
+/** 弹窗形态入参：`direction` 为抽屉专有键，弹窗形态下类型层拒绝（详见 core 同名类型） */
+export interface DialogModalOptions extends DialogOptions {
+  type?: 'dialog'
+  direction?: never
+}
+
+/** 抽屉形态入参：拖拽 / 全屏 / 居中 / 外边距为弹窗专有键，抽屉形态下类型层拒绝 */
+export interface DialogDrawerOptions extends DialogOptions {
+  type: 'drawer'
+  isDraggable?: never
+  fullscreen?: never
+  hiddenFullBtn?: never
+  alignCenter?: never
+  top?: never
+}
+
+/** `useDialog` / `<es-dialog>` 的判别联合入参 */
+export type DialogCallOptions = DialogModalOptions | DialogDrawerOptions
+
 export interface EsFormInstance {
   validate: () => Promise<boolean>
   resetFields: () => void

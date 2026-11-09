@@ -1,6 +1,6 @@
 import { createVNode, getCurrentInstance, getCurrentScope, onScopeDispose, render } from 'vue'
 import EsDialog from './component.vue'
-import type { DialogOptions } from '../../../types'
+import type { DialogCallOptions, DialogOptions } from '../../../types'
 
 /**
  * useDialog 每次调用（DialogComponent(opts)）的统一返回结构。
@@ -17,7 +17,7 @@ export interface DialogResult {
 }
 
 export interface DialogCallable {
-  (dialogOptions: DialogOptions & { cacheKey?: string }): DialogResult
+  (dialogOptions: DialogCallOptions & { cacheKey?: string }): DialogResult
   close: () => void
   /** 销毁：传 cacheKey 只销毁该缓存实例；不传则销毁当前实例与全部缓存 */
   destroy: (cacheKey?: string) => void

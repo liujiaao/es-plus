@@ -87,6 +87,9 @@ export type {
   TableOptions,
   PaginationConfig,
   DialogOptions,
+  DialogModalOptions,
+  DialogDrawerOptions,
+  DialogCallOptions,
   EsFormInstance,
   EsTableInstance,
   EsPlusOptions

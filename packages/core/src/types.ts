@@ -1239,6 +1239,42 @@ export interface DialogOptions {
   [key: string]: unknown
 }
 
+/**
+ * 弹窗形态入参（`type` 省略或 `'dialog'`）。
+ *
+ * `direction` 是抽屉专有键：弹窗形态下传它没有任何运行时效果，此处在**类型层**
+ * 直接拒绝（`never`），不再依赖文档约定。`[key: string]: unknown` 索引签名保留 ——
+ * 扩展键仍是公开契约的一部分，具名 `never` 属性会覆盖索引签名，故不会被它放行。
+ */
+export interface DialogModalOptions extends DialogOptions {
+  type?: 'dialog'
+  direction?: never
+}
+
+/**
+ * 抽屉形态入参（`type: 'drawer'`）。
+ *
+ * 抽屉没有拖拽手柄、没有全屏按钮、也没有弹窗的居中/外边距（尺寸由 `width` +
+ * `direction` 决定）。这几个键在抽屉形态下类型为 `never`，误传即编译报错 ——
+ * 此前它们只被运行时静默忽略。
+ */
+export interface DialogDrawerOptions extends DialogOptions {
+  type: 'drawer'
+  isDraggable?: never
+  fullscreen?: never
+  hiddenFullBtn?: never
+  alignCenter?: never
+  top?: never
+}
+
+/**
+ * `useDialog` / `<es-dialog>` 的判别联合入参。
+ *
+ * 与 `DialogOptions` 的关系：`DialogOptions` 仍是**扁平全量**的公开形状（CRUD 配置、
+ * 缓存合并等场景需要在不知道 `type` 时携带全部键）；调用侧用本联合按 `type` 收窄。
+ */
+export type DialogCallOptions = DialogModalOptions | DialogDrawerOptions
+
 // ============================================================================
 // 回调映射接口
 // ============================================================================

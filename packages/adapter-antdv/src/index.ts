@@ -97,6 +97,7 @@ export type { CrudPageSchema, CrudPageProps, CrudPageEmits, CrudPageExpose } fro
 export type {
   FormItemOption, FormDataOption, ApiParams, BtnConfig, LayoutFormProps,
   TableColumn, TableColumnDataOption, TableOptions, PaginationConfig, DialogOptions,
+  DialogModalOptions, DialogDrawerOptions, DialogCallOptions,
   EsFormInstance, EsTableInstance, EsPlusOptions,
 } from './types'
 // 框架无关契约类型三端一致，直接透传 @es-plus/core

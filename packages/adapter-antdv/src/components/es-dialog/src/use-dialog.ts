@@ -10,7 +10,7 @@
  */
 import { createVNode, getCurrentInstance, getCurrentScope, onScopeDispose, render } from 'vue'
 import EsDialog from './component.vue'
-import type { DialogOptions } from '../../../types'
+import type { DialogCallOptions, DialogOptions } from '../../../types'
 
 /**
  * 单次调用返回值 —— 与 @es-plus/vue3 / @es-plus/vue2 的 `DialogResult` 同构。
@@ -28,7 +28,7 @@ export interface DialogResult {
 }
 
 export interface DialogCallable {
-  (dialogOptions: DialogOptions): DialogResult
+  (dialogOptions: DialogCallOptions): DialogResult
   close: () => void
   /** 销毁：传 cacheKey 只销毁该缓存实例；不传则销毁当前实例与全部缓存 */
   destroy: (cacheKey?: string) => void

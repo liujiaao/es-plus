@@ -24,10 +24,10 @@
 
 import { Vue, getCurrentInstance, onUnmounted } from '../../vue-compat'
 import EsDialog from './component.vue'
-import type { DialogOptions } from '@es-plus/core'
+import type { DialogCallOptions, DialogOptions } from '@es-plus/core'
 
 export interface DialogCallable {
-  (dialogOptions: DialogOptions & { cacheKey?: string }): unknown
+  (dialogOptions: DialogCallOptions & { cacheKey?: string }): unknown
   close: () => void
   /** 销毁：传 cacheKey 只销毁该缓存实例；不传则销毁当前实例与全部缓存 */
   destroy: (cacheKey?: string) => void

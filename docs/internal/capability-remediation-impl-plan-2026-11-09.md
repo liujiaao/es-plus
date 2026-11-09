@@ -204,6 +204,32 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 
 **实施方案**：`DialogOptions` 改判别联合（纯类型，不影响运行时）。
 
+**当前进度**：✅ 已实现（实施记录见下）。
+
+**实施记录（2026-11-09）**
+
+1. **保留扁平基线，新增判别联合**：`DialogOptions` 仍是全量扁平接口 —— 它同时被
+   `Partial<DialogOptions>`（CRUD 配置槽）与缓存合并使用，那些场景**不知道** `type`，
+   强行改写成联合会让 `dialogOptions` 配置项无法表达。新增：
+   - `DialogModalOptions extends DialogOptions { type?: 'dialog'; direction?: never }`
+   - `DialogDrawerOptions extends DialogOptions { type: 'drawer'; isDraggable/fullscreen/
+     hiddenFullBtn/alignCenter/top?: never }`
+   - `DialogCallOptions = DialogModalOptions | DialogDrawerOptions`
+2. **`[key: string]: unknown` 不妨碍收窄**：索引签名是刻意开的扩展键契约；同名的具名
+   `never` 属性优先级高于索引签名，故 `{ type: 'drawer', isDraggable: true }` 会真的编译报错。
+3. **收窄点**：三端 `useDialog` 的 `DialogCallable` 调用签名改为 `DialogCallOptions`
+   （vue2 额外带 `cacheKey`）；三个类型进入 `PUBLIC_CONTRACT_TYPES`（39→42），
+   vue3 / antdv 各自特化、vue2 透传 core，`check:exports` 成员级比对通过。
+4. **类型级测试**：`packages/core/__tests__/dialog-call-options.types.spec.ts` 用
+   `@ts-expect-error` 覆盖 6 种误配（抽屉带拖拽/全屏/全屏按钮/居中/外边距、弹窗带方向），
+   由 `npm run typecheck -w @es-plus/core`（`tsc --noEmit`，include 含 `__tests__`）真的检查；
+   vitest 不做类型检查，文件内附一条运行时断言避免被判为空套件。
+5. **已知边界（刻意不做）**：`dialogOptions?: Partial<DialogOptions>` 配置槽不参与收窄
+   （它不带 `type`，无从判别）；`<es-dialog>` 的 Vue 运行时 props 无法表达判别联合，
+   组件 props 接口保持扁平，约束只落在编程式 `useDialog` 调用面。
+   显式标注 `DialogOptions` 的变量传入 `useDialog` 现在会报错 —— 改标 `DialogCallOptions`
+   或用 `satisfies` 即可（这是该能力的必要代价，已在类型注释中说明）。
+
 ---
 
 ## P1-7：localPagination AI 生成零分
