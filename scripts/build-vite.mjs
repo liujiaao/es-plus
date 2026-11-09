@@ -17,7 +17,7 @@
  * 用法：`node ../scripts/build-vite.mjs [vite build 的额外参数]`，cwd 必须是站点目录。
  */
 import { spawn, spawnSync } from 'node:child_process'
-import { existsSync, readdirSync, readlinkSync } from 'node:fs'
+import { existsSync, closeSync, readdirSync, readlinkSync } from 'node:fs'
 import { join } from 'node:path'
 
 const cwd = process.cwd()
@@ -45,10 +45,54 @@ if (process.platform === 'win32') {
   process.exit(res.status ?? 1)
 }
 
-// Linux：不 exec，留一个只握着几个 fd 的父进程去采样子进程的 /proc/<pid>/fd。
-// EMFILE 只发生在云构建里，光看「谁报了错」定位不到占用者 —— 把峰值时的 fd
-// 去向打出来，才知道是并发峰值、继承来的 fd，还是真漏了。
+// Linux：先把构建器继承进来的普通文件 fd 关掉，再留一个只握几个 fd 的父进程
+// 采样子进程的 /proc/<pid>/fd。EMFILE 只发生在云构建里，光看「谁报了错」定位不到
+// 占用者 —— 起始值 / 峰值 / 峰值时 fd 的去向，才能判断是继承、并发峰值还是真漏了。
 const canSample = process.platform === 'linux' && existsSync('/proc/self/fd')
+
+/**
+ * 关掉从父进程继承来的「普通文件」fd（指向真实路径的那些）。
+ *
+ * 为什么需要：云端 EMFILE 出现得很早（452 个模块）且两次位置不同 —— 像是进程
+ * 一启动就已经被上千个继承来的 fd 顶到上限，而不是构建自己开的。管道 / socket /
+ * anon_inode 一律不动（可能是构建器给我们接的日志与状态通道），stdio 更不会碰。
+ */
+function closeInheritedFileFds() {
+  if (!canSample) return 0
+  let names
+  try {
+    names = readdirSync('/proc/self/fd')
+  } catch {
+    return 0
+  }
+  const before = names.length
+  let closed = 0
+  for (const name of names) {
+    const fd = Number(name)
+    if (!Number.isInteger(fd) || fd <= 2) continue
+    let target
+    try {
+      target = readlinkSync(`/proc/self/fd/${name}`)
+    } catch {
+      continue
+    }
+    if (!target.startsWith('/')) continue // pipe:[…] / socket:[…] / anon_inode:[…]
+    if (target === '/dev/null' || target.startsWith('/dev/tty')) continue
+    try {
+      closeSync(fd)
+      closed += 1
+    } catch {
+      /* 关不掉就留着，不影响构建 */
+    }
+  }
+  if (closed) {
+    console.error(`[build-vite] 起始 fd ${before}，其中 ${closed} 个是继承来的普通文件，已关闭`)
+  }
+  return closed
+}
+
+closeInheritedFileFds()
+
 if (!canSample) {
   const res = spawnSync('sh', ['-c', POSIX_SCRIPT, process.execPath, ...args], { stdio: 'inherit' })
   if (res.error) {
