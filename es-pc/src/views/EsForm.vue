@@ -231,6 +231,21 @@
 
     <a-divider v-if="isActive('scenes')" />
 
+    <!-- 嵌套对象：父字段 children -->
+    <section v-if="isActive('scenes')" id="form-nested">
+      <h2>嵌套对象：一个标题 + 一组子字段</h2>
+      <p>
+        父字段写 <code>children</code>：容器只出整行标题，不渲染控件也不绑定数据；子字段用相对
+        <code>prop</code> 绑定到嵌套模型（<code>province</code> → <code>address.province</code>），
+        栅格按容器内数量自动算。支持一层，三端同一套摊平规则。
+      </p>
+            <CodeDemo :source="rawSFCs['./es-form/FormNested.vue']">
+        <EsFormFormNested />
+      </CodeDemo>
+    </section>
+
+    <a-divider v-if="isActive('scenes')" />
+
     <!-- 分组布局：容器组件包裹多个 EsForm -->
     <section v-if="isActive('scenes')" id="form-group">
       <h2>进阶：多实例组合与逐组校验</h2>
@@ -332,6 +347,7 @@ import EsFormDialog from './es-form/Dialog.vue'
 import EsFormFileUpload from './es-form/FileUpload.vue'
 import EsFormGroupLayout from './es-form/GroupLayout.vue'
 import EsFormFormGroups from './es-form/FormGroups.vue'
+import EsFormFormNested from './es-form/FormNested.vue'
 
 const rawSFCs = import.meta.glob('./es-form/*.vue', { query: '?raw', import: 'default', eager: true })
 
@@ -350,7 +366,7 @@ const SECTION_GROUPS = [
     name: '选择、运行期与按钮',
     ids: ['advanced-buttons', 'cascader', 'tree-select-autocomplete', 'datetime-range', 'dynamic', 'custom-button'],
   },
-  { key: 'scenes', name: '业务场景', ids: ['detail', 'upload', 'search', 'dialog', 'file-upload', 'form-groups', 'form-group'] },
+  { key: 'scenes', name: '业务场景', ids: ['detail', 'upload', 'search', 'dialog', 'file-upload', 'form-groups', 'form-nested', 'form-group'] },
 ]
 
 const route = useRoute()

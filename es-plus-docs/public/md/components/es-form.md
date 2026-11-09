@@ -40,6 +40,7 @@ type: 'component'
 - 详情模式 —— 编辑/详情双模式切换：详情模式禁用所有字段并隐藏按钮，编辑模式恢复可交互。
 - 组合搜索 —— isHidden 条件显隐 + apiParams 异步选项 + 更多/收起，完整搜索表单模式。
 - 分组容器：页签 / 分步 / 折叠面板 —— 字段上写 group、layout 里声明组 —— Tabs / Steps / Collapse 由 EsForm 自己渲染，三端同一套分桶规则；未分组字段落进「其他」或按 ungrouped 丢弃。
+- 嵌套对象：一个标题 + 一组子字段 —— 父字段写 children：容器只出整行标题、不绑定数据，子字段用相对 prop 绑定到嵌套模型（province → address.province），栅格按容器内数量自动算。支持一层，三端行为一致。
 - 进阶：多实例组合与逐组校验 —— 用容器组件包裹多个 EsForm、共用一个 model。演示内置分组管不了的难点 —— 保存时逐组校验，并把第一个出错的组切到前台；分步模式下「下一步」只校验当前步。
 
 ## API
@@ -67,6 +68,7 @@ type: 'component'
 | formtype | string | - | 控件类型（14 种）：Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / Radio / Checkbox / Switch / Rate / Upload。旧写法 datePicker / timePicker 仍兼容 |
 | span | number | 6 | 栅格占位（24 列布局） |
 | group | string | - | 所属分组 key，配合 layoutFormProps.layout 使用；不写则按 ungrouped 策略处理（默认落进「其他」） |
+| children | FormItemOption[] | - | 嵌套对象（一层）：本字段变成整行标题、不渲染控件也不绑定数据；子字段 prop 相对本字段（province → address.province），栅格按容器内数量自动算，显式 span 优先；子字段继承父字段 group |
 | emptyPlaceholder | string | '-' | 详情模式（mode="detail"）下空值的展示文本；编辑模式不消费 |
 | attrs | Object | - | 透传给 Element Plus 组件的属性（placeholder、clearable 等） |
 | on | Object | - | 事件监听，如 { change: (val) => {} } |

@@ -105,6 +105,7 @@ export const docsData: Record<string, any> = {
       { group: '模式与组合', key: 'detail-mode', title: '详情模式', description: '编辑/详情双模式切换：详情模式禁用所有字段并隐藏按钮，编辑模式恢复可交互。', component: getComponent('form/17-detail-mode'), code: code('form/17-detail-mode') },
       { group: '模式与组合', key: 'search-form', title: '组合搜索', description: 'isHidden 条件显隐 + apiParams 异步选项 + 更多/收起，完整搜索表单模式。', component: getComponent('form/18-search-form'), code: code('form/18-search-form') },
       { group: '模式与组合', key: 'form-groups', title: '分组容器：页签 / 分步 / 折叠面板', description: '字段上写 group、layout 里声明组 —— Tabs / Steps / Collapse 由 EsForm 自己渲染，三端同一套分桶规则；未分组字段落进「其他」或按 ungrouped 丢弃。', component: getComponent('form/22-form-groups'), code: code('form/22-form-groups') },
+      { group: '模式与组合', key: 'form-nested', title: '嵌套对象：一个标题 + 一组子字段', description: '父字段写 children：容器只出整行标题、不绑定数据，子字段用相对 prop 绑定到嵌套模型（province → address.province），栅格按容器内数量自动算。支持一层，三端行为一致。', component: getComponent('form/23-form-nested'), code: code('form/23-form-nested') },
       { group: '模式与组合', key: 'form-group', title: '进阶：多实例组合与逐组校验', description: '用容器组件包裹多个 EsForm、共用一个 model。演示内置分组管不了的难点 —— 保存时逐组校验，并把第一个出错的组切到前台；分步模式下「下一步」只校验当前步。', component: getComponent('form/21-form-group'), code: code('form/21-form-group') }
     ],
     api: {
@@ -125,6 +126,7 @@ export const docsData: Record<string, any> = {
         { name: 'formtype', type: 'string', default: '-', desc: '控件类型（14 种）：Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / Radio / Checkbox / Switch / Rate / Upload。旧写法 datePicker / timePicker 仍兼容' },
         { name: 'span', type: 'number', default: '6', desc: '栅格占位（24 列布局）' },
         { name: 'group', type: 'string', default: '-', desc: '所属分组 key，配合 layoutFormProps.layout 使用；不写则按 ungrouped 策略处理（默认落进「其他」）' },
+        { name: 'children', type: 'FormItemOption[]', default: '-', desc: '嵌套对象（一层）：本字段变成整行标题、不渲染控件也不绑定数据；子字段 prop 相对本字段（province → address.province），栅格按容器内数量自动算，显式 span 优先；子字段继承父字段 group' },
         { name: 'emptyPlaceholder', type: 'string', default: "'-'", desc: '详情模式（mode="detail"）下空值的展示文本；编辑模式不消费' },
         { name: 'attrs', type: 'Object', default: '-', desc: '透传给 Element Plus 组件的属性（placeholder、clearable 等）' },
         { name: 'on', type: 'Object', default: '-', desc: '事件监听，如 { change: (val) => {} }' },
