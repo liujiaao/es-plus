@@ -100,6 +100,8 @@ export interface FormItemOption {
   labelKey?: string
   formtype?: 'Input' | 'InputNumber' | 'Select' | 'DatePicker' | 'TimePicker' | 'Slider' | 'ColorPicker' | 'Transfer' | 'Cascader' | 'TreeSelect' | 'Autocomplete' | 'Radio' | 'Checkbox' | 'Switch' | 'Rate' | 'Upload'
   span?: number
+  /** 分组键（P1-3）：与 `layoutFormProps.layout.groups[].key` 对应 */
+  group?: string
   placeholder?: string
   /** 详情模式（EsForm mode="detail"）下空值的展示文本，默认 '-' */
   emptyPlaceholder?: string
@@ -214,6 +216,22 @@ export interface BtnConfig {
 // ============================================================================
 // 表单布局
 // ============================================================================
+/** 表单分组声明（P1-3）：与 `FormItemOption.group` 以 key 呼应，顺序即渲染顺序 */
+export interface FormGroupOption {
+  key: string
+  label?: string
+  labelKey?: string
+  description?: string
+}
+
+/** 表单分组容器配置（P1-3）：tabs / steps / collapse */
+export interface FormGroupLayout {
+  type: 'tabs' | 'steps' | 'collapse'
+  groups?: FormGroupOption[]
+  ungrouped?: 'default' | 'first' | 'hidden'
+  defaultLabel?: string
+}
+
 export interface LayoutFormProps {
   rowLayProps?: Record<string, unknown>
   formLayProps?: {
@@ -234,6 +252,8 @@ export interface LayoutFormProps {
     size?: 'large' | 'middle' | 'small' | string
   }
   setOptions?: boolean
+  /** 分组容器（P1-3）：未配置时布局与历史行为完全一致 */
+  layout?: FormGroupLayout
 }
 
 // ============================================================================

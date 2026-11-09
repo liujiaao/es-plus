@@ -1,9 +1,16 @@
 <template>
   <el-form ref="formRef" v-bind="formProps" :class="['es-form', { 'es-form--detail': isDetail }]">
     <div class="flex-center">
-      <el-row v-bind="rowLayout">
-        <template v-for="(item, index) in formItem">
+      <!-- P1-3 第一期：分组容器。layout 为空时 shell 退化成普通 el-row（与历史 DOM 一致） -->
+      <form-group-shell
+        :layout="formGroupInfo.layout"
+        :groups="formGroupInfo.groups"
+        :row-layout="rowLayout"
+        :resolve-label="groupLabel"
+      >
+        <template #default="{ group }">
           <el-col
+            v-for="(item, index) in group.items"
             v-show="!item.isFold"
             :key="item.prop || index"
             :span="item.span"
@@ -21,7 +28,7 @@
                 <render-dom-form
                   :row="item"
                   :render="formInputComponents(item)"
-                  :index="index"
+                  :index="Number(index)"
                   :model="resolvedModel"
                 />
               </template>
@@ -29,7 +36,7 @@
                 <render-dom-form
                   :row="item"
                   :render="item.render"
-                  :index="index"
+                  :index="Number(index)"
                   :model="resolvedModel"
                 />
               </template>
@@ -37,7 +44,8 @@
           </el-col>
         </template>
 
-        <template v-if="!isBtnHidden">
+        <template #actions>
+          <template v-if="!isBtnHidden">
           <render-btn
             v-if="isRenderBtn"
             :row="{ isFold, folded, getBtnColSpan, getRowColsAlgorithm, changeFolded, refsForm: formInstance }"
@@ -82,7 +90,7 @@
                     </el-button>
                   </template>
                   <el-button
-                    v-if="isFold"
+                    v-if="isFold && !formGroupInfo.active"
                     type="text"
                     :icon="folded ? 'el-icon-arrow-down' : 'el-icon-arrow-up'"
                     style="padding-left: 0; border: none"
@@ -118,7 +126,7 @@
                   </el-button>
                 </template>
                 <el-button
-                  v-if="isFold"
+                  v-if="isFold && !formGroupInfo.active"
                   type="text"
                   :icon="folded ? 'el-icon-arrow-down' : 'el-icon-arrow-up'"
                   style="padding-left: 0; border: none"
@@ -129,8 +137,9 @@
               </div>
             </el-form-item>
           </el-col>
+          </template>
         </template>
-      </el-row>
+      </form-group-shell>
     </div>
   </el-form>
 </template>
@@ -181,8 +190,9 @@ import {
   checkPermissionValue,
   resolveFormDetailText,
   resolveBuiltinText,
+  groupFormItems,
 } from '@es-plus/core'
-import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData, FieldOutputProvider, ConfigFormFieldOut } from '@es-plus/core'
+import type { FormItemOption, BtnConfig, LayoutFormProps, ModelData, FieldOutputProvider, ConfigFormFieldOut, FormGroupLayout, ResolvedFormGroup } from '@es-plus/core'
 
 // 弃用告警去重：错拼 `isHiden` 每字段只提示一次，避免响应式重算刷屏
 const warnedIsHiden = new Set<string>()
@@ -232,9 +242,145 @@ const RenderBtn = defineComponent({
   },
 })
 
+/**
+ * P1-3 第一期：分组容器（Vue 2 版）。
+ *
+ * 与 Vue 3 版语义一致：`layout` 为空时退化成普通 `el-row`（字段 + 动作区），
+ * 配置了容器形态才画 tabs / steps / collapse。分桶规则在 core `groupFormItems` 单源。
+ */
+const GROUP_NAME_FALLBACK = '__es_ungrouped'
+const groupDomName = (key: string): string => key || GROUP_NAME_FALLBACK
+
+const FormGroupShell = defineComponent({
+  name: 'FormGroupShell',
+  props: {
+    layout: { type: Object as PropType<FormGroupLayout | null>, default: null },
+    groups: { type: Array as PropType<ResolvedFormGroup<FormItemOption>[]>, default: () => [] },
+    rowLayout: { type: Object as PropType<Record<string, unknown>>, default: () => ({}) },
+    resolveLabel: {
+      type: Function as PropType<(g: { key: string; label?: string; labelKey?: string }) => string>,
+      required: true,
+    },
+  },
+  data() {
+    return { activeTab: '', collapsedKeys: [] as string[], step: 0 }
+  },
+  render(this: any, createElement: any) {
+    const groups: ResolvedFormGroup<FormItemOption>[] = this.groups || []
+    const layout: FormGroupLayout | null = this.layout
+    const scoped = this.$scopedSlots && this.$scopedSlots.default
+    // 插槽内容为空时 Vue 2 的作用域插槽会返回 undefined，统一归一成数组
+    const toVNodes = (v: any): any[] => (Array.isArray(v) ? v : v == null ? [] : [v])
+    const body = (g: ResolvedFormGroup<FormItemOption>) => toVNodes(scoped ? scoped({ group: g }) : [])
+    // Vue 2.6 起所有 `v-slot` 模板都编译进 $scopedSlots（含具名、无作用域的），
+    // 因此 `#actions` 不会出现在 $slots 里 —— 两处都要看。
+    const actionsScoped = this.$scopedSlots && this.$scopedSlots.actions
+    const actions: any[] = toVNodes(actionsScoped ? actionsScoped() : this.$slots.actions)
+    // 注意 el-row 的 gutter/type 是**组件 props**，必须放进 props 而不是 attrs
+    const row = (children: any[]) => createElement('el-row', { props: this.rowLayout || {} }, children)
+    const label = (g: ResolvedFormGroup<FormItemOption>) => this.resolveLabel(g)
+
+    if (!layout || !groups.length) {
+      return row(groups.length ? [...body(groups[0]), ...actions] : [...actions])
+    }
+    const names = groups.map((g) => groupDomName(g.key))
+
+    if (layout.type === 'tabs') {
+      const active = names.indexOf(this.activeTab) >= 0 ? this.activeTab : names[0]
+      return createElement('div', { class: 'es-form-groups es-form-groups--tabs' }, [
+        createElement(
+          'el-tabs',
+          {
+            props: { value: active },
+            on: {
+              input: (v: string) => {
+                this.activeTab = String(v)
+              },
+            },
+          },
+          groups.map((g) =>
+            createElement(
+              'el-tab-pane',
+              { key: groupDomName(g.key), props: { label: label(g), name: groupDomName(g.key) } },
+              [row(body(g))]
+            )
+          )
+        ),
+        row(actions),
+      ])
+    }
+
+    if (layout.type === 'collapse') {
+      const expanded = names.filter((n) => this.collapsedKeys.indexOf(n) === -1)
+      return createElement('div', { class: 'es-form-groups es-form-groups--collapse' }, [
+        createElement(
+          'el-collapse',
+          {
+            props: { value: expanded },
+            on: {
+              input: (v: string | string[]) => {
+                const next = Array.isArray(v) ? v : [v]
+                this.collapsedKeys = names.filter((n) => next.indexOf(n) === -1)
+              },
+            },
+          },
+          groups.map((g) =>
+            createElement(
+              'el-collapse-item',
+              { key: groupDomName(g.key), props: { title: label(g), name: groupDomName(g.key) } },
+              [row(body(g))]
+            )
+          )
+        ),
+        row(actions),
+      ])
+    }
+
+    // steps：只渲染当前组，内置上一步/下一步
+    const current = Math.min(Math.max(this.step, 0), groups.length - 1)
+    const navBtn = (disabled: boolean, text: string, onClick: () => void, primary = false) =>
+      createElement(
+        'el-button',
+        { props: { size: 'small', type: primary ? 'primary' : 'default', disabled }, on: { click: onClick } },
+        [text]
+      )
+    return createElement('div', { class: 'es-form-groups es-form-groups--steps' }, [
+        createElement(
+        'el-steps',
+        { props: { active: current, alignCenter: true }, style: { marginBottom: '16px' } },
+        groups.map((g) =>
+          createElement('el-step', {
+            key: groupDomName(g.key),
+            props: { title: label(g), description: g.description },
+          })
+        )
+      ),
+      row(body(groups[current])),
+      createElement('div', { class: 'es-form-groups__nav', style: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '8px' } }, [
+        navBtn(
+          current <= 0,
+          resolveBuiltinText('prev'),
+          () => {
+            this.step = current - 1
+          }
+        ),
+        navBtn(
+          current >= groups.length - 1,
+          resolveBuiltinText('next'),
+          () => {
+            this.step = current + 1
+          },
+          true
+        ),
+      ]),
+      row(actions),
+    ])
+  },
+})
+
 export default defineComponent({
   name: 'EsForm',
-  components: { RenderDomForm, RenderBtn },
+  components: { RenderDomForm, RenderBtn, FormGroupShell },
   props: {
     /** 表单 model 数据 */
     model: { type: Object as PropType<ModelData>, default: () => ({}) },
@@ -656,6 +802,35 @@ export default defineComponent({
       { immediate: true }
     )
 
+    // P1-3 第一期：分组容器。分桶在 core 单源；分组生效时关闭折叠（折叠按整表行数，
+    // 跨组会藏字段，折叠按钮同步隐藏）。
+    const formGroupInfo = computed(() => {
+      const layoutCfg = effectiveLayoutFormProps.value.layout as FormGroupLayout | undefined
+      const result = groupFormItems(formItem.value as unknown as { group?: string }[], layoutCfg)
+      if (!result.active) {
+        return {
+          active: false,
+          layout: null as FormGroupLayout | null,
+          groups: result.groups as unknown as ResolvedFormGroup<FormItemOption>[],
+        }
+      }
+      return {
+        active: true,
+        layout: layoutCfg as FormGroupLayout,
+        groups: result.groups.map((g) => ({
+          ...g,
+          items: (g.items as unknown as FormItemOption[]).map((it) => ({ ...it, isFold: undefined })),
+        })) as unknown as ResolvedFormGroup<FormItemOption>[],
+      }
+    })
+
+    /** 分组标题：labelKey 走宿主 `t`，未分组桶回落内置文案「其他」，其余回落 key。 */
+    const groupLabel = (g: { key: string; label?: string; labelKey?: string }): string => {
+      const t = (esPlus && esPlus.t) as ((k: string) => string) | undefined
+      if (g.labelKey && typeof t === 'function') return t(g.labelKey)
+      return g.label || g.key || resolveBuiltinText('other')
+    }
+
     // ─── 按钮分组（左右） ──
     /**
      * 详情模式下的生效按钮：`triggerEvent` 按钮（查询/重置等取数动作）在只读表单里没有意义，
@@ -891,6 +1066,8 @@ export default defineComponent({
       formProps,
       rowLayout,
       formItem,
+      formGroupInfo,
+      groupLabel,
       isBtnHidden,
       isFold,
       folded,

@@ -16,6 +16,7 @@ import FormComputedFields from './form/ComputedFields.vue'
 import FormDeclarativeLinkage from './form/DeclarativeLinkage.vue'
 import FormDetailMode from './form/DetailMode.vue'
 import FormGroupLayout from './form/GroupLayout.vue'
+import FormGroups from './form/FormGroups.vue'
 
 import TableBasic from './table/Basic.vue'
 import TableAutoRequest from './table/AutoRequest.vue'
@@ -123,6 +124,7 @@ const componentMap = {
   './form/DeclarativeLinkage.vue': FormDeclarativeLinkage,
   './form/DetailMode.vue': FormDetailMode,
   './form/GroupLayout.vue': FormGroupLayout,
+  './form/FormGroups.vue': FormGroups,
   './table/Basic.vue': TableBasic,
   './table/AutoRequest.vue': TableAutoRequest,
   './table/CustomHttp.vue': TableCustomHttp,
@@ -243,7 +245,8 @@ export const formExamples = [
   { key: 'ComputedFields', title: '字段联动计算', description: 'watch 监听字段变化自动回填与计算（单价×数量=小计，×折扣=应付），派生字段只读展示。' },
   { key: 'DeclarativeLinkage', title: '报销单：零回调联动', description: '省→市→门店三级下拉、选了城市才要求发票号、大区自动带出并锁定、金额 > 5000 才要求说明、非部分退款时隐藏退款原因 —— 全部来自一份纯 JSON（reactions + JSON 表达式），示例里 0 个函数。' },
   { key: 'DetailMode', title: '详情/编辑模式', description: '同一份 formItemList 通过 computed 切换 attrs.disabled，实现详情与编辑双模式复用。' },
-  { key: 'GroupLayout', title: '分组布局（Tabs/Steps/Collapse）', description: 'EsForm 没有内置分组容器：用 el-tabs 包裹多个 EsForm、共用一个 model；保存前逐组 validate()，避免错误藏在没打开的标签页里。' },
+  { key: 'FormGroups', title: '分组容器：页签 / 分步 / 折叠面板', description: '字段上写 group、layout 里声明组 —— Tabs / Steps / Collapse 由 EsForm 自己渲染，三端同一套分桶规则；未分组字段落进「其他」或按 ungrouped 丢弃。' },
+  { key: 'GroupLayout', title: '进阶：多实例组合与逐组校验', description: '内置分组管不了「每组独立校验」时，用 el-tabs 包裹多个 EsForm、共用一个 model；保存前逐组 validate()，避免错误藏在没打开的标签页里。' },
 ]
 
 export const tableExamples = [

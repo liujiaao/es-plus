@@ -441,6 +441,12 @@ export default {
                 <td>栅格列数 (1-24)，默认 6。常用值：8(1/3行)、6(1/4行)、12(半行)、24(整行)</td>
               </tr>
               <tr>
+                <td><code>group</code></td>
+                <td>String</td>
+                <td><span class="badge optional">否</span></td>
+                <td>所属分组 key，配合 <code>layoutFormProps.layout</code> 使用；不写则按 <code>ungrouped</code> 策略处理（默认落进「其他」）</td>
+              </tr>
+              <tr>
                 <td><code>attrs</code></td>
                 <td>Object</td>
                 <td><span class="badge optional">否</span></td>
@@ -574,6 +580,17 @@ export default {
                 </td>
               </tr>
               <tr><td><code>setOptions</code></td><td>Boolean</td><td>在表格内嵌表单时，是否将表单查询条件作为表格请求参数（默认 true）</td></tr>
+              <tr>
+                <td><code>layout</code></td><td>Object</td><td>
+                  分组容器（不写时保持平铺栅格）：
+                  <ul style="margin:4px 0 0 16px">
+                    <li><code>type</code> — <code>'tabs' | 'steps' | 'collapse'</code>（必填）</li>
+                    <li><code>groups</code> — <code>[{ key, label?, labelKey?, description? }]</code>，声明组的顺序与标题；未声明的组按字段首次出现顺序追加</li>
+                    <li><code>ungrouped</code> — 没有 <code>group</code> 的字段去哪：<code>'default'</code>（默认，单独放进「其他」）/ <code>'first'</code>（并入第一个组）/ <code>'hidden'</code>（不渲染）</li>
+                    <li><code>defaultLabel</code> — 兜底组的标题，默认「其他」</li>
+                  </ul>
+                </td>
+              </tr>
             </tbody>
           </table>
         </div>

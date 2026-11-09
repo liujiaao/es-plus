@@ -1,9 +1,21 @@
 <template>
   <el-form :ref="setFormRef" v-bind="(formProps as any)" :class="['es-form', { 'es-form--detail': isDetail }]">
     <div class="flex-center">
-      <el-row v-bind="rowLayout">
-        <template v-for="(item, index) in formItem" :key="item.prop">
+      <!--
+        P1-3 第一期：分组容器。`layout` 为 null 时 shell 直接渲染 `<el-row>` + 字段 +
+        动作区 —— DOM 与历史扁平布局一致；配置了 tabs/steps/collapse 才换成容器。
+        el-row 由 shell 统一包裹，字段与按钮各自只写一份。
+      -->
+      <FormGroupShell
+        :layout="formGroupInfo.layout"
+        :groups="formGroupInfo.groups"
+        :row-layout="rowLayout"
+        :resolve-label="groupLabel"
+      >
+        <template #default="{ group }">
           <el-col
+            v-for="(item, index) in group.items"
+            :key="item.prop"
             :span="item.span"
             :class="{ 'es-col--foldable': item?.isFold !== undefined, 'is-folded': item?.isFold && folded }"
           >
@@ -17,16 +29,17 @@
                 <span class="es-form-detail__text">{{ detailText(item) }}</span>
               </template>
               <template v-else-if="item.formtype">
-                <RenderDomForm :row="item" :render="formInputComponents(item)" :index="index" :model="model" />
+                <RenderDomForm :row="item" :render="formInputComponents(item)" :index="Number(index)" :model="model" />
               </template>
               <template v-else>
-                <RenderDomForm :row="item" :render="item.render" :index="index" :model="model" />
+                <RenderDomForm :row="item" :render="item.render" :index="Number(index)" :model="model" />
               </template>
             </el-form-item>
           </el-col>
         </template>
 
-        <template v-if="!isBtnHidden">
+        <template #actions>
+          <template v-if="!isBtnHidden">
           <template v-if="isRenderBtn">
             <RenderBtn
               :row="{ isFold: isFold, folded, getBtnColSpan, getRowColsAlgorithm, changeFolded, refsForm: formInstance }"
@@ -66,7 +79,7 @@
                     </el-button>
                   </template>
                   <el-button
-                    v-if="isFold"
+                    v-if="isFold && !formGroupInfo.active"
                     link
                     type="primary"
                     :icon="getCompIcon(folded ? 'ArrowDown' : 'ArrowUp')"
@@ -115,7 +128,7 @@
                   </template>
                 </template>
                 <el-button
-                  v-if="isFold"
+                  v-if="isFold && !formGroupInfo.active"
                   type="primary"
                   link
                   :icon="getCompIcon(folded ? 'ArrowDown' : 'ArrowUp')"
@@ -142,8 +155,9 @@
               </div>
             </el-form-item>
           </el-col>
+          </template>
         </template>
-      </el-row>
+      </FormGroupShell>
     </div>
   </el-form>
 </template>
@@ -157,13 +171,19 @@ export default { name: 'EsForm' }
 // `queryTableRequest` 通过 triggerEvent 联动父级 es-table（三端同一行为，antdv 文件头
 // 早已写明）。此前这里声明并定义了 confirm/reset 却零调用点 —— 宿主写 `@confirm`
 // 只会得到静默。声明了却永不触发 = 承诺了不存在的能力，故一并删除（F5a）。
-import { ref, computed, watch, inject, getCurrentInstance, nextTick, h, defineComponent } from 'vue'
+import { ref, computed, watch, inject, getCurrentInstance, nextTick, h, defineComponent, type PropType } from 'vue'
 import {
   ElRow,
   ElCol,
   ElFormItem,
   ElForm,
   ElButton,
+  ElTabs,
+  ElTabPane,
+  ElCollapse,
+  ElCollapseItem,
+  ElSteps,
+  ElStep,
   ElDropdownMenu,
   ElDropdownItem,
   ElDropdown,
@@ -177,8 +197,8 @@ import { isObject } from '../../../utils/shared'
 import { getGlobalConfig } from '../../../config'
 import useDialog from '../../es-dialog/src/use-dialog'
 import EsTable from '../../es-table'
-import type { FormItemOption, BtnConfig, LayoutFormProps } from '../../../types'
-import type { FieldOutputProvider, ConfigFormFieldOut } from '@es-plus/core'
+import type { FormItemOption, BtnConfig, LayoutFormProps, FormGroupLayout } from '../../../types'
+import type { FieldOutputProvider, ConfigFormFieldOut, ResolvedFormGroup } from '@es-plus/core'
 import {
   resolveFormLayProps,
   calculateAutoSpan,
@@ -201,6 +221,7 @@ import {
   checkPermissionValue,
   resolveBuiltinText,
   resolveFormDetailText,
+  groupFormItems,
 } from '@es-plus/core'
 
 const props = withDefaults(
@@ -481,6 +502,42 @@ watch(
 )
 
 /**
+ * P1-3 第一期：分组容器（tabs / steps / collapse）。
+ *
+ * 分桶规则在 core `groupFormItems` 单源；这里只做两件事：
+ * ① 分组生效时**关闭折叠**——折叠是「按整表行数」的语义，跨组叠加会把某个页签里的
+ *    字段藏起来（且折叠按钮已同步隐藏）；
+ * ② 把未分组桶（key 为 ''）的标题交给渲染层兜底为内置文案「其他」。
+ */
+const formGroupInfo = computed(() => {
+  const layoutCfg = effectiveLayoutFormProps.value.layout as FormGroupLayout | undefined
+  const result = groupFormItems(formItem.value, layoutCfg)
+  if (!result.active) {
+    return {
+      active: false,
+      layout: null as FormGroupLayout | null,
+      groups: result.groups as unknown as ResolvedFormGroup<FormItemOption>[],
+    }
+  }
+  return {
+    active: true,
+    layout: layoutCfg as FormGroupLayout,
+    groups: result.groups.map((g) => ({
+      ...g,
+      items: g.items.map((it) => ({ ...it, isFold: undefined })),
+    })) as unknown as ResolvedFormGroup<FormItemOption>[],
+  }
+})
+
+/** 分组标题：labelKey 走宿主 `t`，未分组桶回落内置文案「其他」，其余回落 key。 */
+const groupLabel = (g: { key: string; label?: string; labelKey?: string }): string => {
+  if (g.labelKey && typeof esPlus.t === 'function') {
+    return (esPlus.t as (k: string) => string)(g.labelKey)
+  }
+  return g.label || g.key || resolveBuiltinText('other')
+}
+
+/**
  * 详情模式下的生效按钮：`triggerEvent` 按钮（查询/重置等取数动作）在只读表单里没有意义，
  * 默认不渲染；其余显式按钮（关闭/返回/打印…）照常。编辑模式原样返回。
  *
@@ -718,6 +775,127 @@ const RenderDomForm = defineComponent({
       const { row, index, model } = props
       const renderContent = props.render?.(h, model, { row, index }) || ''
       return typeof renderContent === 'string' ? h('span', renderContent) : renderContent
+    }
+  }
+})
+
+/**
+ * P1-3 第一期：分组容器渲染层。
+ *
+ * 只负责「怎么画容器」：`layout` 为空时退化成一个普通 `<el-row>`（字段 + 动作区），
+ * 与历史扁平布局拥有**完全相同的 DOM 结构**；配置了容器形态才换成 tabs / steps / collapse。
+ * 字段与按钮的标记都只写一份（父模板的两个插槽），容器不重复它们。
+ */
+const GROUP_NAME_FALLBACK = '__es_ungrouped'
+const groupDomName = (key: string): string => key || GROUP_NAME_FALLBACK
+
+const FormGroupShell = defineComponent({
+  name: 'FormGroupShell',
+  props: {
+    layout: { type: Object as PropType<FormGroupLayout | null>, default: null },
+    groups: { type: Array as PropType<ResolvedFormGroup<FormItemOption>[]>, default: () => [] },
+    rowLayout: { type: Object as PropType<Record<string, unknown>>, default: () => ({}) },
+    resolveLabel: {
+      type: Function as PropType<(g: { key: string; label?: string; labelKey?: string }) => string>,
+      required: true
+    }
+  },
+  setup(props, { slots }) {
+    const activeTab = ref('')
+    const collapsedKeys = ref<string[]>([])
+    const step = ref(0)
+
+    // 插槽里的字段 VNode / 动作区 VNode
+    const body = (g: ResolvedFormGroup<FormItemOption>) => slots.default?.({ group: g }) ?? []
+    const actions = () => slots.actions?.() ?? []
+    const row = (children: () => unknown) => h(ElRow, props.rowLayout, children)
+
+    return () => {
+      const groups = props.groups || []
+      const layout = props.layout
+      if (!layout || !groups.length) {
+        // 扁平：字段与动作区仍在同一个 el-row 里，和历史行为一致
+        return row(() => (groups.length ? [body(groups[0]), actions()] : actions()))
+      }
+      const names = groups.map((g) => groupDomName(g.key))
+
+      if (layout.type === 'tabs') {
+        const active = names.includes(activeTab.value) ? activeTab.value : names[0]
+        return [
+          h(
+            ElTabs,
+            {
+              class: 'es-form-groups es-form-groups--tabs',
+              modelValue: active,
+              'onUpdate:modelValue': (v: string | number) => {
+                activeTab.value = String(v)
+              }
+            },
+            () =>
+              groups.map((g) =>
+                h(
+                  ElTabPane,
+                  { key: groupDomName(g.key), name: groupDomName(g.key), label: props.resolveLabel(g) },
+                  () => row(() => body(g))
+                )
+              )
+          ),
+          row(() => actions())
+        ]
+      }
+
+      if (layout.type === 'collapse') {
+        // modelValue = 展开的组；缺省全部展开（未登记在 collapsedKeys 的组视为展开）
+        const expanded = names.filter((n) => !collapsedKeys.value.includes(n))
+        return [
+          h(
+            ElCollapse,
+            {
+              class: 'es-form-groups es-form-groups--collapse',
+              modelValue: expanded,
+              'onUpdate:modelValue': (v: string | string[]) => {
+                const next = Array.isArray(v) ? v : [v]
+                collapsedKeys.value = names.filter((n) => !next.includes(n))
+              }
+            },
+            () =>
+              groups.map((g) =>
+                h(
+                  ElCollapseItem,
+                  { key: groupDomName(g.key), name: groupDomName(g.key), title: props.resolveLabel(g) },
+                  () => row(() => body(g))
+                )
+              )
+          ),
+          row(() => actions())
+        ]
+      }
+
+      // steps：只渲染当前组，内置上一步/下一步
+      const current = Math.min(Math.max(step.value, 0), groups.length - 1)
+      const navBtn = (disabled: boolean, label: string, onClick: () => void, primary = false) =>
+        h(ElButton, { size: 'small', type: primary ? 'primary' : 'default', disabled, onClick }, () => label)
+      return [
+        h(ElSteps, { class: 'es-form-groups es-form-groups--steps', active: current, 'align-center': true, style: { marginBottom: '16px' } }, () =>
+          groups.map((g) =>
+            h(ElStep, {
+              key: groupDomName(g.key),
+              title: props.resolveLabel(g),
+              description: g.description
+            })
+          )
+        ),
+        row(() => body(groups[current])),
+        h('div', { class: 'es-form-groups__nav', style: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '8px' } }, [
+          navBtn(current <= 0, resolveBuiltinText('prev'), () => {
+            step.value = current - 1
+          }),
+          navBtn(current >= groups.length - 1, resolveBuiltinText('next'), () => {
+            step.value = current + 1
+          }, true)
+        ]),
+        row(() => actions())
+      ]
     }
   }
 })

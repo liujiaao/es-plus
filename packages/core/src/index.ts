@@ -100,6 +100,10 @@ export {
 } from './form-layout.js'
 export type { RowLayoutInfo, FormLayoutResult } from './form-layout.js'
 
+// ─── 表单分组容器（P1-3 第一期）：分桶规则单源，三端只画容器 ──────
+export { groupFormItems, UNGROUPED_FORM_GROUP_KEY } from './form-groups.js'
+export type { FormGroupItemLike, ResolvedFormGroup, FormGroupResult } from './form-groups.js'
+
 // ─── EsCrudPage action 面解析（三端共用，AN-06）───────────────
 export { resolveCrudActions, LEGACY_CRUD_ACTIONS } from './crud-actions.js'
 export type { CrudActionsSource } from './crud-actions.js'

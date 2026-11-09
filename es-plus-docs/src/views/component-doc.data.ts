@@ -104,7 +104,8 @@ export const docsData: Record<string, any> = {
       { group: '模式与组合', key: 'custom-button', title: '自定义按钮区', description: 'renderBtn 完全自定义按钮区域，支持异步提交、保存草稿、确认弹窗等交互。', component: getComponent('form/16-custom-button'), code: code('form/16-custom-button') },
       { group: '模式与组合', key: 'detail-mode', title: '详情模式', description: '编辑/详情双模式切换：详情模式禁用所有字段并隐藏按钮，编辑模式恢复可交互。', component: getComponent('form/17-detail-mode'), code: code('form/17-detail-mode') },
       { group: '模式与组合', key: 'search-form', title: '组合搜索', description: 'isHidden 条件显隐 + apiParams 异步选项 + 更多/收起，完整搜索表单模式。', component: getComponent('form/18-search-form'), code: code('form/18-search-form') },
-      { group: '模式与组合', key: 'form-group', title: '分组布局：Tabs / Steps / 折叠面板', description: 'EsForm 没有内置分组容器：用容器组件包裹多个 EsForm、共用一个 model。示例演示真正的难点 —— 保存时逐组校验，并把第一个出错的组切到前台；分步模式下「下一步」只校验当前步。', component: getComponent('form/21-form-group'), code: code('form/21-form-group') }
+      { group: '模式与组合', key: 'form-groups', title: '分组容器：页签 / 分步 / 折叠面板', description: '字段上写 group、layout 里声明组 —— Tabs / Steps / Collapse 由 EsForm 自己渲染，三端同一套分桶规则；未分组字段落进「其他」或按 ungrouped 丢弃。', component: getComponent('form/22-form-groups'), code: code('form/22-form-groups') },
+      { group: '模式与组合', key: 'form-group', title: '进阶：多实例组合与逐组校验', description: '用容器组件包裹多个 EsForm、共用一个 model。演示内置分组管不了的难点 —— 保存时逐组校验，并把第一个出错的组切到前台；分步模式下「下一步」只校验当前步。', component: getComponent('form/21-form-group'), code: code('form/21-form-group') }
     ],
     api: {
       props: [
@@ -123,6 +124,7 @@ export const docsData: Record<string, any> = {
         { name: 'label', type: 'string', default: '-', desc: '标签文本（必填）' },
         { name: 'formtype', type: 'string', default: '-', desc: '控件类型（14 种）：Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / Radio / Checkbox / Switch / Rate / Upload。旧写法 datePicker / timePicker 仍兼容' },
         { name: 'span', type: 'number', default: '6', desc: '栅格占位（24 列布局）' },
+        { name: 'group', type: 'string', default: '-', desc: '所属分组 key，配合 layoutFormProps.layout 使用；不写则按 ungrouped 策略处理（默认落进「其他」）' },
         { name: 'emptyPlaceholder', type: 'string', default: "'-'", desc: '详情模式（mode="detail"）下空值的展示文本；编辑模式不消费' },
         { name: 'attrs', type: 'Object', default: '-', desc: '透传给 Element Plus 组件的属性（placeholder、clearable 等）' },
         { name: 'on', type: 'Object', default: '-', desc: '事件监听，如 { change: (val) => {} }' },
@@ -151,7 +153,14 @@ export const docsData: Record<string, any> = {
         { name: 'formLayProps.btnColSpan', type: 'number', default: '-', desc: '按钮所在列的 span' },
         { name: 'formLayProps.labelBtnWidth', type: 'string | number', default: '-', desc: '按钮区标签宽度' },
         { name: 'fromLayProps', type: 'Object', default: '-', desc: '旧拼写（键同 formLayProps），仅为兼容保留，新代码请改用 formLayProps' },
-        { name: 'setOptions', type: 'boolean', default: '-', desc: '是否启用设置下拉' }
+        { name: 'setOptions', type: 'boolean', default: '-', desc: '是否启用设置下拉' },
+        { name: 'layout', type: 'FormGroupLayout', default: '-', desc: '分组容器配置（见 FormGroupLayout 表）；不写时保持平铺栅格' }
+      ],
+      'FormGroupLayout': [
+        { name: 'type', type: "'tabs' | 'steps' | 'collapse'", default: '-', desc: '容器类型：页签 / 分步 / 折叠面板（必填，三端同一套分桶规则）' },
+        { name: 'groups', type: 'FormGroupOption[]', default: '-', desc: '组的顺序与标题：[{ key, label?, labelKey?, description? }]；字段上的 group 匹配这里的 key。未声明的组按字段首次出现顺序追加，空组会被丢弃' },
+        { name: 'ungrouped', type: "'default' | 'first' | 'hidden'", default: "'default'", desc: '没有 group 的字段去哪：default = 单独放进「其他」组（末尾）；first = 并入第一个组；hidden = 不渲染' },
+        { name: 'defaultLabel', type: 'string', default: "'其他'", desc: 'ungrouped: default 时那个兜底组的标题' }
       ],
       'BtnConfig': [
         { name: 'name', type: 'string', default: '-', desc: '按钮文本' },

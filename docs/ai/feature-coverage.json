@@ -206,6 +206,15 @@
       ]
     },
     {
+      "id": "form/22-form-groups",
+      "group": "es-form",
+      "title": "分组容器：页签 / 分步 / 折叠面板",
+      "tokens": [
+        "formLayout",
+        "formtype"
+      ]
+    },
+    {
       "id": "table/01-basic",
       "group": "es-table",
       "title": "基础表格",
@@ -1035,7 +1044,7 @@
     {
       "site": "es-eui",
       "root": "es-eui/src/examples",
-      "refs": 41,
+      "refs": 42,
       "uncovered": 60,
       "cases": [
         {
@@ -1475,6 +1484,15 @@
           ],
           "tier": "D",
           "reason": "组合/兼容演示：Vue2 文档站的组合页与兼容性案例，无单源能力令牌（多人/多组件编排）"
+        },
+        {
+          "id": "form/FormGroups",
+          "demo": "form/22-form-groups",
+          "tokens": [
+            "formLayout",
+            "formtype"
+          ],
+          "tier": "A"
         },
         {
           "id": "form/GroupLayout",
@@ -1941,7 +1959,7 @@
     {
       "site": "es-pc",
       "root": "es-pc/src/views",
-      "refs": 99,
+      "refs": 100,
       "uncovered": 31,
       "cases": [
         {
@@ -2697,6 +2715,15 @@
             "fieldEventFn"
           ],
           "tier": "C"
+        },
+        {
+          "id": "es-form/FormGroups",
+          "demo": "form/22-form-groups",
+          "tokens": [
+            "formLayout",
+            "formtype"
+          ],
+          "tier": "A"
         },
         {
           "id": "es-form/GroupLayout",

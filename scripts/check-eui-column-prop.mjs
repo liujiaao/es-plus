@@ -10,6 +10,7 @@
  *   · 同一行既有 `key: '…'` 又有 `label:` → 判为列；
  *   · 该行只有 `key: '…',`，且对象结束（`}`）前出现 `label:` → 判为列；
  *   · 行内已有 `prop:` → 不是「用 key 代替 prop」，不管（API 表格的行数据就是这种）；
+ *   · `groups: [...]` 数组里的 `{ key, label }` 是表单分组的 FormGroupOption，key 是语义字段，放过；
  *   · 其余（按钮 `{ name, key }`、弹窗注册 `key: 'xxxDialog'`）一律放过。
  *
  * 扫描范围含 `views/`：快速上手与开发者指南里的代码块是**给人抄的**（`&lt;` 转义，
@@ -39,9 +40,17 @@ function main() {
   const files = DIRS.flatMap((dir) => collect(dir))
   for (const abs of files) {
     const lines = readFileSync(abs, 'utf8').split(/\r?\n/)
+    // 数组上下文栈：`groups: [` 里的 `{ key, label }` 是**表单分组**（FormGroupOption），
+    // key 就是它的语义字段，不是「用 key 代替 prop」。不区分上下文的话，
+    // 新加的分组容器示例会被误判成列定义。
+    const arrayCtx = []
     lines.forEach((line, i) => {
+      if (/^\s*\]/.test(line) && arrayCtx.length) arrayCtx.pop()
+      const open = line.match(/^\s*([A-Za-z_$][\w$]*)\s*:\s*\[/)
+      if (open) arrayCtx.push(open[1])
       if (!/key:\s*'/.test(line)) return
       if (/prop:\s*'/.test(line)) return
+      if (arrayCtx[arrayCtx.length - 1] === 'groups') return
       const sameLineLabel = /key:\s*'[^']*',\s*label:/.test(line)
       let nextLabel = false
       if (!sameLineLabel) {

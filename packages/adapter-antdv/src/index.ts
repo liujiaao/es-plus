@@ -96,6 +96,7 @@ export type { CrudPageSchema, CrudPageProps, CrudPageEmits, CrudPageExpose } fro
 // 配置类类型在 antdv 做 Ant Design Vue 特化，从本地 ./types 导出（形状兼容 core）
 export type {
   FormItemOption, FormDataOption, ApiParams, BtnConfig, LayoutFormProps,
+  FormGroupOption, FormGroupLayout,
   TableColumn, TableColumnDataOption, TableOptions, PaginationConfig, DialogOptions,
   DialogModalOptions, DialogDrawerOptions, DialogCallOptions,
   EsFormInstance, EsTableInstance, EsPlusOptions,

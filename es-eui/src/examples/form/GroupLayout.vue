@@ -2,11 +2,13 @@
   <div class="group-layout-demo">
     <div class="intro-wrap">
       <el-alert
-        title="EsForm 是平铺的栅格表单，没有内置分组容器"
+        title="进阶：多实例组合 + 逐组校验"
         type="info"
         :closable="false"
         show-icon
-      >用 el-tabs 包裹多个 EsForm：每组一份 formItemList，共用同一个 model。
+      >只想把字段分到 Tabs / Steps / Collapse 里，用内置的 layout: { type, groups } 就够了
+        （见「分组容器：页签 / 分步 / 折叠面板」）。需要每组独立校验时才用这里的写法：
+        用 el-tabs 包裹多个 EsForm，每组一份 formItemList，共用同一个 model。
         保存前逐组 validate()，否则藏在未打开标签页里的错误用户看不见。</el-alert>
     </div>
 

@@ -18,6 +18,8 @@ export type {
   FormDataOption,
   BtnConfig,
   LayoutFormProps,
+  FormGroupOption,
+  FormGroupLayout,
   TableColumn,
   TableColumnDataOption,
   ColumnFilterMode,

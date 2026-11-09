@@ -11,9 +11,17 @@
 -->
 <template>
   <a-form :ref="setFormRef" v-bind="formProps" :class="['es-form', { 'es-form--detail': isDetail }]">
-    <a-row v-bind="rowLayout">
-      <template v-for="(item, index) in formItem" :key="item.prop || index">
+    <!-- P1-3 第一期：分组容器。layout 为空时 shell 退化成普通 a-row（与历史 DOM 一致） -->
+    <FormGroupShell
+      :layout="formGroupInfo.layout"
+      :groups="formGroupInfo.groups"
+      :row-layout="rowLayout"
+      :resolve-label="groupLabel"
+    >
+      <template #default="{ group }">
         <a-col
+          v-for="(item, index) in group.items"
+          :key="item.prop || index"
           :span="item.span"
           :class="{ 'es-col--foldable': item?.isFold !== undefined, 'is-folded': item?.isFold && folded }"
         >
@@ -29,17 +37,18 @@
               <span class="es-form-detail__text">{{ detailText(item) }}</span>
             </template>
             <template v-else-if="item.formtype">
-              <RenderDomForm :row="item" :render="formInputRenderer(item)" :index="index" :model="model" />
+              <RenderDomForm :row="item" :render="formInputRenderer(item)" :index="Number(index)" :model="model" />
             </template>
             <template v-else>
-              <RenderDomForm :row="item" :render="item.render" :index="index" :model="model" />
+              <RenderDomForm :row="item" :render="item.render" :index="Number(index)" :model="model" />
             </template>
           </a-form-item>
         </a-col>
       </template>
 
-      <!-- 按钮区域 -->
-      <template v-if="!isBtnHidden">
+      <template #actions>
+        <!-- 按钮区域 -->
+        <template v-if="!isBtnHidden">
         <template v-if="isRenderBtn">
           <RenderBtn
             :row="{ isFold: isFold, folded, getBtnColSpan, getRowColsAlgorithm, changeFolded, refsForm: formRef }"
@@ -96,7 +105,7 @@
                   </template>
                   <!-- 折叠按钮 -->
                   <a-button
-                    v-if="isFold"
+                    v-if="isFold && !formGroupInfo.active"
                     type="link"
                     @click="changeFolded"
                   >
@@ -149,7 +158,7 @@
                   </a-button>
                 </template>
                 <a-button
-                  v-if="isFold"
+                  v-if="isFold && !formGroupInfo.active"
                   type="link"
                   @click="changeFolded"
                 >
@@ -171,10 +180,11 @@
                 </a-dropdown>
               </a-space>
             </div>
-          </a-form-item>
-        </a-col>
+            </a-form-item>
+          </a-col>
+        </template>
       </template>
-    </a-row>
+    </FormGroupShell>
   </a-form>
 </template>
 
@@ -183,7 +193,7 @@ export default { name: 'EsForm' }
 </script>
 
 <script setup lang="ts">
-import { ref, computed, watch, inject, getCurrentInstance, nextTick, h, defineComponent } from 'vue'
+import { ref, computed, watch, inject, getCurrentInstance, nextTick, h, defineComponent, type PropType } from 'vue'
 import type { VNode } from 'vue'
 // 本地导入并按模板标签命名（AForm↔<a-form> 等），使模板解析为直接组件引用而非全局 resolveComponent。
 // 对齐 @es-plus/vue3（其 EsForm 直接 import ElForm/ElFormItem…），确保在 useDialog 命令式渲染的
@@ -199,6 +209,12 @@ import {
   Menu as AMenu,
   MenuItem as AMenuItem,
   Input,
+  Tabs as ATabs,
+  TabPane as ATabPane,
+  Collapse as ACollapse,
+  CollapsePanel as ACollapsePanel,
+  Steps as ASteps,
+  Step as AStep,
 } from 'ant-design-vue'
 import { DownOutlined, UpOutlined } from '@ant-design/icons-vue'
 import { getGlobalConfig } from '../../../config'
@@ -227,6 +243,7 @@ import {
   checkPermissionValue,
   resolveBuiltinText,
   resolveFormDetailText,
+  groupFormItems,
 } from '@es-plus/core'
 import { mapButtonType, mapButtonDanger, mapSize, getNestedValue, isObject } from '../../../utils/shared'
 import type { ButtonType } from 'ant-design-vue/es/button/buttonTypes'
@@ -234,8 +251,8 @@ import type { SizeType } from 'ant-design-vue/es/config-provider/context'
 import { getAdvIconComponent } from '../../../utils/icon'
 import useDialog from '../../es-dialog/src/use-dialog'
 import EsTable from '../../es-table'
-import type { FormItemOption, BtnConfig, LayoutFormProps } from '../../../types'
-import type { FieldOutputProvider } from '@es-plus/core'
+import type { FormItemOption, BtnConfig, LayoutFormProps, FormGroupLayout } from '../../../types'
+import type { FieldOutputProvider, ResolvedFormGroup } from '@es-plus/core'
 
 // ─── Props（对齐 vue3，无 formProps prop）─────────────
 const props = withDefaults(
@@ -617,6 +634,35 @@ watch(
   { immediate: true },
 )
 
+// P1-3 第一期：分组容器（分桶在 core 单源；分组生效时关闭折叠）
+const formGroupInfo = computed(() => {
+  const layoutCfg = effectiveLayoutFormProps.value.layout as FormGroupLayout | undefined
+  const result = groupFormItems(formItem.value, layoutCfg)
+  if (!result.active) {
+    return {
+      active: false,
+      layout: null as FormGroupLayout | null,
+      groups: result.groups as unknown as ResolvedFormGroup<FormItemOption>[],
+    }
+  }
+  return {
+    active: true,
+    layout: layoutCfg as FormGroupLayout,
+    groups: result.groups.map((g) => ({
+      ...g,
+      items: g.items.map((it) => ({ ...it, isFold: undefined })),
+    })) as unknown as ResolvedFormGroup<FormItemOption>[],
+  }
+})
+
+/** 分组标题：labelKey 走宿主 `t`，未分组桶回落内置文案「其他」，其余回落 key。 */
+const groupLabel = (g: { key: string; label?: string; labelKey?: string }): string => {
+  if (g.labelKey && typeof esPlus.t === 'function') {
+    return (esPlus.t as (k: string) => string)(g.labelKey)
+  }
+  return g.label || g.key || resolveBuiltinText('other')
+}
+
 const labelBtnWidth = computed(() => (formLayout.value.labelBtnWidth as string) || 'auto')
 
 // ─── 按钮分流（委托 core 的唯一实现，三端一致）────────────
@@ -866,9 +912,129 @@ const RenderDomForm = defineComponent({
   },
 })
 
+/**
+ * P1-3 第一期：分组容器（antdv 版）。
+ *
+ * 与 vue3 版语义一致：`layout` 为空时退化成普通 `a-row`（字段 + 动作区），
+ * 配置了容器形态才画 tabs / steps / collapse。分桶规则在 core `groupFormItems` 单源。
+ */
+const GROUP_NAME_FALLBACK = '__es_ungrouped'
+const groupDomName = (key: string): string => key || GROUP_NAME_FALLBACK
+
+const FormGroupShell = defineComponent({
+  name: 'FormGroupShell',
+  props: {
+    layout: { type: Object as PropType<FormGroupLayout | null>, default: null },
+    groups: { type: Array as PropType<ResolvedFormGroup<FormItemOption>[]>, default: () => [] },
+    rowLayout: { type: Object as PropType<Record<string, unknown>>, default: () => ({}) },
+    resolveLabel: {
+      type: Function as PropType<(g: { key: string; label?: string; labelKey?: string }) => string>,
+      required: true,
+    },
+  },
+  setup(props, { slots }) {
+    const activeTab = ref('')
+    const collapsedKeys = ref<string[]>([])
+    const step = ref(0)
+
+    const body = (g: ResolvedFormGroup<FormItemOption>) => slots.default?.({ group: g }) ?? []
+    const actions = () => slots.actions?.() ?? []
+    const row = (children: () => unknown) => h(ARow, props.rowLayout, children)
+
+    return (): unknown => {
+      const groups = props.groups || []
+      const layout = props.layout
+      if (!layout || !groups.length) {
+        return row(() => (groups.length ? [body(groups[0]), actions()] : actions()))
+      }
+      const names = groups.map((g) => groupDomName(g.key))
+
+      if (layout.type === 'tabs') {
+        const active = names.includes(activeTab.value) ? activeTab.value : names[0]
+        return [
+          h(
+            ATabs,
+            {
+              class: 'es-form-groups es-form-groups--tabs',
+              activeKey: active,
+              'onUpdate:activeKey': (v: string | number) => {
+                activeTab.value = String(v)
+              },
+            },
+            () =>
+              groups.map((g) =>
+                h(
+                  ATabPane,
+                  { key: groupDomName(g.key), tab: props.resolveLabel(g) },
+                  () => row(() => body(g))
+                )
+              )
+          ),
+          row(() => actions()),
+        ]
+      }
+
+      if (layout.type === 'collapse') {
+        const expanded = names.filter((n) => !collapsedKeys.value.includes(n))
+        return [
+          h(
+            ACollapse,
+            {
+              class: 'es-form-groups es-form-groups--collapse',
+              activeKey: expanded,
+              'onUpdate:activeKey': (v: string | number | Array<string | number>) => {
+                const next = (Array.isArray(v) ? v : [v]).map(String)
+                collapsedKeys.value = names.filter((n) => !next.includes(n))
+              },
+            },
+            () =>
+              groups.map((g) =>
+                h(
+                  ACollapsePanel,
+                  { key: groupDomName(g.key), header: props.resolveLabel(g) },
+                  () => row(() => body(g))
+                )
+              )
+          ),
+          row(() => actions()),
+        ]
+      }
+
+      // steps：只渲染当前组，内置上一步/下一步
+      const current = Math.min(Math.max(step.value, 0), groups.length - 1)
+      const navBtn = (disabled: boolean, label: string, onClick: () => void, primary = false) =>
+        h(
+          AButton,
+          { size: 'small', type: primary ? 'primary' : 'default', disabled, onClick },
+          () => label
+        )
+      return [
+        h(ASteps, { class: 'es-form-groups es-form-groups--steps', current, style: { marginBottom: '16px' } }, () =>
+          groups.map((g) =>
+            h(AStep, {
+              key: groupDomName(g.key),
+              title: props.resolveLabel(g),
+              description: g.description,
+            })
+          )
+        ),
+        row(() => body(groups[current])),
+        h('div', { class: 'es-form-groups__nav', style: { display: 'flex', justifyContent: 'flex-end', gap: '8px', marginBottom: '8px' } }, [
+          navBtn(current <= 0, resolveBuiltinText('prev'), () => {
+            step.value = current - 1
+          }),
+          navBtn(current >= groups.length - 1, resolveBuiltinText('next'), () => {
+            step.value = current + 1
+          }, true),
+        ]),
+        row(() => actions()),
+      ]
+    }
+  },
+})
+
 // ─── 暴露给外部的方法（对齐 vue3 defineExpose 全集）──
-const formItmeRequestInstance = async (propsList: string[]) => {
-  const list = formItemListFilter.value
+const formItmeRequestInstance = async (propsList: string[]) => {  const list = formItemListFilter.value
   const targetItems = list.filter((it) => it && propsList.includes(it.prop))
   if (!targetItems.length) return
 

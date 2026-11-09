@@ -1,9 +1,11 @@
 <template>
   <div class="form-group-demo">
     <el-alert type="info" :closable="false" class="intro-alert">
-      <template #title>EsForm 是平铺的栅格表单，没有内置分组容器</template>
+      <template #title>进阶：多实例组合 + 逐组校验</template>
       <div class="intro-body">
-        需要 Tabs / Steps / Collapse 时，用对应的容器组件包裹多个 EsForm：每组一份
+        只想把字段分到 Tabs / Steps / Collapse 里，用内置的
+        <code>layout: { type, groups }</code> 就够了（见『分组容器：页签 / 分步 / 折叠面板』）。
+        需要<strong>每组独立校验</strong>时才用这里的写法：容器组件包裹多个 EsForm，每组一份
         <code>formItemList</code>，共用同一个 <code>model</code>。难点在校验 ——
         字段藏在没打开的标签页里，用户看不见错误。下面的做法是：保存时逐组 <code>validate()</code>，
         第一个不通过的组自动切到前台；分步模式下「下一步」只校验当前步。

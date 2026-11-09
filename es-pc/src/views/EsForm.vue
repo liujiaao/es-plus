@@ -216,10 +216,25 @@
 
     <a-divider v-if="isActive('scenes')" />
 
+    <!-- 分组容器：内置 layout 配置 -->
+    <section v-if="isActive('scenes')" id="form-groups">
+      <h2>分组容器：页签 / 分步 / 折叠面板</h2>
+      <p>
+        字段上写 <code>group</code>、<code>layout</code> 里声明组，Tabs / Steps / Collapse 由 EsForm
+        自己渲染。未声明的组按字段首次出现顺序追加，没有 <code>group</code> 的字段按
+        <code>ungrouped</code> 落进「其他」或被丢弃 —— 分桶规则来自 core，三端一致。
+      </p>
+            <CodeDemo :source="rawSFCs['./es-form/FormGroups.vue']">
+        <EsFormFormGroups />
+      </CodeDemo>
+    </section>
+
+    <a-divider v-if="isActive('scenes')" />
+
     <!-- 分组布局：容器组件包裹多个 EsForm -->
     <section v-if="isActive('scenes')" id="form-group">
-      <h2>分组布局：Tabs / Steps / Collapse</h2>
-      <p>用 <code>a-tabs / a-steps / a-collapse</code> 包裹多个 EsForm 实现字段分组，字段联动与校验在各组内独立生效。保存前逐组 <code>validate()</code>，避免错误藏在没打开的标签页里。</p>
+      <h2>进阶：多实例组合与逐组校验</h2>
+      <p>内置分组管不了「每组独立校验」时，用 <code>a-tabs / a-steps / a-collapse</code> 包裹多个 EsForm，字段联动与校验在各组内独立生效。保存前逐组 <code>validate()</code>，避免错误藏在没打开的标签页里。</p>
             <CodeDemo :source="rawSFCs['./es-form/GroupLayout.vue']">
         <EsFormGroupLayout />
       </CodeDemo>
@@ -316,6 +331,7 @@ import EsFormCustomButton from './es-form/CustomButton.vue'
 import EsFormDialog from './es-form/Dialog.vue'
 import EsFormFileUpload from './es-form/FileUpload.vue'
 import EsFormGroupLayout from './es-form/GroupLayout.vue'
+import EsFormFormGroups from './es-form/FormGroups.vue'
 
 const rawSFCs = import.meta.glob('./es-form/*.vue', { query: '?raw', import: 'default', eager: true })
 
@@ -334,7 +350,7 @@ const SECTION_GROUPS = [
     name: '选择、运行期与按钮',
     ids: ['advanced-buttons', 'cascader', 'tree-select-autocomplete', 'datetime-range', 'dynamic', 'custom-button'],
   },
-  { key: 'scenes', name: '业务场景', ids: ['detail', 'upload', 'search', 'dialog', 'file-upload', 'form-group'] },
+  { key: 'scenes', name: '业务场景', ids: ['detail', 'upload', 'search', 'dialog', 'file-upload', 'form-groups', 'form-group'] },
 ]
 
 const route = useRoute()
@@ -421,6 +437,7 @@ const formItemOptions = [
   { key: '3', prop: 'labelKey', type: 'string', default: '-', desc: '国际化 key，配置了全局 t 函数时优先于 label' },
   { key: '4', prop: 'formtype', type: 'string', default: '-', desc: '控件类型：Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / TreeSelect / Autocomplete / Radio / Checkbox / Switch / Rate / Upload' },
   { key: '5', prop: 'span', type: 'number', default: '6', desc: '栅格占位（1-24）' },
+  { key: '5.1', prop: 'group', type: 'string', default: '-', desc: '所属分组 key，配合 layoutFormProps.layout 使用；不写则按 ungrouped 策略处理（默认落进「其他」）' },
   { key: '6', prop: 'placeholder', type: 'string', default: '-', desc: '占位文本快捷方式，自动注入 attrs.placeholder（attrs 同名优先）' },
   { key: '6.1', prop: 'emptyPlaceholder', type: 'string', default: "'-'", desc: '详情模式（mode="detail"）下空值的展示文本；编辑模式不消费' },
   { key: '7', prop: 'clearable', type: 'boolean', default: '-', desc: '可清除快捷方式，自动注入 attrs.clearable（attrs 同名优先）' },
@@ -455,6 +472,7 @@ const layoutFormProps = [
   { key: '8', prop: 'formLayProps.labelBtnWidth', type: 'string | number', default: '-', desc: '按钮区标签宽度' },
   { key: '9', prop: 'fromLayProps', type: 'object', default: '-', desc: '旧拼写（同 formLayProps 的键），仅为兼容保留，新代码请改用 formLayProps' },
   { key: '10', prop: 'setOptions', type: 'boolean', default: '-', desc: '是否启用设置下拉' },
+  { key: '11', prop: 'layout', type: "'{ type, groups?, ungrouped?, defaultLabel? }'", default: '-', desc: '分组容器：type = tabs / steps / collapse；groups = [{ key, label?, labelKey?, description? }]；ungrouped = default / first / hidden（默认 default）' },
 ]
 
 const formBtns = [

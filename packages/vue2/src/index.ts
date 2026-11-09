@@ -178,6 +178,8 @@ export type {
   FormDataOption,
   BtnConfig,
   LayoutFormProps,
+  FormGroupOption,
+  FormGroupLayout,
   ListenToCallBack,
   TableColumn,
   TableColumnDataOption,

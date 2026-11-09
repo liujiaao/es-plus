@@ -128,6 +128,50 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 
 **验收**：每期四份契约同批 + golden + 三端运行时见证。
 
+**当前进度**：🟡 第一期运行时 + 站点示例已实现（2026-11-09，P1-3a）；AI 四份契约
+（Zod / 前门 knobs / `configShape` / 片段 shape）与 golden 未落，P1-3b 单独一批补齐。
+
+**实施记录（P1-3 第一期 · 2026-11-09）**
+
+1. **契约（core 单源）**：`FormItemOption.group?: string`；`LayoutFormProps.layout?: FormGroupLayout`；
+   新增 `FormGroupOption { key, label?, labelKey?, description? }`、
+   `FormGroupLayout { type: 'tabs'|'steps'|'collapse', groups?, ungrouped?, defaultLabel? }`。
+   后两者进 `PUBLIC_CONTRACT_TYPES`（42→44），三端 `types/index.ts` 同批声明，
+   `check:type-exports` 成员级对齐。
+2. **分桶单源** `packages/core/src/form-groups.ts`：`groupFormItems(items, layout)` 返回
+   `{ active, groups }`。规则：无 layout / 无显式 groups → `active:false` 且单桶（历史平铺行为）；
+   声明的组按声明顺序在前、未声明的组按字段首次出现追加；空组丢弃、重复/空 key 忽略；
+   `ungrouped: 'default'` 把无 group 的字段汇总成末位桶（标题 `defaultLabel` 或「其他」）、
+   `'first'` 并入首组、`'hidden'` 丢弃。三端只调用，不各自读 `group`
+   （`check:contract` ALLOWLIST 登记原因）。
+3. **三端渲染**：各端 `es-form.vue` 内新增 `FormGroupShell` 渲染组件，字段区与按钮区改为两个
+   作用域插槽（`default({ group })` / `actions`），容器分发：
+   - tabs：`ElTabs/ElTabPane`、`a-tabs/a-tab-pane`（`activeKey`）、`el-tabs/el-tab-pane`；
+   - collapse：缺省全部展开（内部只记「被收起的组」）；
+   - steps：只渲染当前组，内置「上一步 / 下一步」，`description` 仅 steps 消费；
+   - 动作区（按钮）在所有容器下单独一行，不在页签/面板内部；
+   - 内置折叠按钮（`minFoldRows`）在分组激活时隐藏 —— 折叠是按行裁剪，与容器互斥。
+4. **偏离说明**：① steps 的「下一步」**不做校验**（本期是纯布局能力；需要分步校验的宿主
+   仍走多实例组合示例，站点示例已写明这条边界）；② `ungrouped:'first'` 在没有任何
+   显式组时退回平铺，而不是造一个无名容器；③ 组的标题解析顺序 `labelKey`（全局 `t`）→
+   `label` → `key` → 内建「其他」。
+5. **i18n**：`BuiltinTextKey` 新增 `other` / `prev` / `next`（中英各一份），三端 shell 经
+   `resolveBuiltinText` 取文案，避免新硬编码中文（`check:i18n-literals`）。
+6. **守卫**：`check:contract` 登记 `FormItemOption.group`（core 统一分桶）；
+   `check:eui-column-prop` 增加「`groups:` 数组上下文」豁免 —— 否则新示例的
+   `{ key, label }`（FormGroupOption 的语义字段就是 key）会被误判成「列定义用 key 代替 prop」。
+7. **测试**：core `form-groups.spec.ts` 14 例（平铺不变 / 排序 / 空组 / labelKey / 三种
+   ungrouped / 空 key / 三种容器同分桶）；vue3 9 例、vue2 5 例、antdv 5 例（容器结构、
+   未分组兜底、hidden、collapse 缺省展开、steps 翻页、折叠按钮隐藏）。
+8. **站点示例**：三站各增一个 `FormGroups.vue`（容器切换 + `ungrouped` 开关 + 保存校验），
+   并把原「分组布局」示例改名为「进阶：多实例组合与逐组校验」，正文与新能力互指
+   （不再宣称「EsForm 没有内置分组容器」）。`docs/ai/feature-coverage.json` 增
+   `form/22-form-groups`（A 档，tokens: formLayout/formtype）并重跑 `sites:coverage:gen`、
+   `llms:gen`、`tri-render:pairs`。
+9. **验证**：`build:libs` 后四包单测全绿（core 531 / vue2 445 / vue3 722 / antdv 771）；
+   三站构建成功（es-eui 用 `--dest dist-verify` 后删除）；`check:consistency` 140/141，
+   唯一红仍是 `check:eval-freshness`（准确率产物需一次新的全量付费测量，不在本地伪造）。
+
 ---
 
 ## P1-4：TreeSelect + Autocomplete 缺失

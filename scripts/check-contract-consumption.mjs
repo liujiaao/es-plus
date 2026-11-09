@@ -76,6 +76,9 @@ const ALLOWLIST = new Map([
   // 列筛选谓词是**跨引擎单源**：三端只把列配置交给 core 的 buildColumnFilterMethod(col)，
   // 由它读取 filterMode 并生成 (value, row) => boolean。渲染器直接读 filterMode 反而是漂移源。
   ['TableColumn.filterMode', '由 core 的 table-filter.ts（buildColumnFilterMethod）统一消费；三端共享同一谓词，渲染器只传列配置'],
+  // 分组键的分桶点在 core：三端只把 formItemList 交给 groupFormItems(cols)，由它读 group
+  // 决定「字段进哪个容器」。渲染器自己再读一遍反而是漂移源（与 filterMode 同因）。
+  ['FormItemOption.group', '由 core 的 form-groups.ts（groupFormItems）统一分桶；三端只调用，不各自读 group'],
   // autoFilters 的合成点在 core：三端只把列交给 withAutoFilters(col)，由它读 autoFilters +
   // dataOptions 并派生 filters。渲染器自己再读一遍反而是漂移源（与 filterMode 同因）。
   ['TableColumn.autoFilters', '由 core 的 table-filter.ts（withAutoFilters）统一合成 filters；三端只调用，不各自读 autoFilters'],

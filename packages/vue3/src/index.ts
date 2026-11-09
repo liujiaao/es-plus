@@ -82,6 +82,8 @@ export type {
   ApiParams,
   BtnConfig,
   LayoutFormProps,
+  FormGroupOption,
+  FormGroupLayout,
   TableColumn,
   TableColumnDataOption,
   TableOptions,

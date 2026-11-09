@@ -300,6 +300,11 @@ export interface FormItemOption {
   formtype?: FormType
   /** 栅格 span（1-24，默认 6） */
   span?: number
+  /**
+   * 分组键（P1-3）：与 `layoutFormProps.layout.groups[].key` 对应。
+   * 只在启用了分组容器（`layout.type`）时生效；未声明 → 归入「未分组」桶。
+   */
+  group?: string
   /** 占位文本快捷方式（自动注入到 attrs.placeholder，attrs 中的同名属性优先） */
   placeholder?: string
   /**
@@ -457,6 +462,54 @@ export interface BtnConfig {
 }
 
 // ============================================================================
+// 表单分组容器（P1-3 第一期）
+// ============================================================================
+
+/**
+ * 一个表单分组的声明。
+ *
+ * 与 `FormItemOption.group` 以 `key` 呼应：字段声明 `group: 'basic'`，这里声明
+ * `{ key: 'basic', label: '基本信息' }`。**顺序即渲染顺序**。
+ */
+export interface FormGroupOption {
+  /** 分组键，与 `FormItemOption.group` 对应 */
+  key: string
+  /** 分组标题（tabs 页签 / steps 步骤名 / collapse 面板标题） */
+  label?: string
+  /** i18n 标题 key（优先于 label，经宿主的 `t` 解析） */
+  labelKey?: string
+  /** 分组说明（steps 的 description / collapse 的副标题，可选） */
+  description?: string
+}
+
+/**
+ * 表单分组容器配置（`layoutFormProps.layout`）。
+ *
+ * 纯 JSON（无回调），因此可直接进 AI 结构化配置；三端渲染语义一致：
+ * - `tabs`：`el-tabs` / `a-tabs`，切换不销毁字段（校验仍覆盖全部字段）；
+ * - `steps`：`el-steps` / `a-steps`，按组顺序分步，内置上一步/下一步；
+ * - `collapse`：`el-collapse` / `a-collapse`，缺省全部展开。
+ *
+ * 只有**真正分组**时才启用容器，规则见 core `groupFormItems`：
+ * 没有任何字段声明 `group` 且未声明 `groups` 时原样走扁平布局（历史行为不变）。
+ */
+export interface FormGroupLayout {
+  /** 容器形态 */
+  type: 'tabs' | 'steps' | 'collapse'
+  /** 分组声明（顺序即渲染顺序；未声明的组按字段首次出现顺序追加） */
+  groups?: FormGroupOption[]
+  /**
+   * 未声明 `group` 的字段如何安置：
+   * - `'default'`（缺省）：单独成组，排在最后，标题取 `defaultLabel`；
+   * - `'first'`：并入第一个分组；
+   * - `'hidden'`：不渲染（只在确实存在分组时生效）。
+   */
+  ungrouped?: 'default' | 'first' | 'hidden'
+  /** `ungrouped: 'default'` 的组标题；缺省用库内置文案「其他」 */
+  defaultLabel?: string
+}
+
+// ============================================================================
 // 表单布局类型
 // ============================================================================
 
@@ -499,6 +552,11 @@ export interface LayoutFormProps {
   }
   /** 是否显示"列设置"等扩展按钮 */
   setOptions?: boolean
+  /**
+   * 分组容器（P1-3）：`tabs` / `steps` / `collapse`。
+   * 配合表单项的 `group` 字段使用；未配置时布局与历史行为完全一致。
+   */
+  layout?: FormGroupLayout
 }
 
 // ============================================================================

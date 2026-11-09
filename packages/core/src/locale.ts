@@ -50,6 +50,9 @@ export type BuiltinTextKey =
   | 'close'
   | 'fold'
   | 'unfold'
+  | 'other'
+  | 'prev'
+  | 'next'
 
 /** 简体中文（缺省）。**值即 v1.5 三个渲染器里原有的字面量**，默认行为逐字节不变。 */
 export const ZH_CN_MESSAGES: Record<BuiltinTextKey, string> = {
@@ -76,6 +79,9 @@ export const ZH_CN_MESSAGES: Record<BuiltinTextKey, string> = {
   close: '关闭',
   fold: '展开',
   unfold: '收起',
+  other: '其他',
+  prev: '上一步',
+  next: '下一步',
 }
 
 /** English. */
@@ -102,6 +108,9 @@ export const EN_US_MESSAGES: Record<BuiltinTextKey, string> = {
   close: 'Close',
   fold: 'Expand',
   unfold: 'Collapse',
+  other: 'Other',
+  prev: 'Previous',
+  next: 'Next',
 }
 
 /**
