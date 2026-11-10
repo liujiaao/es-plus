@@ -107,9 +107,13 @@ describe("examples 资源", () => {
     expect(text).toContain("the same engine the `generate_crud_page` tool calls");
   });
 
-  it("front-door：engine 说明指向 generate_crud（schema mode）", async () => {
+  it("front-door：如实说明产物来自 legacy 引擎，并指向 structured 前门的形状资源", async () => {
     const text = await resourceText("front-door", "esplus://examples");
-    expect(text).toContain("`generate_crud` (schema mode)");
+    expect(text).toContain("legacy regex engine");
+    expect(text).toContain("`generate_scene` (scene='crud')");
+    expect(text).toContain("esplus://examples/surfaces");
+    // 回归：不得再声称与前门是同一引擎，也不得引导到隐藏工具
+    expect(text).not.toContain("the same engine `generate_crud`");
     expect(text).not.toContain("the `generate_crud_page` tool calls");
   });
 });

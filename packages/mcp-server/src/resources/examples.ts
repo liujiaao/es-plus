@@ -21,12 +21,12 @@ function buildContent(target: Target, profile: ToolProfile = "full"): string {
   const pkg = target === "vue2" ? "@es-plus/vue2" : target === "antdv" ? "@es-plus/adapter-antdv" : "@es-plus/vue3";
   const elementLayer = target === "vue2" ? "Element UI" : target === "antdv" ? "Ant Design Vue" : "Element Plus";
 
-  // AN-26：这批 few-shot 的产物来自 regex 引擎（PRESET_EXAMPLES → generateCrudPage）。
-  // front-door 下 `generate_crud_page` 不注册，措辞要指向实际可调的前门；产物本身
-  // 仍是同一 engine 的输出，作为形状/写法参考依旧成立。
+  // AN-26：这批 few-shot 的产物来自 legacy regex 引擎（PRESET_EXAMPLES → generateCrudPage）。
+  // 前门 `generate_scene`（scene='crud'）走的是 shared 的 structured generator，**不是**
+  // 这个引擎 —— 此处只能说「运行时形状参考」，不能声称是前门所用的同一引擎。
   const engineNote =
     profile === "front-door"
-      ? `These examples are generated from natural language descriptions using the @es-plus/shared CRUD engine — the same engine \`generate_crud\` (schema mode) composes for you.\n`
+      ? `These SFCs come from the legacy regex engine (no LLM) and are kept as runtime-shape references only. The front door \`generate_scene\` (scene='crud') composes through the structured generator, not this engine — fetch \`esplus://examples/surfaces\` for the current intent shapes.\n`
       : `These examples are generated from natural language descriptions using the @es-plus/shared CRUD engine — the same engine the \`generate_crud_page\` tool calls.\n`;
 
   return [
