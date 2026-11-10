@@ -76,7 +76,7 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
   {
     nl: '订单管理：表格上方左侧一个"批量导出"按钮，右侧一个"新增订单"按钮；表格展示订单号、金额、下单时间；支持新增、删除、查看；金额右对齐并保留两位小数。',
     reasoning:
-      '工具栏按钮的左右定位用 position："left"/"right"（三端渲染器都读它；code:1/2 是仍被接受的旧别名）。按钮的动作绑定按语义分两类：打开弹窗的 add/edit/view 用 dialogKey（新增→dialogKey:"add" 才会打开内置新增弹窗），导出/导入这类副作用用 actionType（actionType:"export"/"import"）—— 二者不可混用，给新增写 actionType:"add" 不会打开任何弹窗（是个死按钮）。金额的两位小数显示是 schema 无法声明的展示逻辑 → 落成 formatter 扩展点串，而不是丢弃。',
+      '工具栏按钮的左右定位用 position："left"/"right"（三端渲染器都读它；code:1/2 是仍被接受的旧别名）。按钮的动作绑定按语义分两类：打开弹窗的 add/edit/view 用 dialogKey（新增→dialogKey:"add" 才会打开新增弹窗），导出/导入这类副作用用 actionType（actionType:"export"/"import"）—— 二者不可混用，给新增写 actionType:"add" 不会打开任何弹窗（是个死按钮）。**声明 tableBtns / toolbarBtns / operationColumn 任一面即进入显式弹窗模式：运行时只认 `dialogs`，不会从 fields 派生** —— 每个被 dialogKey 指向的键（这里 add、view）都必须在 `dialogs` 里写明自己的 `formItems`；漏写就是点开空弹窗 / 按钮点了没反应。金额的两位小数显示是 schema 无法声明的展示逻辑 → 落成 formatter 扩展点串，而不是丢弃。',
     config: {
       name: 'OrderManage',
       apiUrl: '/api/orders',
@@ -97,6 +97,25 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
         { name: '批量导出', position: 'left', actionType: 'export' },
         { name: '新增订单', type: 'primary', position: 'right', dialogKey: 'add' },
       ],
+      dialogs: {
+        add: {
+          title: '新增订单',
+          formItems: [
+            { prop: 'orderNo', label: '订单号', formtype: 'Input' },
+            { prop: 'amount', label: '金额', formtype: 'InputNumber' },
+            { prop: 'createdAt', label: '下单时间', formtype: 'DatePicker' },
+          ],
+        },
+        view: {
+          title: '查看订单',
+          isHiddenFooter: true,
+          formItems: [
+            { prop: 'orderNo', label: '订单号', formtype: 'Input' },
+            { prop: 'amount', label: '金额', formtype: 'InputNumber' },
+            { prop: 'createdAt', label: '下单时间', formtype: 'DatePicker' },
+          ],
+        },
+      },
     },
   },
   {
@@ -381,7 +400,7 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
   {
     nl: '工单管理：查询有工单号、状态（待处理/处理中/已完成）；表格展示工单号、标题、状态、优先级；状态列要用彩色标签自定义渲染；操作列每行有"处理""关闭"两个按钮；支持查看、编辑。',
     reasoning:
-      '"状态列彩色标签自定义渲染" 明确要求自定义渲染 → 保留 render 扩展点（函数源码串，不丢）；注意若只是「码值 → 中文 + 标签色」，声明式 dataOptions + tagType 就够，不必上 render；"操作列每行有处理/关闭按钮" → operationColumn 配成对象并显式列出两个行按钮 btns（处理走 edit 弹窗）。',
+      '"状态列彩色标签自定义渲染" 明确要求自定义渲染 → 保留 render 扩展点（函数源码串，不丢）；注意若只是「码值 → 中文 + 标签色」，声明式 dataOptions + tagType 就够，不必上 render；"操作列每行有处理/关闭按钮" → operationColumn 配成对象并显式列出两个行按钮 btns（处理走 edit 弹窗）。显式 operationColumn 下运行时只认 `dialogs`：`处理` 的 dialogKey:"edit" 必须在 `dialogs.edit` 里给出 formItems，否则点开是空弹窗。',
     config: {
       name: 'TicketManage',
       apiUrl: '/api/tickets',
@@ -418,6 +437,35 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
           { name: '处理', dialogKey: 'edit' },
           { name: '关闭' },
         ],
+      },
+      dialogs: {
+        edit: {
+          title: '处理工单',
+          formItems: [
+            { prop: 'ticketNo', label: '工单号', formtype: 'Input' },
+            { prop: 'title', label: '标题', formtype: 'Input' },
+            {
+              prop: 'status',
+              label: '状态',
+              formtype: 'Select',
+              dataOptions: [
+                { label: '待处理', value: 0 },
+                { label: '处理中', value: 1 },
+                { label: '已完成', value: 2 },
+              ],
+            },
+            {
+              prop: 'priority',
+              label: '优先级',
+              formtype: 'Select',
+              dataOptions: [
+                { label: '高', value: 3 },
+                { label: '中', value: 2 },
+                { label: '低', value: 1 },
+              ],
+            },
+          ],
+        },
       },
     },
   },
@@ -736,7 +784,7 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
   {
     nl: '请假单管理：查询条件有请假人和状态（待审/通过/驳回）；表格展示请假人、请假类型、开始日期、天数、状态；支持新增、查看。查看弹窗标题改成「请假详情」，底部只保留一个「关闭」按钮。',
     reasoning:
-      '「查看弹窗标题 / 底部只留一个关闭按钮」是 `dialogs.view` 的**基础键**：`title` 覆盖默认标题，`configBtn` 是纯 JSON 数组（这里是 `[{ name: "关闭", action: "cancel" }]`），运行时按 `action` 装配点击行为（"confirm" 校验并提交、"cancel" 直接关闭）——**绝不能**在 JSON 里写 `click` 函数。声明 `dialogs` 不会关掉按钮派生：`actions: ["add","view"]` 仍自动派生「新增」工具栏按钮与「查看」行按钮，二者分别打开 add/view 弹窗，无需再写 toolbarBtns/operationColumn。',
+      '「查看弹窗标题 / 底部只留一个关闭按钮」是 `dialogs.view` 的**基础键**：`title` 覆盖默认标题，`configBtn` 是纯 JSON 数组（这里是 `[{ name: "关闭", action: "cancel" }]`），运行时按 `action` 装配点击行为（"confirm" 校验并提交、"cancel" 直接关闭）——**绝不能**在 JSON 里写 `click` 函数。声明 `dialogs` 不会关掉按钮派生：`actions: ["add","view"]` 仍自动派生「新增」工具栏按钮与「查看」行按钮，二者分别打开 add/view 弹窗，无需再写 toolbarBtns/operationColumn。但一旦 `dialogs` 非空就进入显式模式，运行时**只发射 `dialogs` 里写了的条目**：派生出的「新增」按钮也要能打开，就同样要给 `dialogs.add` 写 formItems（漏写 = 空弹窗）。',
     config: {
       name: 'LeaveViewDialogManage',
       apiUrl: '/api/leaves',
@@ -757,6 +805,25 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
         },
       ],
       dialogs: {
+        add: {
+          title: '新增请假单',
+          formItems: [
+            { prop: 'leavePerson', label: '请假人', formtype: 'Input' },
+            { prop: 'leaveType', label: '请假类型', formtype: 'Select', dataOptions: [{ label: '事假', value: 'personal' }, { label: '病假', value: 'sick' }, { label: '年假', value: 'annual' }] },
+            { prop: 'startDate', label: '开始日期', formtype: 'DatePicker' },
+            { prop: 'days', label: '天数', formtype: 'InputNumber' },
+            {
+              prop: 'status',
+              label: '状态',
+              formtype: 'Select',
+              dataOptions: [
+                { label: '待审', value: 'pending' },
+                { label: '通过', value: 'approved' },
+                { label: '驳回', value: 'rejected' },
+              ],
+            },
+          ],
+        },
         view: {
           title: '请假详情',
           formItems: [
@@ -895,7 +962,7 @@ export function buildNlToConfigSystemPrompt(): string {
     'Dialog appearance and close behaviour ("不要关闭按钮/X", "点遮罩不要关", "按 ESC 不要关", "每次打开都重置表单", "弹窗挂到 #app-dialogs 下", "弹窗要能拖拽 / 要全屏 / 隐藏底部 / 限制高度") → the matching data key on the dialog: `showClose` (hide the X, default true), `closeOnClickModal`, `closeOnPressEscape`, `destroyOnClose` (reset state on each open), `appendTo` (a CSS SELECTOR string — never a DOM node), `isDraggable`, `fullscreen`, `isHiddenFooter`, `maxHeight`, `modal` (the mask), `hiddenFullBtn`. These are plain booleans/strings, usually defaulting to true, so write `false` to turn one off; all three renderers forward them verbatim to the underlying dialog. Put them on `dialogs[k]` — do NOT drop the requirement, and do NOT express it as a comment.',
     'Custom dialog footer buttons ("弹窗底部要有一个…按钮", "只要一个关闭按钮") → `dialogs[k].configBtn`, a JSON ARRAY of `{ name, type?, action?: "confirm" | "cancel" | "custom", permissionValue? }`. The runtime attaches the click handler from `action` ("confirm" validates the dialog form then runs the submit path, "cancel" just closes), so NEVER emit a `click` function here. Omitting `configBtn` keeps the generated cancel+confirm pair. A fully custom dialog BODY is a function and cannot travel in JSON: declare `hasCustomRender: true` on that dialog and the wrapper gets a TODO(es-plus) placeholder to fill in.',
     'Two DIFFERENT button surfaces — pick by WHERE the description puts the buttons, never by habit. `tableBtns` renders ABOVE THE TABLE (the table toolbar: "表格上方左侧…右侧…", "表格工具栏加一个…", "列表顶部"); `toolbarBtns` renders in the QUERY-FORM button area, appended after 查询/重置 ("查询区旁边加一个…", "表单按钮区"). They are NOT aliases and NOT interchangeable: writing the wrong one puts working buttons in the wrong slot and silently drops the placement. **Only `tableBtns` honours `position: "left" | "right"`** — the query-form button area appends everything after 查询/重置 with no left/right side. So whenever the description names a side (「左侧…右侧…」, "on the left/right of the table"), you MUST use `tableBtns`; a `toolbarBtns` entry carrying `position` loses that requirement at runtime. Both bind behaviour the same way (`dialogKey` for dialog buttons, `actionType` for export/import, `confirm` for row delete), and both replace the `actions`-derived toolbar when declared.',
-    'Declaring `dialogs` is the way to give a dialog its own base keys (appearance/close behaviour, `configBtn`, `formItems`) — it does NOT put the page into a button-less mode: the table toolbar buttons (`tableBtns`, or the ones derived from `actions`, default `["add","edit","delete"]`) and the row action column keep being derived, so `dialogs: { add: … }` with `add` among the actions already gets the 「新增」 toolbar button that opens it. The button surface is handed over ONLY by declaring `tableBtns`/`toolbarBtns` and/or `operationColumn` explicitly — those (never `dialogs`) are what stop the derivation: any declared array replaces the derived toolbar (`[]` = none), and any `operationColumn` value (including `false`) replaces the derived row-action column. If you do declare them, every dialog must be reachable from a button you name (`tableBtns`/`toolbarBtns` entries carry `dialogKey`, `operationColumn.btns` entries carry `dialogKey`, `confirm` for the delete button) — a dialog nothing opens is a dead end (the generator warns "has no opener"), and a button whose `dialogKey` matches no `dialogs[k]` entry does nothing when clicked.',
+    'Declaring `dialogs` is the way to give a dialog its own base keys (appearance/close behaviour, `configBtn`, `formItems`) — it does NOT put the page into a button-less mode: the table toolbar buttons (`tableBtns`, or the ones derived from `actions`, default `["add","edit","delete"]`) and the row action column keep being derived, so `dialogs: { add: … }` with `add` among the actions already gets the 「新增」 toolbar button that opens it. The button surface is handed over ONLY by declaring `tableBtns`/`toolbarBtns` and/or `operationColumn` explicitly — those (never `dialogs`) are what stop the derivation: any declared array replaces the derived toolbar (`[]` = none), and any `operationColumn` value (including `false`) replaces the derived row-action column. If you do declare them, every dialog must be reachable from a button you name (`tableBtns`/`toolbarBtns` entries carry `dialogKey`, `operationColumn.btns` entries carry `dialogKey`, `confirm` for the delete button) — a dialog nothing opens is a dead end (the generator warns "has no opener"), and a button whose `dialogKey` matches no `dialogs[k]` entry does nothing when clicked. **In explicit dialog mode the runtime emits ONLY the `dialogs` entries you wrote — it never derives a dialog from `fields`.** So every `dialogKey` you reference (including the add/edit/view buttons that `actions` keeps deriving) must have a `dialogs.<key>` entry, and every entry you declare must carry its own `formItems` — base keys such as `showClose`/`configBtn`/`destroyOnClose` on their own describe a dialog whose body is EMPTY (the generator warns "the modal body will be empty").',
     'Toolbar button placement uses position: "left" | "right" — all three renderers read it (the renderer types mark code as deprecated). code:1 = left / code:2 = right is a legacy alias that is still accepted and auto-normalized.',
     'Bind each button to its behavior by semantics, matching the library defaults: dialog buttons (add / edit / view) use `dialogKey` (the "新增" toolbar button → dialogKey:"add" opens the built-in add dialog; row 编辑 → dialogKey:"edit", 查看 → dialogKey:"view"); side-effect buttons (export / import) use `actionType` ("导出" → actionType:"export", "导入" → actionType:"import"); the row delete button uses `confirm`. NEVER put actionType:"add" on an add button — only `dialogKey` opens the built-in dialog, so an actionType:"add" button does nothing.',
     'Button-level RBAC → the top-level `permissions` map (action → permission code).',

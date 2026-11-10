@@ -20,6 +20,11 @@
  *   ③ 登记数 ≤ 语料总数 且 heldout 非空 —— 防「靠把语料全登记成 few-shot 洗白」。
  *   ③b heldout 绝对地板 `HELDOUT_FLOOR`（AI-33⑦）—— ③ 是**相对**的（删一半语料仍过半），
  *      绝对地板补上「语料整体缩水」这条它看不见的路。
+ *   ④ **few-shot 本身必须是能跑通的配置** —— 每条 few-shot 都逐字进 system prompt、
+ *      是模型模仿的样本。若它生成出的页面里有「点了没反应」的按钮或空弹窗，模型学到
+ *      的就是坏形状（2026-11-10 实测 3/28 条如此：tableBtns+actions 派生出的弹窗没写
+ *      `dialogs`，或只为写基础键声明了弹窗却漏 formItems）。判据直接调用生成器，
+ *      与 `config-feedback` 的告警文案同源，不另写一套静态扫描。
  *
  * 下界**不是**全集（人工裁定会并入低相似度同源例，见 fewshot-derived.mjs 头注），
  * 故本守卫只报「机检下界之外的额外登记」供复核，不作为失败条件。
@@ -27,7 +32,7 @@
 import { readFileSync, readdirSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
-import { StructuredCrudConfigSchema, NL_TO_CONFIG_FEWSHOT } from '@es-plus/shared'
+import { StructuredCrudConfigSchema, NL_TO_CONFIG_FEWSHOT, generateFromConfig } from '@es-plus/shared'
 import { FEWSHOT_DERIVED } from './eval/fewshot-derived.mjs'
 import { HELDOUT_FLOOR } from './eval/ratchet.mjs'
 import { isCrudCase } from './eval/scenes.mjs'
@@ -95,6 +100,24 @@ if (heldout.length * 2 < crudFiles.length) {
 if (heldout.length < HELDOUT_FLOOR) {
   fail(`heldout 仅 ${heldout.length} 条，低于绝对地板 ${HELDOUT_FLOOR} —— 语料规模不足以支撑泛化结论`
     + `（单例噪声会盖过真实差异；若确属有意收缩，须经 PR 评审同步下调 ratchet.mjs 的 HELDOUT_FLOOR）`)
+}
+
+// ④ few-shot 必须生成「能跑通」的页面：没有点不开的弹窗按钮、没有被声明成空壳的弹窗。
+// 判据走真实生成器（`generateFromConfig`），告警文案与宿主看到的一致；静态扫描会漏掉
+// 「actions 派生的按钮」「dialogKey 重映射」这类只有生成期才知道的入口。
+for (const [i, x] of NL_TO_CONFIG_FEWSHOT.entries()) {
+  const tag = `few#${i + 1}（${x.config?.name ?? '?'}）`
+  let out
+  try {
+    out = generateFromConfig(x.config)
+  } catch (e) {
+    fail(`${tag} 无法生成：${String(e?.message ?? e).split('\n')[0]}`)
+    continue
+  }
+  for (const w of out.warnings ?? []) {
+    if (/点了不会有任何反应/.test(w)) fail(`${tag} 的教学配置会生成「点了没反应」的按钮：${w}`)
+    else if (/modal body will be empty/.test(w)) fail(`${tag} 的教学配置会生成空弹窗：${w}`)
+  }
 }
 
 // 报告：机检下界之外的额外登记（人工裁定覆盖，供复核，不失败）

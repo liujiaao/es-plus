@@ -197,8 +197,37 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 - `189-tablebtns-left-right-vue3` / `191-tablebtns-dialogkey-antdv`：pred 声明了
   `tableBtns` 却完全没写 `dialogs`（显式模式下不会回填派生弹窗）。
 
-这 4 条是真实能力缺口，可据此做定向 few-shot / prompt 教学；但不要把
-「53.3%」当作教学效果的基线 —— 下一次测量应看 `byCapabilityOnPinned.dialogs`。
+这 4 条是真实的能力缺口，但**归因不是「模型不会写弹窗」**：对照源码后，189/191 复述的
+正是 few-shot #3 的形状，188 复述的是 few-shot #25「只声明基础键」的形状 —— 是教学样本
+把模型带进了「显式模式下不派生弹窗」的坑。定向修复见下方实施记录；下一次测量应看
+`byCapabilityOnPinned.dialogs`。
+
+**实施记录（2026-11-10，源码核对）**
+
+1. **方案第 2 条已存在**：`packages/mcp-server/src/tools/_arg-guard.ts` 已对工具入参的
+   未知键（含 `surfaces.formFields` 这类近义拼写）回结构化错误并带 did-you-mean，
+   经 `withArgGuard` 覆盖全部工具 —— 不需要另写 `formFields`/`formitems` 检查。
+2. **根因（教学样本自身是坏配置）**：用真实生成器逐条生成 28 条 few-shot，3 条会产出
+   「点了没反应」的按钮或空弹窗：
+   - `#3 OrderManage`：`tableBtns` 写了 `dialogKey:"add"`、`actions` 还派生 view/新增，
+     但整份配置没有 `dialogs` ⟹ 显式模式下运行时一张弹窗都不发射；
+   - `#13 TicketManage`：显式 `operationColumn` 的「处理」指向 `edit`，没有 `dialogs.edit`；
+   - `#25 LeaveViewDialogManage`：只为写 `title`/`configBtn` 声明了 `dialogs.view`，
+     `actions` 仍派生「新增」入口，但没有 `dialogs.add`。
+   语料里的 189/191（tableBtns + dialogKey、无 dialogs）与 188（只写基础键、漏 formItems）
+   正好是这三条样本的形状。
+3. **已修**：三条 few-shot 补齐被引用的 `dialogs` 条目与 `formItems`，并把「显式模式
+   不派生、`dialogKey` 必须有对应条目、只写基础键 = 空弹窗」写进 system prompt 与
+   sample reasoning。
+4. **守卫**：`check:fewshot-registration` 新增第 ④ 条 —— 每条 few-shot 都过
+   `generateFromConfig`，出现「点了不会有任何反应」「modal body will be empty」即红。
+   静态扫描做不到这一点：入口按钮有一半是 `actions`/`operationColumn` 派生出来的，
+   只有生成期才知道哪些 `dialogKey` 真的无家可归。
+5. **语料侧残留（本批不改，已登记）**：全量扫描 227 条 CRUD gold，**12 条**生成时同样
+   有死按钮（03/04/11/12/17/18/20/24/138/141/143/145）。其中只有 `20-antdv-promotion-full`
+   的 `dialogs` 在门禁口径内（它显式声明了「查看」按钮却缺 `dialogs.view`）；其余 11 条
+   `dialogs` 未 pin，不影响 `byCapabilityOnPinned`。但 gold 是「真值」，应当能跑通 ——
+   修法与 few-shot 同（补 `dialogs` 条目），需要与语料哈希/基线同批改，留待下一批。
 
 ---
 
