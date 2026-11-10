@@ -28,6 +28,7 @@ import {
 } from './target.js'
 import { capabilityWarnings, type CapabilityTarget } from './capability.js'
 import { buildPreflight, type PreflightInput, type PreflightReport } from './preflight.js'
+import { buildPageSource, PAGE_SOURCE_KEY, PAGE_SOURCE_MARK, type EsPlusPageSource } from './page-source.js'
 import { buildRenderPlan, type RenderPlan } from './render-plan.js'
 import { DIALOG_TITLES } from './scene/registry.js'
 
@@ -613,7 +614,17 @@ export function generateFromConfig(rawConfig: StructuredCrudConfig): StructuredG
   // AN-22：先落「每个顶层键在这个 mode 下怎么处理」的账本，两个发射器都消费它。
   // 账本与 `StructuredCrudConfig` 的键集由 `check:render-plan` 对账（新增键漏登记 → 红）。
   const plan = buildRenderPlan(config, { mode, target: readTarget(config) })
-  const result = mode === 'sfc' ? generateSFC(config, plan) : generateSchema(config, plan)
+  // W4：出处 = 生效配置 + 三类不一致（丢弃 / 模式不消费 / 归一）。
+  // 在发射**之前**算好并交给两个发射器：schema 模式放进 pageSchema，sfc 模式写注释。
+  const pageSource = buildPageSource({
+    target: readTarget(config),
+    mode,
+    config,
+    unknownKeys,
+    renames: repaired.renames,
+    repairs: repaired.repairs,
+  })
+  const result = mode === 'sfc' ? generateSFC(config, plan, pageSource) : generateSchema(config, plan, pageSource)
   // AN-15：前置清单与本文件是**同一份 config 的两种视图** —— 生成什么由上面的 result 决定，
   // 要让它在宿主里真的工作还需要什么，由 buildPreflight 按同一 config 判定（permission /
   // labelKey / apiParams / JSX 都从生成器实际读取的键推出，不另写一份启发式）。
@@ -746,7 +757,11 @@ function schemaModePermissionWarnings(config: StructuredCrudConfig): string[] {
   ]
 }
 
-function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): StructuredGenerateResult {
+function generateSchema(
+  config: StructuredCrudConfig,
+  plan: RenderPlan,
+  pageSource: EsPlusPageSource,
+): StructuredGenerateResult {
   const warnings: string[] = []
   const target = readTarget(config)
   const queryFields = config.fields.filter(f => f.inQuery !== false)
@@ -994,6 +1009,11 @@ function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): Structu
       : {}),
   }
 
+  // W4：出处随 pageSchema 一起发射（键放最后，运行时忽略；`read_page` 读回）。
+  // 它让产物自描述 —— 宿主下一轮改页面时解压的是生成器的真实输入，而不是从
+  // formItems / columns 反推配置（反推会把猜测固化进下一版）。
+  schema[PAGE_SOURCE_KEY] = pageSource
+
   // 用 inlineJson 而非裸 JSON.stringify：schema 会被内联进 wrapper SFC 的 <script>，
   // 用户可控的 label 含 `</script>` 时否则能提前闭合宿主 script 标签。正常内容字节不变。
   const schemaJson = inlineJson(schema, 2)
@@ -1032,7 +1052,11 @@ function generateSchema(config: StructuredCrudConfig, plan: RenderPlan): Structu
   return { code, wrapperCode, summary, warnings, schema }
 }
 
-function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): StructuredGenerateResult {
+function generateSFC(
+  config: StructuredCrudConfig,
+  plan: RenderPlan,
+  pageSource: EsPlusPageSource,
+): StructuredGenerateResult {
   const warnings: string[] = []
   const target = readTarget(config)
   const isVue2 = target === 'vue2'
@@ -1172,6 +1196,22 @@ function generateSFC(config: StructuredCrudConfig, plan: RenderPlan): Structured
   } else {
     lines.push(scriptLang ? `<script setup lang="${scriptLang}">` : `<script setup>`)
   }
+
+  // W4：sfc 模式没有 pageSchema，出处写在 script 块内的单行注释里。
+  // `inlineJson` 把 `</script` 转义成 `<\/script`（HTML 解析器不再看到结束标签），
+  // JSON.stringify 又没有裸换行 —— 因此它一定是**一行**，且不会提前闭合脚本块。
+  // 但 JSON.stringify **不转义** U+2028 / U+2029（JSON 合法、JS 里是行终止符）：
+  // 写在 `//` 注释里会把注释提前截断，后半段 JSON 变成代码（fuzz 的 label 用例抓到）。
+  // 两处都显式转义成 `\uXXXX` 序列；JSON.parse 会还原，宿主拿到的值不变。
+  // 用码点构造，避免在源码里直接写这两个不可见分隔符（编辑器/格式器容易连同行尾一起清掉）。
+  const LS = String.fromCharCode(0x2028)
+  const PS = String.fromCharCode(0x2029)
+  const sourceJson = inlineJson(pageSource)
+    .split(LS)
+    .join('\\u2028')
+    .split(PS)
+    .join('\\u2029')
+  lines.push(`// ${PAGE_SOURCE_MARK}: ${sourceJson}`)
 
   // Imports
   const vueImports = isVue2 ? ['defineComponent', 'reactive', 'ref'] : ['reactive', 'ref']

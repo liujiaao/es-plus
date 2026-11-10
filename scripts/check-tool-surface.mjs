@@ -55,6 +55,7 @@ const FULL_TOOLS = [
   'refine_config',
   'validate_intent',
   'coverage_report',
+  'read_page',
   'get_component_api',
   'scaffold_page',
   'doctor_page',

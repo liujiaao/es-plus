@@ -268,8 +268,24 @@ function checkSuite(api) {
     ],
   }
   const schemaRun = generateFromConfig(dirty)
+  // W4：pageSchema 里嵌着出处（`__esPlusSource`），它**故意**保留宿主原配置（含
+  // `formatter` / `widht`）—— 那是数据，不是运行时列。检查泄漏前必须先剔除出处，
+  // 否则守卫会把自己的证据当成泄漏（假红，且 P3 注入证明也会跟着失真）。
+  const runtimeOnly = (code, mode) => {
+    if (mode === 'sfc') return code.replace(/^[ \t]*\/\/ __esPlusSource:.*$/gm, '')
+    const start = code.indexOf('{')
+    const end = code.lastIndexOf('}')
+    if (start < 0 || end < 0) return code
+    try {
+      const schema = JSON.parse(code.slice(start, end + 1))
+      delete schema.__esPlusSource
+      return JSON.stringify(schema)
+    } catch {
+      return code
+    }
+  }
   for (const leak of ['formatter', 'widht']) {
-    if (schemaRun.code.includes(leak)) {
+    if (runtimeOnly(schemaRun.code, 'schema').includes(leak)) {
       problems.push(`C1 显式列里的 "${leak}" 泄漏进 pageSchema —— 运行时会把字符串当 formatter 调用 / 忽略拼错的键`)
     }
   }
@@ -279,7 +295,7 @@ function checkSuite(api) {
   // 两种模式必须同一份「剥键」结论：此前 schema 泄漏、sfc 丢弃。
   const sfcOut = generateFromConfig({ ...dirty, mode: 'sfc' }).code
   for (const leak of ['formatter', 'widht']) {
-    if (sfcOut.includes(leak)) problems.push(`C3 sfc 模式泄漏 "${leak}"（两种模式产物不一致）`)
+    if (runtimeOnly(sfcOut, 'sfc').includes(leak)) problems.push(`C3 sfc 模式泄漏 "${leak}"（两种模式产物不一致）`)
   }
 
   // ── D 语料零误杀 ──

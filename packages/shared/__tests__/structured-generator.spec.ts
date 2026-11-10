@@ -2,6 +2,21 @@ import { describe, it, expect } from 'vitest'
 import { generateFromConfig, findDialogsWithoutOpener, findDialogButtonsWithoutDialog } from '../src/structured-generator'
 import { StructuredCrudConfigSchema } from '../src/structured-config.schema'
 
+/**
+ * W4：生成的 pageSchema 里嵌着出处（`__esPlusSource`），它故意保留宿主原配置
+ * （含被剥掉的列级 `formatter`、拼错的 `widht`、`derivedOnly` 字段……）。
+ * 断言「运行时产物」时必须先剔除出处，否则产物断言会把出处当泄漏（假红）。
+ */
+function runtimeSchemaOf(code: string): any {
+  const schema = JSON.parse(code.replace(/^.*?= /s, '').replace(/\n$/, ''))
+  delete schema.__esPlusSource
+  return schema
+}
+/** sfc 产物：剔除 `// __esPlusSource: …` 注释行后的正文。 */
+function withoutSourceComment(code: string): string {
+  return code.replace(/^[ \t]*\/\/ __esPlusSource:.*$/gm, '')
+}
+
 const baseConfig = {
   name: 'UserManage',
   apiUrl: '/api/users',
@@ -572,7 +587,7 @@ describe('generateFromConfig — sfc mode', () => {
         },
       ],
     })
-    expect(result.code).not.toContain('isHidden')
+    expect(JSON.stringify(runtimeSchemaOf(result.code))).not.toContain('isHidden')
   })
 
   it('generates useDialog form with validation', () => {
@@ -846,8 +861,9 @@ describe('multi-target generation (vue3 / vue2 / antdv)', () => {
     // The single source of truth: schema.code (pageSchema JSON) must be byte-identical
     // regardless of target — only the wrapper/SFC differs.
     const extract = (t: 'vue3' | 'vue2' | 'antdv') => {
-      const code = generateFromConfig(cfgFor(t, 'schema')).code
-      return code.replace(/^import[^\n]*\n/gm, '').replace(/^.*?pageSchema[^=]*= /s, '')
+      // 出处里的 `target` 本来就按 target 变，运行时 schema 仍必须逐字节相同。
+      const schema = runtimeSchemaOf(generateFromConfig(cfgFor(t, 'schema')).code)
+      return JSON.stringify(schema)
     }
     expect(extract('vue2')).toBe(extract('vue3'))
     expect(extract('antdv')).toBe(extract('vue3'))
@@ -1095,7 +1111,7 @@ describe('explicit table columns（AI-09 子项① groups）', () => {
     expect(result.code).toContain('"groups": [')
     expect(result.code).toContain('"label": "联系方式"')
     // 派生列不再出现（derivedOnly 是 inQuery/inForm 均 false 的纯表格字段）
-    expect(result.code).not.toContain('"derivedOnly"')
+    expect(JSON.stringify(runtimeSchemaOf(result.code))).not.toContain('"derivedOnly"')
   })
 
   it('schema 模式：无 columns 时派生列行为不变（回归）', () => {
@@ -1110,7 +1126,7 @@ describe('explicit table columns（AI-09 子项① groups）', () => {
     expect(result.code).toContain("type: 'selection'")
     expect(result.code).toContain('groups: [')
     expect(result.code).toContain("label: '联系方式'")
-    expect(result.code).not.toContain('derivedOnly')
+    expect(withoutSourceComment(result.code)).not.toContain('derivedOnly')
     // 操作列仍按 actions 追加（与派生路径一致，不让编辑/删除凭空消失）
     expect(result.code).toContain("prop: 'operate'")
     expect(result.code).toContain("label: '操作'")
@@ -1199,12 +1215,14 @@ describe('declarative row-expand content（AI-09 子项② expandConfig）', () 
       columns: [{ prop: 'orderNo', label: '订单号' }, { type: 'expand' }],
     } as any)
     // 只应存在**一个** expand 列（挂到已有的那个上，而非再前置一个）
-    expect(result.code.match(/"type": "expand"/g)).toHaveLength(1)
-    // 位置保持在 orderNo 之后（既不前置于首，也不追加到末）—— 只在表格 columns 数组内比较
-    const colsIdx = result.code.indexOf('"columns"')
-    const orderNoIdx = result.code.indexOf('"prop": "orderNo"', colsIdx)
-    const expandIdx = result.code.indexOf('"type": "expand"', colsIdx)
-    expect(expandIdx).toBeGreaterThan(orderNoIdx)
+    // 位置保持在 orderNo 之后（既不前置于首，也不追加到末）—— 在运行时 columns 数组内比较。
+    const schema = runtimeSchemaOf(result.code)
+    const orderNoIdx = schema.columns.findIndex((c: any) => c.prop === 'orderNo')
+    const expandAt = schema.columns
+      .map((c: any, i: number) => (c.type === 'expand' ? i : -1))
+      .filter((i: number) => i >= 0)
+    expect(expandAt).toHaveLength(1)
+    expect(expandAt[0]).toBeGreaterThan(orderNoIdx)
     expect(result.code).toContain('"expandConfig": {')
   })
 
@@ -2222,7 +2240,7 @@ describe('AN-08 显式 columns：契约键之外不泄漏进产物', () => {
     )
     const schema = parseSchema(result.code)
     expect(schema.columns[1]).toEqual({ prop: 'salary', label: '月薪' })
-    expect(result.code).not.toContain('formatter')
+    expect(JSON.stringify(runtimeSchemaOf(result.code))).not.toContain('formatter')
     const hit = result.warnings.find((w) => w.includes('未知键 "formatter"'))
     expect(hit, result.warnings.join('\n')).toBeTruthy()
   })
@@ -2266,8 +2284,9 @@ describe('AN-08 显式 columns：契约键之外不泄漏进产物', () => {
     const schemaOut = parseSchema(generateFromConfig(dirty as any).code)
     const sfcOut = generateFromConfig({ ...dirty, mode: 'sfc' } as any).code
     expect(Object.keys(schemaOut.columns[0]).sort()).toEqual(['label', 'prop'])
-    expect(sfcOut).not.toContain('formatter')
-    expect(sfcOut).not.toContain('widht')
+    const sfcRuntime = withoutSourceComment(sfcOut)
+    expect(sfcRuntime).not.toContain('formatter')
+    expect(sfcRuntime).not.toContain('widht')
   })
 })
 
@@ -2386,9 +2405,10 @@ describe('B7 — 空 dialogs 不得把页面切成「新弹窗模式」', () => 
     it(`${label} → 回退 legacy 派生，产物不出现空 dialogs`, () => {
       const r = generateFromConfig(flat({ dialogs }) as any)
       // 产物里没有 dialogs 键；legacy 的逐字段表与入口按钮都还在
-      expect(r.code).not.toContain('"dialogs"')
-      expect(r.code).toContain('"dialogFormItems"')
-      expect(r.code).toContain('"actions"')
+      const runtime = JSON.stringify(runtimeSchemaOf(r.code))
+      expect(runtime).not.toContain('"dialogs"')
+      expect(runtime).toContain('"dialogFormItems"')
+      expect(runtime).toContain('"actions"')
       // 摘要按同一条规则报数：legacy 的一个通用弹窗 = 1，不是 0
       expect(r.summary).toContain('1 dialog(s) configured')
       expect(r.summary).toContain('Legacy actions mode')

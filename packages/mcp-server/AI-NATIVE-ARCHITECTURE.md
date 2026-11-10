@@ -73,7 +73,7 @@ MCP server **不调用模型、不写文件、不持有会话**。所有“理�
                                 │ MCP (stdio)
 ┌───────────────────────────────▼─────────────────────────────────────┐
 │ packages/mcp-server（无状态、无模型、纯函数）                         │
-│  · tools    18 个（full）/ 12 个（front-door）                       │
+│  · tools    19 个（full）/ 13 个（front-door）                       │
 │  · resources 9 族（conventions / types / examples / nl-to-config /   │
 │              surfaces / crud-page-schema / schemas /                │
 │              design-extraction / capabilities）                     │
@@ -172,7 +172,7 @@ surfaces
 
 ---
 
-## 4. 工具手册（full 18 / front-door 12）
+## 4. 工具手册（full 19 / front-door 13）
 
 ### 4.0 工具面 profile（AN-26）
 
@@ -180,8 +180,8 @@ surfaces
 
 | profile | 注册数 | 隐藏 |
 |---|---|---|
-| `full`（**默认**） | 18 | — |
-| `front-door` | 12 | `generate_crud`（兼容入口）、`generate_form` / `generate_table` / `generate_dialog`（单面片段）、`generate_crud_from_config`（ADVANCED）、`generate_crud_schema`（LEGACY FALLBACK） |
+| `full`（**默认**） | 19 | — |
+| `front-door` | 13 | `generate_crud`（兼容入口）、`generate_form` / `generate_table` / `generate_dialog`（单面片段）、`generate_crud_from_config`（ADVANCED）、`generate_crud_schema`（LEGACY FALLBACK） |
 
 - 隐藏标准不是「旧不旧」，而是 **`generate_scene` 能否逐字节复现**：四个 scene 复用同一组
   发射器，`check:scene-parity` 证明产物相同。被隐藏的 6 个工具的名称因此**不进入** front-door
@@ -219,6 +219,7 @@ surfaces
 | 16 | `doctor_page` | 工程 | ✅ | 入口体检报告 | 否 | 稳定 |
 | 17 | `validate_intent` | 抽取校验 | ✅ | 能力报告 + 逐字段 issue | 否 | 稳定（P13） |
 | 18 | `coverage_report` | 覆盖率分级 | ✅ | 逐页 L1/L2/L3 | 否 | 稳定（P13） |
+| 19 | `read_page` | 回读 | ✅ | 出处 config + `lossy[]` + surfaces 投影 | 否 | 稳定（W4） |
 
 > 只有**带场景产物的三个工具** —— `generate_scene`、`generate_crud`（compat adapter）、
 > `generate_composition` —— 在客户端支持 MCP 结构化输出时，会把产物信封挂到
@@ -679,7 +680,7 @@ __tests__/golden/cases/
 | 路径 | 职责 |
 |---|---|
 | `src/index.ts` | server 创建、instructions |
-| `src/tools/index.ts` | 18 工具注册（full；front-door 12） |
+| `src/tools/index.ts` | 19 工具注册（full；front-door 13） |
 | `src/tools/generate-crud.ts` | 前门 + surfaces 形状 |
 | `src/tools/generate-from-config.ts` | 配置直通 + 语义告警 |
 | `src/tools/_fragment-shapes.ts` | 片段/前门字段形状 |

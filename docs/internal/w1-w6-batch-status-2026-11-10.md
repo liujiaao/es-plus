@@ -11,7 +11,7 @@
 |---|---|---|---|---|
 | **A** | W1 标准 + W2 1 小时 spike + `tools/list` 快照 | ✅ 完成 | 冻结产物重算，中文腿不变、英文腿可解释 | zh 未变、en 可逐维解释；spike 与快照今日落盘 |
 | **B** | W2 单源派生 + W3 工具收缩 | ✅ 完成 | 守卫净减 ≥2,000 行；`tools/list` <40 KB | front-door **21.1 KB / 12 工具**（<40 KB 达成）；W2 三份镜像全部清零（旋钮 + configShape + 片段形状），**净 −667 行**；「净减 ≥2,000 行」按实测**不可达**（候选总量 ~1,140 行），出口标准已改判为「镜像清零」 |
-| **C** | W4 回读闭环 + W5 弱维度 | ◐ W5 ✅ / W4 ✗ | 往返测试绿；membership/dataOptions 有归因数据 | W5 已落盘逐行归因（旁路 + 零 API 复算，membership/dataOptions 均有通道级归因）；W4 仍无 `read_page`/`__esPlusSource`/`lossy[]` |
+| **C** | W4 回读闭环 + W5 弱维度 | ✅ 完成 | 往返测试绿；membership/dataOptions 有归因数据 | W5 已落盘逐行归因（旁路 + 零 API 复算，membership/dataOptions 均有通道级归因）；W4 的 `__esPlusSource` / `read_page` / `lossy[]` 全部落地，往返断言「读回配置再生成 = 逐字节相同」（shared `page-source.spec.ts` 18 例） |
 | **D** | W6 legacy 退役 | ✅ 完成 | 无 importer；资源文案不再失实 | `generateCrudPage` / `PRESET_EXAMPLES` / MCP `generate_crud_page` 删除，全仓零代码 importer；`esplus://examples` 改走前门 `emitSceneArtifact`，文案与产物同源 |
 
 A 批的「W1 标准」早在 `86316bf`（`+en-text-agnostic-v1`）与 `fc59d13`（`+label-typographic-v1`）
@@ -192,13 +192,33 @@ B 批当日完成的是 **W3 工具收缩**（前门 16 → 12 工具、171.1 �
 - ⏳ **`check:surface-budget` 已建立**；`generate_crud` 仍是 full 档的独立注册项
   （与 `generate_scene('crud')` 共用同一条实现），但 front-door 已不再暴露它。
 
-### W4 · 回读闭环 —— ✗ 未开始
+### W4 · 回读闭环 —— ✅ 完成（2026-11-10）
 
-- 全仓 grep `__esPlusSource|read_page|lossy[]` **零命中**；`ingest_schema` 只认
-  `openapi / jsonSchema / sample-json / ts-interface / sql-ddl`（数据 schema，不认 `.vue`）。
-- schema 模式投影有损仍是事实：`structured-generator.ts:740`（权限忽略）、`:778`
-  （formatter 丢弃）、`:843`（apiUrl 折叠）、`:1986` 起注入 `span`/`attrs`/自动 rules。
-- 最小可靠解不变：随 `pageSchema` 发射 `__esPlusSource`，再补 `read_page` 与显式 `lossy[]`。
+**出口标准「往返测试绿」已达成**：生成 → 读回 → 用读回的配置再生成，产物逐字节相同
+（schema 与 sfc 两种模式；`packages/shared/__tests__/page-source.spec.ts`）。
+
+- **出处位置**：`__esPlusSource` 嵌在 pageSchema **内部**（不是兄弟 export，否则
+  `extractPageSchema` 与既有测试的「唯一 export」假设会破）；sfc 模式没有 pageSchema，
+  写成 `<script>` 内单行注释 `// __esPlusSource: {…}`。单源 `packages/shared/src/page-source.ts`，
+  三端 `CrudPageSchema` 各持一份同形镜像（渲染端不依赖 shared 运行时）。
+- **`config` 是解压不是反推**：生成器把**真正喂给发射器**的那份配置（归一 + 剔除未知键后）
+  原样带进产物。回读拿到的是输入，不是「从 formItems / 可见性反推出来的猜测」。
+- **`lossy[]` 四类都显式**：`dropped`（未知键 / 非 JSON 值）、`ignored-in-mode`
+  （schema 模式的 `permissions` / formatter；sfc 模式的 `dialogs` / `tableBtns` / `toolbarBtns` /
+  object 形态的 `operationColumn`）、`not-expressible`（行内函数、`hasCustomRender`）、
+  `normalized`（`rowkey → tableOptions.rowkey` 等确定性修复）。空数组 = 逐键无损。
+- **`read_page` 工具**（两种 profile 都注册）：返回 `config` + `lossy[]`，并给一份
+  **机械投影**的 `intent.surfaces`（front-door 没有 `generate_crud_from_config`，
+  「读回 → 改 → 再生成」必须能落回 `generate_scene`）。投影丢掉的键（显式 `columns`
+  没有 surfaces 通道）写进 `surfacesLossy[]`，不静默丢。无出处的页面（W4 前 / 手写）
+  明确报错 + 提示，不反推。
+- **守卫同步改判**：`check:unknown-keys` 的 C1/C3 先剔除出处再查泄漏（出处**故意**保留
+  宿主原配置，含 `formatter` / `widht`）；生成器单测里同类断言统一走
+  `runtimeSchemaOf` / `withoutSourceComment`。fuzz 抓到 sfc 注释被 U+2028/U+2029
+  （JSON 合法、JS 行终止符）截断 —— 已在发射前转义为 `\uXXXX`。
+- **产物重算**：7 个 frozen-config 案例 + composition gallery + ai-workflows +
+  fragment dashboard + cases metrics 全部重放；三站副本 `cases:sync`、`docs:sync`、
+  `llms:gen`。全链 139/143，仅剩 `check:eval-freshness`（需付费全量跑批，见下）。
 
 ### W5 · 弱维度归因 —— ✅ 完成（2026-11-10）
 

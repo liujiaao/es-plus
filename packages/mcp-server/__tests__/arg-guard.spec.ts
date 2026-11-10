@@ -114,8 +114,8 @@ describe("工具入参闸门 — 未知键不再静默消失", () => {
     expect(res.content[0].text).toContain("Form (FormBlock.vue)");
   });
 
-  it("闸门覆盖全部工具（18 个注册项全部走同一入口）", () => {
-    expect(Object.keys(tools)).toHaveLength(18);
+  it("闸门覆盖全部工具（19 个注册项全部走同一入口）", () => {
+    expect(Object.keys(tools)).toHaveLength(19);
     for (const [name, tool] of Object.entries(tools)) {
       // 用宿主真正看到的那份 JSON Schema 断言：loose 对象的 `additionalProperties`
       // 是 `{}`（任意键放行），strip 对象根本没有该字段。这比读 `_def` 更接近契约，

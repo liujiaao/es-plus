@@ -58,6 +58,7 @@ type: 'component'
 | dialogFormItems (deprecated) | FormItemOption[] | - | 旧版单弹窗表单，建议改用 dialogs |
 | dialogOptions (deprecated) | DialogOptions | - | 旧版单弹窗配置，建议改用 dialogs |
 | queryBtns (deprecated) | BtnConfig[] | - | 旧版查询按钮，建议改用 toolbarBtns |
+| __esPlusSource | EsPlusPageSource | - | 生成器写入的出处（es-plus.page-source@1）：运行时忽略；MCP read_page 把它无损解压回生成器当时的输入，lossy[] 说明输入与产物的差异 |
 
 ### CrudBtnConfig
 

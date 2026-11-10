@@ -46,6 +46,29 @@ export interface CrudPageSchema {
   dialogOptions?: Partial<DialogOptions>
   /** @deprecated 使用 toolbarBtns 替代 */
   queryBtns?: BtnConfig[]
+  /**
+   * `es-plus.page-source@1` —— 生成器写入的**出处**（W4 回读闭环）。
+   *
+   * 运行时忽略此键：它是数据，不是配置。`read_page` 把它无损解压回生成器当时的输入，
+   * 宿主改完再生成即可；`lossy[]` 逐条说明输入与产物为何不完全一致。
+   * 单源见 `@es-plus/shared` 的 `page-source.ts` —— 本包不依赖 shared 运行时，
+   * 故这里是同形的手写镜像（新增字段时两处必须同批改）。
+   */
+  __esPlusSource?: EsPlusPageSource
+}
+
+/** 见上方 `__esPlusSource` 的说明：与 `@es-plus/shared` 的 `EsPlusPageSource` 同形。 */
+export interface EsPlusPageSource {
+  contract: 'es-plus.page-source@1'
+  generator: 'es-plus'
+  target: 'vue3' | 'vue2' | 'antdv'
+  mode: 'schema' | 'sfc'
+  config: Record<string, unknown>
+  lossy: Array<{
+    path: string
+    kind: 'dropped' | 'ignored-in-mode' | 'not-expressible' | 'normalized'
+    detail: string
+  }>
 }
 
 export interface CrudBtnConfig extends BtnConfig {

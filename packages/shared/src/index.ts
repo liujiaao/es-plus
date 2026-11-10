@@ -4,6 +4,21 @@ export { generateCrudSchema, type CrudSchemaResult } from './schema-generator.js
 export { FORM_TYPES, COMPONENT_LIST, type ComponentName } from './constants.js'
 export { createSchemaValidator, validateConfig, listAvailableSchemas, type ValidationResult } from './schema-validator.js'
 export { generateFromConfig, type StructuredCrudConfig, type StructuredGenerateResult } from './structured-generator.js'
+// W4 回读闭环：生成物的出处（`__esPlusSource`）—— 构造 + 解压。`read_page` 工具与
+// 生成器共用同一份实现；浏览器端（站点内联预览）也可 import，无 node 依赖。
+export {
+  buildPageSource,
+  readPageSource,
+  configToSurfaces,
+  type ConfigToSurfacesResult,
+  PAGE_SOURCE_CONTRACT,
+  PAGE_SOURCE_KEY,
+  PAGE_SOURCE_MARK,
+  type EsPlusPageSource,
+  type EsPlusLossyEntry,
+  type ReadPageSourceResult,
+  type BuildPageSourceInput,
+} from './page-source.js'
 // 预览边界（事实声明）：配置里声明了、但实时预览画不出来 / 需宿主补一步的特性。
 // 站点预览与 MCP 工具摘要共用这一份判据 —— 不能在各自的 UI 里另写一遍白名单。
 export { describeUnrenderedFeatures } from './preview-hints.js'

@@ -85,7 +85,7 @@ describe("真实 McpServer 注册（SDK 版本兼容）", () => {
    * `inputSchema` —— 换 zod 大版本时，转换器不认识的构造（refine / transform / lazy）
    * 会在这里暴露，而不是等宿主拿到一个空 schema、模型照着空表填字段。
    */
-  it("tools/list 往返：18 个工具的入参 JSON Schema 都带 properties（zod → JSON Schema 转换可用）", async () => {
+  it("tools/list 往返：19 个工具的入参 JSON Schema 都带 properties（zod → JSON Schema 转换可用）", async () => {
     const server = new McpServer({ name: "test", version: "0.0.0" });
     registerTools(server, "full");
     registerResources(server, "full");
@@ -97,7 +97,7 @@ describe("真实 McpServer 注册（SDK 版本兼容）", () => {
     await client.connect(clientT);
 
     const { tools } = await client.listTools();
-    expect(tools).toHaveLength(18);
+    expect(tools).toHaveLength(19);
     for (const tool of tools) {
       expect(tool.inputSchema.type, `${tool.name} 的 inputSchema 不是 object`).toBe("object");
     }

@@ -272,6 +272,7 @@ const crudSchema = [
   { key: '9', prop: 'dialogs', type: 'Record<string, CrudDialogConfig>', default: '-', desc: '多弹窗配置，键名即按钮 dialogKey 取的值（见下方 Dialogs 配置）' },
   { key: '10', prop: 'actions', type: 'CrudAction[]', default: '-', desc: '已废弃：用 toolbarBtns + operationColumn 替代' },
   { key: '11', prop: 'dialogFormItems / dialogOptions / queryBtns', type: '-', default: '-', desc: '已废弃：用 dialogs / toolbarBtns 替代' },
+  { key: '12', prop: '__esPlusSource', type: 'EsPlusPageSource', default: '-', desc: '生成器写入的出处（es-plus.page-source@1）：运行时忽略；MCP read_page 把它无损解压回生成器当时的输入，lossy[] 说明输入与产物的差异' },
 ]
 
 const crudBtnConfigs = [

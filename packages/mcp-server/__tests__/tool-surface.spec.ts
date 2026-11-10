@@ -24,6 +24,7 @@ const FULL_TOOLS = [
   "refine_config",
   "validate_intent",
   "coverage_report",
+  "read_page",
   "get_component_api",
   "scaffold_page",
   "doctor_page",
@@ -44,7 +45,7 @@ describe("registerTools — full profile", () => {
   const tools = capture("full");
   const names = tools.map((t) => t.name);
 
-  it("注册全部 18 个工具且无重复", () => {
+  it("注册全部 19 个工具且无重复", () => {
     expect(names).toEqual(FULL_TOOLS);
     expect(new Set(names).size).toBe(names.length);
   });
@@ -84,7 +85,7 @@ describe("registerTools — front-door profile", () => {
   it("场景路由器、组合页与确定性支撑工具一个不少", () => {
     const kept = FULL_TOOLS.filter((n) => !FRONT_DOOR_HIDDEN.includes(n));
     expect(names).toEqual(kept);
-    expect(names).toHaveLength(12);
+    expect(names).toHaveLength(13);
   });
 });
 

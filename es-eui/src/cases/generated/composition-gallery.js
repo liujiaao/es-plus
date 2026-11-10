@@ -1361,9 +1361,141 @@ export const COMPOSITION_GALLERY = {
           ],
           "pagination": {
             "pageSize": 10
+          },
+          "__esPlusSource": {
+            "contract": "es-plus.page-source@1",
+            "generator": "es-plus",
+            "target": "antdv",
+            "mode": "schema",
+            "config": {
+              "name": "UserManage",
+              "apiUrl": "/api/users",
+              "fields": [
+                {
+                  "prop": "name",
+                  "label": "姓名",
+                  "formtype": "Input",
+                  "inQuery": true,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "status",
+                  "label": "状态",
+                  "formtype": "Select",
+                  "dataOptions": [
+                    {
+                      "label": "启用",
+                      "value": 1
+                    },
+                    {
+                      "label": "禁用",
+                      "value": 0
+                    }
+                  ],
+                  "inQuery": true,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "createdAt",
+                  "label": "创建时间",
+                  "formtype": "DatePicker",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": false
+                },
+                {
+                  "prop": "remark",
+                  "label": "备注",
+                  "formtype": "Input",
+                  "attrs": {
+                    "type": "textarea"
+                  },
+                  "inQuery": false,
+                  "inTable": false,
+                  "inForm": true
+                }
+              ],
+              "actions": [
+                "add",
+                "edit"
+              ],
+              "target": "antdv",
+              "mode": "schema",
+              "dialogs": {
+                "add": {
+                  "title": "新增",
+                  "formItems": [
+                    {
+                      "prop": "name",
+                      "label": "姓名",
+                      "formtype": "Input"
+                    },
+                    {
+                      "prop": "status",
+                      "label": "状态",
+                      "formtype": "Select",
+                      "dataOptions": [
+                        {
+                          "label": "启用",
+                          "value": 1
+                        },
+                        {
+                          "label": "禁用",
+                          "value": 0
+                        }
+                      ]
+                    },
+                    {
+                      "prop": "remark",
+                      "label": "备注",
+                      "formtype": "Input",
+                      "attrs": {
+                        "type": "textarea"
+                      }
+                    }
+                  ]
+                },
+                "edit": {
+                  "title": "编辑",
+                  "formItems": [
+                    {
+                      "prop": "name",
+                      "label": "姓名",
+                      "formtype": "Input"
+                    },
+                    {
+                      "prop": "status",
+                      "label": "状态",
+                      "formtype": "Select",
+                      "dataOptions": [
+                        {
+                          "label": "启用",
+                          "value": 1
+                        },
+                        {
+                          "label": "禁用",
+                          "value": 0
+                        }
+                      ]
+                    },
+                    {
+                      "prop": "remark",
+                      "label": "备注",
+                      "formtype": "Input",
+                      "attrs": {
+                        "type": "textarea"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "lossy": []
           }
         },
-        "code": "export const pageSchema = {\n  \"formItems\": [\n    {\n      \"prop\": \"name\",\n      \"label\": \"姓名\",\n      \"formtype\": \"Input\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"formtype\": \"Select\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      },\n      \"dataOptions\": [\n        {\n          \"label\": \"启用\",\n          \"value\": 1\n        },\n        {\n          \"label\": \"禁用\",\n          \"value\": 0\n        }\n      ]\n    }\n  ],\n  \"columns\": [\n    {\n      \"prop\": \"name\",\n      \"label\": \"姓名\"\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"dataOptions\": [\n        {\n          \"label\": \"启用\",\n          \"value\": 1\n        },\n        {\n          \"label\": \"禁用\",\n          \"value\": 0\n        }\n      ]\n    },\n    {\n      \"prop\": \"createdAt\",\n      \"label\": \"创建时间\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/users\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogs\": {\n    \"add\": {\n      \"title\": \"新增\",\n      \"formItems\": [\n        {\n          \"prop\": \"name\",\n          \"label\": \"姓名\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"启用\",\n              \"value\": 1\n            },\n            {\n              \"label\": \"禁用\",\n              \"value\": 0\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"edit\": {\n      \"title\": \"编辑\",\n      \"formItems\": [\n        {\n          \"prop\": \"name\",\n          \"label\": \"姓名\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"启用\",\n              \"value\": 1\n            },\n            {\n              \"label\": \"禁用\",\n              \"value\": 0\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    }\n  },\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  }\n}\n"
+        "code": "export const pageSchema = {\n  \"formItems\": [\n    {\n      \"prop\": \"name\",\n      \"label\": \"姓名\",\n      \"formtype\": \"Input\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"formtype\": \"Select\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      },\n      \"dataOptions\": [\n        {\n          \"label\": \"启用\",\n          \"value\": 1\n        },\n        {\n          \"label\": \"禁用\",\n          \"value\": 0\n        }\n      ]\n    }\n  ],\n  \"columns\": [\n    {\n      \"prop\": \"name\",\n      \"label\": \"姓名\"\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"dataOptions\": [\n        {\n          \"label\": \"启用\",\n          \"value\": 1\n        },\n        {\n          \"label\": \"禁用\",\n          \"value\": 0\n        }\n      ]\n    },\n    {\n      \"prop\": \"createdAt\",\n      \"label\": \"创建时间\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/users\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogs\": {\n    \"add\": {\n      \"title\": \"新增\",\n      \"formItems\": [\n        {\n          \"prop\": \"name\",\n          \"label\": \"姓名\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"启用\",\n              \"value\": 1\n            },\n            {\n              \"label\": \"禁用\",\n              \"value\": 0\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"edit\": {\n      \"title\": \"编辑\",\n      \"formItems\": [\n        {\n          \"prop\": \"name\",\n          \"label\": \"姓名\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"启用\",\n              \"value\": 1\n            },\n            {\n              \"label\": \"禁用\",\n              \"value\": 0\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    }\n  },\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  },\n  \"__esPlusSource\": {\n    \"contract\": \"es-plus.page-source@1\",\n    \"generator\": \"es-plus\",\n    \"target\": \"antdv\",\n    \"mode\": \"schema\",\n    \"config\": {\n      \"name\": \"UserManage\",\n      \"apiUrl\": \"/api/users\",\n      \"fields\": [\n        {\n          \"prop\": \"name\",\n          \"label\": \"姓名\",\n          \"formtype\": \"Input\",\n          \"inQuery\": true,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"dataOptions\": [\n            {\n              \"label\": \"启用\",\n              \"value\": 1\n            },\n            {\n              \"label\": \"禁用\",\n              \"value\": 0\n            }\n          ],\n          \"inQuery\": true,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"createdAt\",\n          \"label\": \"创建时间\",\n          \"formtype\": \"DatePicker\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": false\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"attrs\": {\n            \"type\": \"textarea\"\n          },\n          \"inQuery\": false,\n          \"inTable\": false,\n          \"inForm\": true\n        }\n      ],\n      \"actions\": [\n        \"add\",\n        \"edit\"\n      ],\n      \"target\": \"antdv\",\n      \"mode\": \"schema\",\n      \"dialogs\": {\n        \"add\": {\n          \"title\": \"新增\",\n          \"formItems\": [\n            {\n              \"prop\": \"name\",\n              \"label\": \"姓名\",\n              \"formtype\": \"Input\"\n            },\n            {\n              \"prop\": \"status\",\n              \"label\": \"状态\",\n              \"formtype\": \"Select\",\n              \"dataOptions\": [\n                {\n                  \"label\": \"启用\",\n                  \"value\": 1\n                },\n                {\n                  \"label\": \"禁用\",\n                  \"value\": 0\n                }\n              ]\n            },\n            {\n              \"prop\": \"remark\",\n              \"label\": \"备注\",\n              \"formtype\": \"Input\",\n              \"attrs\": {\n                \"type\": \"textarea\"\n              }\n            }\n          ]\n        },\n        \"edit\": {\n          \"title\": \"编辑\",\n          \"formItems\": [\n            {\n              \"prop\": \"name\",\n              \"label\": \"姓名\",\n              \"formtype\": \"Input\"\n            },\n            {\n              \"prop\": \"status\",\n              \"label\": \"状态\",\n              \"formtype\": \"Select\",\n              \"dataOptions\": [\n                {\n                  \"label\": \"启用\",\n                  \"value\": 1\n                },\n                {\n                  \"label\": \"禁用\",\n                  \"value\": 0\n                }\n              ]\n            },\n            {\n              \"prop\": \"remark\",\n              \"label\": \"备注\",\n              \"formtype\": \"Input\",\n              \"attrs\": {\n                \"type\": \"textarea\"\n              }\n            }\n          ]\n        }\n      }\n    },\n    \"lossy\": []\n  }\n}\n"
       }
     },
     {
@@ -1780,9 +1912,141 @@ export const COMPOSITION_GALLERY = {
           ],
           "pagination": {
             "pageSize": 10
+          },
+          "__esPlusSource": {
+            "contract": "es-plus.page-source@1",
+            "generator": "es-plus",
+            "target": "vue2",
+            "mode": "schema",
+            "config": {
+              "name": "UserManage",
+              "apiUrl": "/api/users",
+              "fields": [
+                {
+                  "prop": "name",
+                  "label": "姓名",
+                  "formtype": "Input",
+                  "inQuery": true,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "status",
+                  "label": "状态",
+                  "formtype": "Select",
+                  "dataOptions": [
+                    {
+                      "label": "启用",
+                      "value": 1
+                    },
+                    {
+                      "label": "禁用",
+                      "value": 0
+                    }
+                  ],
+                  "inQuery": true,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "createdAt",
+                  "label": "创建时间",
+                  "formtype": "DatePicker",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": false
+                },
+                {
+                  "prop": "remark",
+                  "label": "备注",
+                  "formtype": "Input",
+                  "attrs": {
+                    "type": "textarea"
+                  },
+                  "inQuery": false,
+                  "inTable": false,
+                  "inForm": true
+                }
+              ],
+              "actions": [
+                "add",
+                "edit"
+              ],
+              "target": "vue2",
+              "mode": "schema",
+              "dialogs": {
+                "add": {
+                  "title": "新增",
+                  "formItems": [
+                    {
+                      "prop": "name",
+                      "label": "姓名",
+                      "formtype": "Input"
+                    },
+                    {
+                      "prop": "status",
+                      "label": "状态",
+                      "formtype": "Select",
+                      "dataOptions": [
+                        {
+                          "label": "启用",
+                          "value": 1
+                        },
+                        {
+                          "label": "禁用",
+                          "value": 0
+                        }
+                      ]
+                    },
+                    {
+                      "prop": "remark",
+                      "label": "备注",
+                      "formtype": "Input",
+                      "attrs": {
+                        "type": "textarea"
+                      }
+                    }
+                  ]
+                },
+                "edit": {
+                  "title": "编辑",
+                  "formItems": [
+                    {
+                      "prop": "name",
+                      "label": "姓名",
+                      "formtype": "Input"
+                    },
+                    {
+                      "prop": "status",
+                      "label": "状态",
+                      "formtype": "Select",
+                      "dataOptions": [
+                        {
+                          "label": "启用",
+                          "value": 1
+                        },
+                        {
+                          "label": "禁用",
+                          "value": 0
+                        }
+                      ]
+                    },
+                    {
+                      "prop": "remark",
+                      "label": "备注",
+                      "formtype": "Input",
+                      "attrs": {
+                        "type": "textarea"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "lossy": []
           }
         },
-        "code": "export const pageSchema = {\n  \"formItems\": [\n    {\n      \"prop\": \"name\",\n      \"label\": \"姓名\",\n      \"formtype\": \"Input\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"formtype\": \"Select\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      },\n      \"dataOptions\": [\n        {\n          \"label\": \"启用\",\n          \"value\": 1\n        },\n        {\n          \"label\": \"禁用\",\n          \"value\": 0\n        }\n      ]\n    }\n  ],\n  \"columns\": [\n    {\n      \"prop\": \"name\",\n      \"label\": \"姓名\"\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"dataOptions\": [\n        {\n          \"label\": \"启用\",\n          \"value\": 1\n        },\n        {\n          \"label\": \"禁用\",\n          \"value\": 0\n        }\n      ]\n    },\n    {\n      \"prop\": \"createdAt\",\n      \"label\": \"创建时间\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/users\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogs\": {\n    \"add\": {\n      \"title\": \"新增\",\n      \"formItems\": [\n        {\n          \"prop\": \"name\",\n          \"label\": \"姓名\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"启用\",\n              \"value\": 1\n            },\n            {\n              \"label\": \"禁用\",\n              \"value\": 0\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"edit\": {\n      \"title\": \"编辑\",\n      \"formItems\": [\n        {\n          \"prop\": \"name\",\n          \"label\": \"姓名\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"启用\",\n              \"value\": 1\n            },\n            {\n              \"label\": \"禁用\",\n              \"value\": 0\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    }\n  },\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  }\n}\n"
+        "code": "export const pageSchema = {\n  \"formItems\": [\n    {\n      \"prop\": \"name\",\n      \"label\": \"姓名\",\n      \"formtype\": \"Input\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"formtype\": \"Select\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      },\n      \"dataOptions\": [\n        {\n          \"label\": \"启用\",\n          \"value\": 1\n        },\n        {\n          \"label\": \"禁用\",\n          \"value\": 0\n        }\n      ]\n    }\n  ],\n  \"columns\": [\n    {\n      \"prop\": \"name\",\n      \"label\": \"姓名\"\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"dataOptions\": [\n        {\n          \"label\": \"启用\",\n          \"value\": 1\n        },\n        {\n          \"label\": \"禁用\",\n          \"value\": 0\n        }\n      ]\n    },\n    {\n      \"prop\": \"createdAt\",\n      \"label\": \"创建时间\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/users\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogs\": {\n    \"add\": {\n      \"title\": \"新增\",\n      \"formItems\": [\n        {\n          \"prop\": \"name\",\n          \"label\": \"姓名\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"启用\",\n              \"value\": 1\n            },\n            {\n              \"label\": \"禁用\",\n              \"value\": 0\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"edit\": {\n      \"title\": \"编辑\",\n      \"formItems\": [\n        {\n          \"prop\": \"name\",\n          \"label\": \"姓名\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"启用\",\n              \"value\": 1\n            },\n            {\n              \"label\": \"禁用\",\n              \"value\": 0\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    }\n  },\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  },\n  \"__esPlusSource\": {\n    \"contract\": \"es-plus.page-source@1\",\n    \"generator\": \"es-plus\",\n    \"target\": \"vue2\",\n    \"mode\": \"schema\",\n    \"config\": {\n      \"name\": \"UserManage\",\n      \"apiUrl\": \"/api/users\",\n      \"fields\": [\n        {\n          \"prop\": \"name\",\n          \"label\": \"姓名\",\n          \"formtype\": \"Input\",\n          \"inQuery\": true,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"dataOptions\": [\n            {\n              \"label\": \"启用\",\n              \"value\": 1\n            },\n            {\n              \"label\": \"禁用\",\n              \"value\": 0\n            }\n          ],\n          \"inQuery\": true,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"createdAt\",\n          \"label\": \"创建时间\",\n          \"formtype\": \"DatePicker\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": false\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"attrs\": {\n            \"type\": \"textarea\"\n          },\n          \"inQuery\": false,\n          \"inTable\": false,\n          \"inForm\": true\n        }\n      ],\n      \"actions\": [\n        \"add\",\n        \"edit\"\n      ],\n      \"target\": \"vue2\",\n      \"mode\": \"schema\",\n      \"dialogs\": {\n        \"add\": {\n          \"title\": \"新增\",\n          \"formItems\": [\n            {\n              \"prop\": \"name\",\n              \"label\": \"姓名\",\n              \"formtype\": \"Input\"\n            },\n            {\n              \"prop\": \"status\",\n              \"label\": \"状态\",\n              \"formtype\": \"Select\",\n              \"dataOptions\": [\n                {\n                  \"label\": \"启用\",\n                  \"value\": 1\n                },\n                {\n                  \"label\": \"禁用\",\n                  \"value\": 0\n                }\n              ]\n            },\n            {\n              \"prop\": \"remark\",\n              \"label\": \"备注\",\n              \"formtype\": \"Input\",\n              \"attrs\": {\n                \"type\": \"textarea\"\n              }\n            }\n          ]\n        },\n        \"edit\": {\n          \"title\": \"编辑\",\n          \"formItems\": [\n            {\n              \"prop\": \"name\",\n              \"label\": \"姓名\",\n              \"formtype\": \"Input\"\n            },\n            {\n              \"prop\": \"status\",\n              \"label\": \"状态\",\n              \"formtype\": \"Select\",\n              \"dataOptions\": [\n                {\n                  \"label\": \"启用\",\n                  \"value\": 1\n                },\n                {\n                  \"label\": \"禁用\",\n                  \"value\": 0\n                }\n              ]\n            },\n            {\n              \"prop\": \"remark\",\n              \"label\": \"备注\",\n              \"formtype\": \"Input\",\n              \"attrs\": {\n                \"type\": \"textarea\"\n              }\n            }\n          ]\n        }\n      }\n    },\n    \"lossy\": []\n  }\n}\n"
       }
     },
     {
@@ -2199,9 +2463,141 @@ export const COMPOSITION_GALLERY = {
           ],
           "pagination": {
             "pageSize": 10
+          },
+          "__esPlusSource": {
+            "contract": "es-plus.page-source@1",
+            "generator": "es-plus",
+            "target": "vue3",
+            "mode": "schema",
+            "config": {
+              "name": "UserManage",
+              "apiUrl": "/api/users",
+              "fields": [
+                {
+                  "prop": "name",
+                  "label": "姓名",
+                  "formtype": "Input",
+                  "inQuery": true,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "status",
+                  "label": "状态",
+                  "formtype": "Select",
+                  "dataOptions": [
+                    {
+                      "label": "启用",
+                      "value": 1
+                    },
+                    {
+                      "label": "禁用",
+                      "value": 0
+                    }
+                  ],
+                  "inQuery": true,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "createdAt",
+                  "label": "创建时间",
+                  "formtype": "DatePicker",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": false
+                },
+                {
+                  "prop": "remark",
+                  "label": "备注",
+                  "formtype": "Input",
+                  "attrs": {
+                    "type": "textarea"
+                  },
+                  "inQuery": false,
+                  "inTable": false,
+                  "inForm": true
+                }
+              ],
+              "actions": [
+                "add",
+                "edit"
+              ],
+              "target": "vue3",
+              "mode": "schema",
+              "dialogs": {
+                "add": {
+                  "title": "新增",
+                  "formItems": [
+                    {
+                      "prop": "name",
+                      "label": "姓名",
+                      "formtype": "Input"
+                    },
+                    {
+                      "prop": "status",
+                      "label": "状态",
+                      "formtype": "Select",
+                      "dataOptions": [
+                        {
+                          "label": "启用",
+                          "value": 1
+                        },
+                        {
+                          "label": "禁用",
+                          "value": 0
+                        }
+                      ]
+                    },
+                    {
+                      "prop": "remark",
+                      "label": "备注",
+                      "formtype": "Input",
+                      "attrs": {
+                        "type": "textarea"
+                      }
+                    }
+                  ]
+                },
+                "edit": {
+                  "title": "编辑",
+                  "formItems": [
+                    {
+                      "prop": "name",
+                      "label": "姓名",
+                      "formtype": "Input"
+                    },
+                    {
+                      "prop": "status",
+                      "label": "状态",
+                      "formtype": "Select",
+                      "dataOptions": [
+                        {
+                          "label": "启用",
+                          "value": 1
+                        },
+                        {
+                          "label": "禁用",
+                          "value": 0
+                        }
+                      ]
+                    },
+                    {
+                      "prop": "remark",
+                      "label": "备注",
+                      "formtype": "Input",
+                      "attrs": {
+                        "type": "textarea"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "lossy": []
           }
         },
-        "code": "export const pageSchema = {\n  \"formItems\": [\n    {\n      \"prop\": \"name\",\n      \"label\": \"姓名\",\n      \"formtype\": \"Input\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"formtype\": \"Select\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      },\n      \"dataOptions\": [\n        {\n          \"label\": \"启用\",\n          \"value\": 1\n        },\n        {\n          \"label\": \"禁用\",\n          \"value\": 0\n        }\n      ]\n    }\n  ],\n  \"columns\": [\n    {\n      \"prop\": \"name\",\n      \"label\": \"姓名\"\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"dataOptions\": [\n        {\n          \"label\": \"启用\",\n          \"value\": 1\n        },\n        {\n          \"label\": \"禁用\",\n          \"value\": 0\n        }\n      ]\n    },\n    {\n      \"prop\": \"createdAt\",\n      \"label\": \"创建时间\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/users\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogs\": {\n    \"add\": {\n      \"title\": \"新增\",\n      \"formItems\": [\n        {\n          \"prop\": \"name\",\n          \"label\": \"姓名\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"启用\",\n              \"value\": 1\n            },\n            {\n              \"label\": \"禁用\",\n              \"value\": 0\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"edit\": {\n      \"title\": \"编辑\",\n      \"formItems\": [\n        {\n          \"prop\": \"name\",\n          \"label\": \"姓名\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"启用\",\n              \"value\": 1\n            },\n            {\n              \"label\": \"禁用\",\n              \"value\": 0\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    }\n  },\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  }\n}\n"
+        "code": "export const pageSchema = {\n  \"formItems\": [\n    {\n      \"prop\": \"name\",\n      \"label\": \"姓名\",\n      \"formtype\": \"Input\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"formtype\": \"Select\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      },\n      \"dataOptions\": [\n        {\n          \"label\": \"启用\",\n          \"value\": 1\n        },\n        {\n          \"label\": \"禁用\",\n          \"value\": 0\n        }\n      ]\n    }\n  ],\n  \"columns\": [\n    {\n      \"prop\": \"name\",\n      \"label\": \"姓名\"\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"dataOptions\": [\n        {\n          \"label\": \"启用\",\n          \"value\": 1\n        },\n        {\n          \"label\": \"禁用\",\n          \"value\": 0\n        }\n      ]\n    },\n    {\n      \"prop\": \"createdAt\",\n      \"label\": \"创建时间\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/users\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogs\": {\n    \"add\": {\n      \"title\": \"新增\",\n      \"formItems\": [\n        {\n          \"prop\": \"name\",\n          \"label\": \"姓名\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"启用\",\n              \"value\": 1\n            },\n            {\n              \"label\": \"禁用\",\n              \"value\": 0\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"edit\": {\n      \"title\": \"编辑\",\n      \"formItems\": [\n        {\n          \"prop\": \"name\",\n          \"label\": \"姓名\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"启用\",\n              \"value\": 1\n            },\n            {\n              \"label\": \"禁用\",\n              \"value\": 0\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    }\n  },\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  },\n  \"__esPlusSource\": {\n    \"contract\": \"es-plus.page-source@1\",\n    \"generator\": \"es-plus\",\n    \"target\": \"vue3\",\n    \"mode\": \"schema\",\n    \"config\": {\n      \"name\": \"UserManage\",\n      \"apiUrl\": \"/api/users\",\n      \"fields\": [\n        {\n          \"prop\": \"name\",\n          \"label\": \"姓名\",\n          \"formtype\": \"Input\",\n          \"inQuery\": true,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"dataOptions\": [\n            {\n              \"label\": \"启用\",\n              \"value\": 1\n            },\n            {\n              \"label\": \"禁用\",\n              \"value\": 0\n            }\n          ],\n          \"inQuery\": true,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"createdAt\",\n          \"label\": \"创建时间\",\n          \"formtype\": \"DatePicker\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": false\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"attrs\": {\n            \"type\": \"textarea\"\n          },\n          \"inQuery\": false,\n          \"inTable\": false,\n          \"inForm\": true\n        }\n      ],\n      \"actions\": [\n        \"add\",\n        \"edit\"\n      ],\n      \"target\": \"vue3\",\n      \"mode\": \"schema\",\n      \"dialogs\": {\n        \"add\": {\n          \"title\": \"新增\",\n          \"formItems\": [\n            {\n              \"prop\": \"name\",\n              \"label\": \"姓名\",\n              \"formtype\": \"Input\"\n            },\n            {\n              \"prop\": \"status\",\n              \"label\": \"状态\",\n              \"formtype\": \"Select\",\n              \"dataOptions\": [\n                {\n                  \"label\": \"启用\",\n                  \"value\": 1\n                },\n                {\n                  \"label\": \"禁用\",\n                  \"value\": 0\n                }\n              ]\n            },\n            {\n              \"prop\": \"remark\",\n              \"label\": \"备注\",\n              \"formtype\": \"Input\",\n              \"attrs\": {\n                \"type\": \"textarea\"\n              }\n            }\n          ]\n        },\n        \"edit\": {\n          \"title\": \"编辑\",\n          \"formItems\": [\n            {\n              \"prop\": \"name\",\n              \"label\": \"姓名\",\n              \"formtype\": \"Input\"\n            },\n            {\n              \"prop\": \"status\",\n              \"label\": \"状态\",\n              \"formtype\": \"Select\",\n              \"dataOptions\": [\n                {\n                  \"label\": \"启用\",\n                  \"value\": 1\n                },\n                {\n                  \"label\": \"禁用\",\n                  \"value\": 0\n                }\n              ]\n            },\n            {\n              \"prop\": \"remark\",\n              \"label\": \"备注\",\n              \"formtype\": \"Input\",\n              \"attrs\": {\n                \"type\": \"textarea\"\n              }\n            }\n          ]\n        }\n      }\n    },\n    \"lossy\": []\n  }\n}\n"
       }
     },
     {
@@ -2728,9 +3124,198 @@ export const COMPOSITION_GALLERY = {
           ],
           "pagination": {
             "pageSize": 10
+          },
+          "__esPlusSource": {
+            "contract": "es-plus.page-source@1",
+            "generator": "es-plus",
+            "target": "antdv",
+            "mode": "schema",
+            "config": {
+              "name": "OrderManage",
+              "apiUrl": "/api/orders",
+              "fields": [
+                {
+                  "prop": "orderNo",
+                  "label": "订单号",
+                  "formtype": "Input",
+                  "inQuery": true,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "status",
+                  "label": "状态",
+                  "formtype": "Select",
+                  "dataOptions": [
+                    {
+                      "label": "待付款",
+                      "value": "pending"
+                    },
+                    {
+                      "label": "已完成",
+                      "value": "done"
+                    }
+                  ],
+                  "inQuery": true,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "amount",
+                  "label": "金额",
+                  "formtype": "InputNumber",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "createdAt",
+                  "label": "下单时间",
+                  "formtype": "DatePicker",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": false
+                },
+                {
+                  "prop": "remark",
+                  "label": "备注",
+                  "formtype": "Input",
+                  "attrs": {
+                    "type": "textarea"
+                  },
+                  "inQuery": false,
+                  "inTable": false,
+                  "inForm": true
+                }
+              ],
+              "actions": [
+                "add",
+                "edit",
+                "view"
+              ],
+              "target": "antdv",
+              "mode": "schema",
+              "dialogs": {
+                "add": {
+                  "title": "新增",
+                  "formItems": [
+                    {
+                      "prop": "orderNo",
+                      "label": "订单号",
+                      "formtype": "Input"
+                    },
+                    {
+                      "prop": "amount",
+                      "label": "金额",
+                      "formtype": "InputNumber"
+                    },
+                    {
+                      "prop": "status",
+                      "label": "状态",
+                      "formtype": "Select",
+                      "dataOptions": [
+                        {
+                          "label": "待付款",
+                          "value": "pending"
+                        },
+                        {
+                          "label": "已完成",
+                          "value": "done"
+                        }
+                      ]
+                    },
+                    {
+                      "prop": "remark",
+                      "label": "备注",
+                      "formtype": "Input",
+                      "attrs": {
+                        "type": "textarea"
+                      }
+                    }
+                  ]
+                },
+                "edit": {
+                  "title": "编辑",
+                  "formItems": [
+                    {
+                      "prop": "orderNo",
+                      "label": "订单号",
+                      "formtype": "Input"
+                    },
+                    {
+                      "prop": "amount",
+                      "label": "金额",
+                      "formtype": "InputNumber"
+                    },
+                    {
+                      "prop": "status",
+                      "label": "状态",
+                      "formtype": "Select",
+                      "dataOptions": [
+                        {
+                          "label": "待付款",
+                          "value": "pending"
+                        },
+                        {
+                          "label": "已完成",
+                          "value": "done"
+                        }
+                      ]
+                    },
+                    {
+                      "prop": "remark",
+                      "label": "备注",
+                      "formtype": "Input",
+                      "attrs": {
+                        "type": "textarea"
+                      }
+                    }
+                  ]
+                },
+                "view": {
+                  "title": "查看",
+                  "formItems": [
+                    {
+                      "prop": "orderNo",
+                      "label": "订单号",
+                      "formtype": "Input"
+                    },
+                    {
+                      "prop": "amount",
+                      "label": "金额",
+                      "formtype": "InputNumber"
+                    },
+                    {
+                      "prop": "status",
+                      "label": "状态",
+                      "formtype": "Select",
+                      "dataOptions": [
+                        {
+                          "label": "待付款",
+                          "value": "pending"
+                        },
+                        {
+                          "label": "已完成",
+                          "value": "done"
+                        }
+                      ]
+                    },
+                    {
+                      "prop": "remark",
+                      "label": "备注",
+                      "formtype": "Input",
+                      "attrs": {
+                        "type": "textarea"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "lossy": []
           }
         },
-        "code": "export const pageSchema = {\n  \"formItems\": [\n    {\n      \"prop\": \"orderNo\",\n      \"label\": \"订单号\",\n      \"formtype\": \"Input\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"formtype\": \"Select\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      },\n      \"dataOptions\": [\n        {\n          \"label\": \"待付款\",\n          \"value\": \"pending\"\n        },\n        {\n          \"label\": \"已完成\",\n          \"value\": \"done\"\n        }\n      ]\n    }\n  ],\n  \"columns\": [\n    {\n      \"prop\": \"orderNo\",\n      \"label\": \"订单号\"\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"dataOptions\": [\n        {\n          \"label\": \"待付款\",\n          \"value\": \"pending\"\n        },\n        {\n          \"label\": \"已完成\",\n          \"value\": \"done\"\n        }\n      ]\n    },\n    {\n      \"prop\": \"amount\",\n      \"label\": \"金额\"\n    },\n    {\n      \"prop\": \"createdAt\",\n      \"label\": \"下单时间\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/orders\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogs\": {\n    \"add\": {\n      \"title\": \"新增\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"edit\": {\n      \"title\": \"编辑\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"view\": {\n      \"title\": \"查看\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    }\n  },\n  \"actions\": [\n    \"add\",\n    \"edit\",\n    \"view\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  }\n}\n"
+        "code": "export const pageSchema = {\n  \"formItems\": [\n    {\n      \"prop\": \"orderNo\",\n      \"label\": \"订单号\",\n      \"formtype\": \"Input\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"formtype\": \"Select\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      },\n      \"dataOptions\": [\n        {\n          \"label\": \"待付款\",\n          \"value\": \"pending\"\n        },\n        {\n          \"label\": \"已完成\",\n          \"value\": \"done\"\n        }\n      ]\n    }\n  ],\n  \"columns\": [\n    {\n      \"prop\": \"orderNo\",\n      \"label\": \"订单号\"\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"dataOptions\": [\n        {\n          \"label\": \"待付款\",\n          \"value\": \"pending\"\n        },\n        {\n          \"label\": \"已完成\",\n          \"value\": \"done\"\n        }\n      ]\n    },\n    {\n      \"prop\": \"amount\",\n      \"label\": \"金额\"\n    },\n    {\n      \"prop\": \"createdAt\",\n      \"label\": \"下单时间\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/orders\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogs\": {\n    \"add\": {\n      \"title\": \"新增\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"edit\": {\n      \"title\": \"编辑\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"view\": {\n      \"title\": \"查看\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    }\n  },\n  \"actions\": [\n    \"add\",\n    \"edit\",\n    \"view\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  },\n  \"__esPlusSource\": {\n    \"contract\": \"es-plus.page-source@1\",\n    \"generator\": \"es-plus\",\n    \"target\": \"antdv\",\n    \"mode\": \"schema\",\n    \"config\": {\n      \"name\": \"OrderManage\",\n      \"apiUrl\": \"/api/orders\",\n      \"fields\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"inQuery\": true,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ],\n          \"inQuery\": true,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"createdAt\",\n          \"label\": \"下单时间\",\n          \"formtype\": \"DatePicker\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": false\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"attrs\": {\n            \"type\": \"textarea\"\n          },\n          \"inQuery\": false,\n          \"inTable\": false,\n          \"inForm\": true\n        }\n      ],\n      \"actions\": [\n        \"add\",\n        \"edit\",\n        \"view\"\n      ],\n      \"target\": \"antdv\",\n      \"mode\": \"schema\",\n      \"dialogs\": {\n        \"add\": {\n          \"title\": \"新增\",\n          \"formItems\": [\n            {\n              \"prop\": \"orderNo\",\n              \"label\": \"订单号\",\n              \"formtype\": \"Input\"\n            },\n            {\n              \"prop\": \"amount\",\n              \"label\": \"金额\",\n              \"formtype\": \"InputNumber\"\n            },\n            {\n              \"prop\": \"status\",\n              \"label\": \"状态\",\n              \"formtype\": \"Select\",\n              \"dataOptions\": [\n                {\n                  \"label\": \"待付款\",\n                  \"value\": \"pending\"\n                },\n                {\n                  \"label\": \"已完成\",\n                  \"value\": \"done\"\n                }\n              ]\n            },\n            {\n              \"prop\": \"remark\",\n              \"label\": \"备注\",\n              \"formtype\": \"Input\",\n              \"attrs\": {\n                \"type\": \"textarea\"\n              }\n            }\n          ]\n        },\n        \"edit\": {\n          \"title\": \"编辑\",\n          \"formItems\": [\n            {\n              \"prop\": \"orderNo\",\n              \"label\": \"订单号\",\n              \"formtype\": \"Input\"\n            },\n            {\n              \"prop\": \"amount\",\n              \"label\": \"金额\",\n              \"formtype\": \"InputNumber\"\n            },\n            {\n              \"prop\": \"status\",\n              \"label\": \"状态\",\n              \"formtype\": \"Select\",\n              \"dataOptions\": [\n                {\n                  \"label\": \"待付款\",\n                  \"value\": \"pending\"\n                },\n                {\n                  \"label\": \"已完成\",\n                  \"value\": \"done\"\n                }\n              ]\n            },\n            {\n              \"prop\": \"remark\",\n              \"label\": \"备注\",\n              \"formtype\": \"Input\",\n              \"attrs\": {\n                \"type\": \"textarea\"\n              }\n            }\n          ]\n        },\n        \"view\": {\n          \"title\": \"查看\",\n          \"formItems\": [\n            {\n              \"prop\": \"orderNo\",\n              \"label\": \"订单号\",\n              \"formtype\": \"Input\"\n            },\n            {\n              \"prop\": \"amount\",\n              \"label\": \"金额\",\n              \"formtype\": \"InputNumber\"\n            },\n            {\n              \"prop\": \"status\",\n              \"label\": \"状态\",\n              \"formtype\": \"Select\",\n              \"dataOptions\": [\n                {\n                  \"label\": \"待付款\",\n                  \"value\": \"pending\"\n                },\n                {\n                  \"label\": \"已完成\",\n                  \"value\": \"done\"\n                }\n              ]\n            },\n            {\n              \"prop\": \"remark\",\n              \"label\": \"备注\",\n              \"formtype\": \"Input\",\n              \"attrs\": {\n                \"type\": \"textarea\"\n              }\n            }\n          ]\n        }\n      }\n    },\n    \"lossy\": []\n  }\n}\n"
       }
     },
     {
@@ -3257,9 +3842,198 @@ export const COMPOSITION_GALLERY = {
           ],
           "pagination": {
             "pageSize": 10
+          },
+          "__esPlusSource": {
+            "contract": "es-plus.page-source@1",
+            "generator": "es-plus",
+            "target": "vue2",
+            "mode": "schema",
+            "config": {
+              "name": "OrderManage",
+              "apiUrl": "/api/orders",
+              "fields": [
+                {
+                  "prop": "orderNo",
+                  "label": "订单号",
+                  "formtype": "Input",
+                  "inQuery": true,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "status",
+                  "label": "状态",
+                  "formtype": "Select",
+                  "dataOptions": [
+                    {
+                      "label": "待付款",
+                      "value": "pending"
+                    },
+                    {
+                      "label": "已完成",
+                      "value": "done"
+                    }
+                  ],
+                  "inQuery": true,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "amount",
+                  "label": "金额",
+                  "formtype": "InputNumber",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "createdAt",
+                  "label": "下单时间",
+                  "formtype": "DatePicker",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": false
+                },
+                {
+                  "prop": "remark",
+                  "label": "备注",
+                  "formtype": "Input",
+                  "attrs": {
+                    "type": "textarea"
+                  },
+                  "inQuery": false,
+                  "inTable": false,
+                  "inForm": true
+                }
+              ],
+              "actions": [
+                "add",
+                "edit",
+                "view"
+              ],
+              "target": "vue2",
+              "mode": "schema",
+              "dialogs": {
+                "add": {
+                  "title": "新增",
+                  "formItems": [
+                    {
+                      "prop": "orderNo",
+                      "label": "订单号",
+                      "formtype": "Input"
+                    },
+                    {
+                      "prop": "amount",
+                      "label": "金额",
+                      "formtype": "InputNumber"
+                    },
+                    {
+                      "prop": "status",
+                      "label": "状态",
+                      "formtype": "Select",
+                      "dataOptions": [
+                        {
+                          "label": "待付款",
+                          "value": "pending"
+                        },
+                        {
+                          "label": "已完成",
+                          "value": "done"
+                        }
+                      ]
+                    },
+                    {
+                      "prop": "remark",
+                      "label": "备注",
+                      "formtype": "Input",
+                      "attrs": {
+                        "type": "textarea"
+                      }
+                    }
+                  ]
+                },
+                "edit": {
+                  "title": "编辑",
+                  "formItems": [
+                    {
+                      "prop": "orderNo",
+                      "label": "订单号",
+                      "formtype": "Input"
+                    },
+                    {
+                      "prop": "amount",
+                      "label": "金额",
+                      "formtype": "InputNumber"
+                    },
+                    {
+                      "prop": "status",
+                      "label": "状态",
+                      "formtype": "Select",
+                      "dataOptions": [
+                        {
+                          "label": "待付款",
+                          "value": "pending"
+                        },
+                        {
+                          "label": "已完成",
+                          "value": "done"
+                        }
+                      ]
+                    },
+                    {
+                      "prop": "remark",
+                      "label": "备注",
+                      "formtype": "Input",
+                      "attrs": {
+                        "type": "textarea"
+                      }
+                    }
+                  ]
+                },
+                "view": {
+                  "title": "查看",
+                  "formItems": [
+                    {
+                      "prop": "orderNo",
+                      "label": "订单号",
+                      "formtype": "Input"
+                    },
+                    {
+                      "prop": "amount",
+                      "label": "金额",
+                      "formtype": "InputNumber"
+                    },
+                    {
+                      "prop": "status",
+                      "label": "状态",
+                      "formtype": "Select",
+                      "dataOptions": [
+                        {
+                          "label": "待付款",
+                          "value": "pending"
+                        },
+                        {
+                          "label": "已完成",
+                          "value": "done"
+                        }
+                      ]
+                    },
+                    {
+                      "prop": "remark",
+                      "label": "备注",
+                      "formtype": "Input",
+                      "attrs": {
+                        "type": "textarea"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "lossy": []
           }
         },
-        "code": "export const pageSchema = {\n  \"formItems\": [\n    {\n      \"prop\": \"orderNo\",\n      \"label\": \"订单号\",\n      \"formtype\": \"Input\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"formtype\": \"Select\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      },\n      \"dataOptions\": [\n        {\n          \"label\": \"待付款\",\n          \"value\": \"pending\"\n        },\n        {\n          \"label\": \"已完成\",\n          \"value\": \"done\"\n        }\n      ]\n    }\n  ],\n  \"columns\": [\n    {\n      \"prop\": \"orderNo\",\n      \"label\": \"订单号\"\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"dataOptions\": [\n        {\n          \"label\": \"待付款\",\n          \"value\": \"pending\"\n        },\n        {\n          \"label\": \"已完成\",\n          \"value\": \"done\"\n        }\n      ]\n    },\n    {\n      \"prop\": \"amount\",\n      \"label\": \"金额\"\n    },\n    {\n      \"prop\": \"createdAt\",\n      \"label\": \"下单时间\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/orders\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogs\": {\n    \"add\": {\n      \"title\": \"新增\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"edit\": {\n      \"title\": \"编辑\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"view\": {\n      \"title\": \"查看\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    }\n  },\n  \"actions\": [\n    \"add\",\n    \"edit\",\n    \"view\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  }\n}\n"
+        "code": "export const pageSchema = {\n  \"formItems\": [\n    {\n      \"prop\": \"orderNo\",\n      \"label\": \"订单号\",\n      \"formtype\": \"Input\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"formtype\": \"Select\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      },\n      \"dataOptions\": [\n        {\n          \"label\": \"待付款\",\n          \"value\": \"pending\"\n        },\n        {\n          \"label\": \"已完成\",\n          \"value\": \"done\"\n        }\n      ]\n    }\n  ],\n  \"columns\": [\n    {\n      \"prop\": \"orderNo\",\n      \"label\": \"订单号\"\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"dataOptions\": [\n        {\n          \"label\": \"待付款\",\n          \"value\": \"pending\"\n        },\n        {\n          \"label\": \"已完成\",\n          \"value\": \"done\"\n        }\n      ]\n    },\n    {\n      \"prop\": \"amount\",\n      \"label\": \"金额\"\n    },\n    {\n      \"prop\": \"createdAt\",\n      \"label\": \"下单时间\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/orders\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogs\": {\n    \"add\": {\n      \"title\": \"新增\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"edit\": {\n      \"title\": \"编辑\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"view\": {\n      \"title\": \"查看\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    }\n  },\n  \"actions\": [\n    \"add\",\n    \"edit\",\n    \"view\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  },\n  \"__esPlusSource\": {\n    \"contract\": \"es-plus.page-source@1\",\n    \"generator\": \"es-plus\",\n    \"target\": \"vue2\",\n    \"mode\": \"schema\",\n    \"config\": {\n      \"name\": \"OrderManage\",\n      \"apiUrl\": \"/api/orders\",\n      \"fields\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"inQuery\": true,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ],\n          \"inQuery\": true,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"createdAt\",\n          \"label\": \"下单时间\",\n          \"formtype\": \"DatePicker\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": false\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"attrs\": {\n            \"type\": \"textarea\"\n          },\n          \"inQuery\": false,\n          \"inTable\": false,\n          \"inForm\": true\n        }\n      ],\n      \"actions\": [\n        \"add\",\n        \"edit\",\n        \"view\"\n      ],\n      \"target\": \"vue2\",\n      \"mode\": \"schema\",\n      \"dialogs\": {\n        \"add\": {\n          \"title\": \"新增\",\n          \"formItems\": [\n            {\n              \"prop\": \"orderNo\",\n              \"label\": \"订单号\",\n              \"formtype\": \"Input\"\n            },\n            {\n              \"prop\": \"amount\",\n              \"label\": \"金额\",\n              \"formtype\": \"InputNumber\"\n            },\n            {\n              \"prop\": \"status\",\n              \"label\": \"状态\",\n              \"formtype\": \"Select\",\n              \"dataOptions\": [\n                {\n                  \"label\": \"待付款\",\n                  \"value\": \"pending\"\n                },\n                {\n                  \"label\": \"已完成\",\n                  \"value\": \"done\"\n                }\n              ]\n            },\n            {\n              \"prop\": \"remark\",\n              \"label\": \"备注\",\n              \"formtype\": \"Input\",\n              \"attrs\": {\n                \"type\": \"textarea\"\n              }\n            }\n          ]\n        },\n        \"edit\": {\n          \"title\": \"编辑\",\n          \"formItems\": [\n            {\n              \"prop\": \"orderNo\",\n              \"label\": \"订单号\",\n              \"formtype\": \"Input\"\n            },\n            {\n              \"prop\": \"amount\",\n              \"label\": \"金额\",\n              \"formtype\": \"InputNumber\"\n            },\n            {\n              \"prop\": \"status\",\n              \"label\": \"状态\",\n              \"formtype\": \"Select\",\n              \"dataOptions\": [\n                {\n                  \"label\": \"待付款\",\n                  \"value\": \"pending\"\n                },\n                {\n                  \"label\": \"已完成\",\n                  \"value\": \"done\"\n                }\n              ]\n            },\n            {\n              \"prop\": \"remark\",\n              \"label\": \"备注\",\n              \"formtype\": \"Input\",\n              \"attrs\": {\n                \"type\": \"textarea\"\n              }\n            }\n          ]\n        },\n        \"view\": {\n          \"title\": \"查看\",\n          \"formItems\": [\n            {\n              \"prop\": \"orderNo\",\n              \"label\": \"订单号\",\n              \"formtype\": \"Input\"\n            },\n            {\n              \"prop\": \"amount\",\n              \"label\": \"金额\",\n              \"formtype\": \"InputNumber\"\n            },\n            {\n              \"prop\": \"status\",\n              \"label\": \"状态\",\n              \"formtype\": \"Select\",\n              \"dataOptions\": [\n                {\n                  \"label\": \"待付款\",\n                  \"value\": \"pending\"\n                },\n                {\n                  \"label\": \"已完成\",\n                  \"value\": \"done\"\n                }\n              ]\n            },\n            {\n              \"prop\": \"remark\",\n              \"label\": \"备注\",\n              \"formtype\": \"Input\",\n              \"attrs\": {\n                \"type\": \"textarea\"\n              }\n            }\n          ]\n        }\n      }\n    },\n    \"lossy\": []\n  }\n}\n"
       }
     },
     {
@@ -3786,9 +4560,198 @@ export const COMPOSITION_GALLERY = {
           ],
           "pagination": {
             "pageSize": 10
+          },
+          "__esPlusSource": {
+            "contract": "es-plus.page-source@1",
+            "generator": "es-plus",
+            "target": "vue3",
+            "mode": "schema",
+            "config": {
+              "name": "OrderManage",
+              "apiUrl": "/api/orders",
+              "fields": [
+                {
+                  "prop": "orderNo",
+                  "label": "订单号",
+                  "formtype": "Input",
+                  "inQuery": true,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "status",
+                  "label": "状态",
+                  "formtype": "Select",
+                  "dataOptions": [
+                    {
+                      "label": "待付款",
+                      "value": "pending"
+                    },
+                    {
+                      "label": "已完成",
+                      "value": "done"
+                    }
+                  ],
+                  "inQuery": true,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "amount",
+                  "label": "金额",
+                  "formtype": "InputNumber",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "createdAt",
+                  "label": "下单时间",
+                  "formtype": "DatePicker",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": false
+                },
+                {
+                  "prop": "remark",
+                  "label": "备注",
+                  "formtype": "Input",
+                  "attrs": {
+                    "type": "textarea"
+                  },
+                  "inQuery": false,
+                  "inTable": false,
+                  "inForm": true
+                }
+              ],
+              "actions": [
+                "add",
+                "edit",
+                "view"
+              ],
+              "target": "vue3",
+              "mode": "schema",
+              "dialogs": {
+                "add": {
+                  "title": "新增",
+                  "formItems": [
+                    {
+                      "prop": "orderNo",
+                      "label": "订单号",
+                      "formtype": "Input"
+                    },
+                    {
+                      "prop": "amount",
+                      "label": "金额",
+                      "formtype": "InputNumber"
+                    },
+                    {
+                      "prop": "status",
+                      "label": "状态",
+                      "formtype": "Select",
+                      "dataOptions": [
+                        {
+                          "label": "待付款",
+                          "value": "pending"
+                        },
+                        {
+                          "label": "已完成",
+                          "value": "done"
+                        }
+                      ]
+                    },
+                    {
+                      "prop": "remark",
+                      "label": "备注",
+                      "formtype": "Input",
+                      "attrs": {
+                        "type": "textarea"
+                      }
+                    }
+                  ]
+                },
+                "edit": {
+                  "title": "编辑",
+                  "formItems": [
+                    {
+                      "prop": "orderNo",
+                      "label": "订单号",
+                      "formtype": "Input"
+                    },
+                    {
+                      "prop": "amount",
+                      "label": "金额",
+                      "formtype": "InputNumber"
+                    },
+                    {
+                      "prop": "status",
+                      "label": "状态",
+                      "formtype": "Select",
+                      "dataOptions": [
+                        {
+                          "label": "待付款",
+                          "value": "pending"
+                        },
+                        {
+                          "label": "已完成",
+                          "value": "done"
+                        }
+                      ]
+                    },
+                    {
+                      "prop": "remark",
+                      "label": "备注",
+                      "formtype": "Input",
+                      "attrs": {
+                        "type": "textarea"
+                      }
+                    }
+                  ]
+                },
+                "view": {
+                  "title": "查看",
+                  "formItems": [
+                    {
+                      "prop": "orderNo",
+                      "label": "订单号",
+                      "formtype": "Input"
+                    },
+                    {
+                      "prop": "amount",
+                      "label": "金额",
+                      "formtype": "InputNumber"
+                    },
+                    {
+                      "prop": "status",
+                      "label": "状态",
+                      "formtype": "Select",
+                      "dataOptions": [
+                        {
+                          "label": "待付款",
+                          "value": "pending"
+                        },
+                        {
+                          "label": "已完成",
+                          "value": "done"
+                        }
+                      ]
+                    },
+                    {
+                      "prop": "remark",
+                      "label": "备注",
+                      "formtype": "Input",
+                      "attrs": {
+                        "type": "textarea"
+                      }
+                    }
+                  ]
+                }
+              }
+            },
+            "lossy": []
           }
         },
-        "code": "export const pageSchema = {\n  \"formItems\": [\n    {\n      \"prop\": \"orderNo\",\n      \"label\": \"订单号\",\n      \"formtype\": \"Input\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"formtype\": \"Select\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      },\n      \"dataOptions\": [\n        {\n          \"label\": \"待付款\",\n          \"value\": \"pending\"\n        },\n        {\n          \"label\": \"已完成\",\n          \"value\": \"done\"\n        }\n      ]\n    }\n  ],\n  \"columns\": [\n    {\n      \"prop\": \"orderNo\",\n      \"label\": \"订单号\"\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"dataOptions\": [\n        {\n          \"label\": \"待付款\",\n          \"value\": \"pending\"\n        },\n        {\n          \"label\": \"已完成\",\n          \"value\": \"done\"\n        }\n      ]\n    },\n    {\n      \"prop\": \"amount\",\n      \"label\": \"金额\"\n    },\n    {\n      \"prop\": \"createdAt\",\n      \"label\": \"下单时间\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/orders\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogs\": {\n    \"add\": {\n      \"title\": \"新增\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"edit\": {\n      \"title\": \"编辑\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"view\": {\n      \"title\": \"查看\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    }\n  },\n  \"actions\": [\n    \"add\",\n    \"edit\",\n    \"view\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  }\n}\n"
+        "code": "export const pageSchema = {\n  \"formItems\": [\n    {\n      \"prop\": \"orderNo\",\n      \"label\": \"订单号\",\n      \"formtype\": \"Input\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"formtype\": \"Select\",\n      \"span\": 6,\n      \"attrs\": {\n        \"clearable\": true\n      },\n      \"dataOptions\": [\n        {\n          \"label\": \"待付款\",\n          \"value\": \"pending\"\n        },\n        {\n          \"label\": \"已完成\",\n          \"value\": \"done\"\n        }\n      ]\n    }\n  ],\n  \"columns\": [\n    {\n      \"prop\": \"orderNo\",\n      \"label\": \"订单号\"\n    },\n    {\n      \"prop\": \"status\",\n      \"label\": \"状态\",\n      \"dataOptions\": [\n        {\n          \"label\": \"待付款\",\n          \"value\": \"pending\"\n        },\n        {\n          \"label\": \"已完成\",\n          \"value\": \"done\"\n        }\n      ]\n    },\n    {\n      \"prop\": \"amount\",\n      \"label\": \"金额\"\n    },\n    {\n      \"prop\": \"createdAt\",\n      \"label\": \"下单时间\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/orders\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogs\": {\n    \"add\": {\n      \"title\": \"新增\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"edit\": {\n      \"title\": \"编辑\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    },\n    \"view\": {\n      \"title\": \"查看\",\n      \"formItems\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          }\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true\n          },\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ]\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"span\": 24,\n          \"attrs\": {\n            \"clearable\": true,\n            \"type\": \"textarea\"\n          }\n        }\n      ]\n    }\n  },\n  \"actions\": [\n    \"add\",\n    \"edit\",\n    \"view\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  },\n  \"__esPlusSource\": {\n    \"contract\": \"es-plus.page-source@1\",\n    \"generator\": \"es-plus\",\n    \"target\": \"vue3\",\n    \"mode\": \"schema\",\n    \"config\": {\n      \"name\": \"OrderManage\",\n      \"apiUrl\": \"/api/orders\",\n      \"fields\": [\n        {\n          \"prop\": \"orderNo\",\n          \"label\": \"订单号\",\n          \"formtype\": \"Input\",\n          \"inQuery\": true,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"status\",\n          \"label\": \"状态\",\n          \"formtype\": \"Select\",\n          \"dataOptions\": [\n            {\n              \"label\": \"待付款\",\n              \"value\": \"pending\"\n            },\n            {\n              \"label\": \"已完成\",\n              \"value\": \"done\"\n            }\n          ],\n          \"inQuery\": true,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"amount\",\n          \"label\": \"金额\",\n          \"formtype\": \"InputNumber\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"createdAt\",\n          \"label\": \"下单时间\",\n          \"formtype\": \"DatePicker\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": false\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"attrs\": {\n            \"type\": \"textarea\"\n          },\n          \"inQuery\": false,\n          \"inTable\": false,\n          \"inForm\": true\n        }\n      ],\n      \"actions\": [\n        \"add\",\n        \"edit\",\n        \"view\"\n      ],\n      \"target\": \"vue3\",\n      \"mode\": \"schema\",\n      \"dialogs\": {\n        \"add\": {\n          \"title\": \"新增\",\n          \"formItems\": [\n            {\n              \"prop\": \"orderNo\",\n              \"label\": \"订单号\",\n              \"formtype\": \"Input\"\n            },\n            {\n              \"prop\": \"amount\",\n              \"label\": \"金额\",\n              \"formtype\": \"InputNumber\"\n            },\n            {\n              \"prop\": \"status\",\n              \"label\": \"状态\",\n              \"formtype\": \"Select\",\n              \"dataOptions\": [\n                {\n                  \"label\": \"待付款\",\n                  \"value\": \"pending\"\n                },\n                {\n                  \"label\": \"已完成\",\n                  \"value\": \"done\"\n                }\n              ]\n            },\n            {\n              \"prop\": \"remark\",\n              \"label\": \"备注\",\n              \"formtype\": \"Input\",\n              \"attrs\": {\n                \"type\": \"textarea\"\n              }\n            }\n          ]\n        },\n        \"edit\": {\n          \"title\": \"编辑\",\n          \"formItems\": [\n            {\n              \"prop\": \"orderNo\",\n              \"label\": \"订单号\",\n              \"formtype\": \"Input\"\n            },\n            {\n              \"prop\": \"amount\",\n              \"label\": \"金额\",\n              \"formtype\": \"InputNumber\"\n            },\n            {\n              \"prop\": \"status\",\n              \"label\": \"状态\",\n              \"formtype\": \"Select\",\n              \"dataOptions\": [\n                {\n                  \"label\": \"待付款\",\n                  \"value\": \"pending\"\n                },\n                {\n                  \"label\": \"已完成\",\n                  \"value\": \"done\"\n                }\n              ]\n            },\n            {\n              \"prop\": \"remark\",\n              \"label\": \"备注\",\n              \"formtype\": \"Input\",\n              \"attrs\": {\n                \"type\": \"textarea\"\n              }\n            }\n          ]\n        },\n        \"view\": {\n          \"title\": \"查看\",\n          \"formItems\": [\n            {\n              \"prop\": \"orderNo\",\n              \"label\": \"订单号\",\n              \"formtype\": \"Input\"\n            },\n            {\n              \"prop\": \"amount\",\n              \"label\": \"金额\",\n              \"formtype\": \"InputNumber\"\n            },\n            {\n              \"prop\": \"status\",\n              \"label\": \"状态\",\n              \"formtype\": \"Select\",\n              \"dataOptions\": [\n                {\n                  \"label\": \"待付款\",\n                  \"value\": \"pending\"\n                },\n                {\n                  \"label\": \"已完成\",\n                  \"value\": \"done\"\n                }\n              ]\n            },\n            {\n              \"prop\": \"remark\",\n              \"label\": \"备注\",\n              \"formtype\": \"Input\",\n              \"attrs\": {\n                \"type\": \"textarea\"\n              }\n            }\n          ]\n        }\n      }\n    },\n    \"lossy\": []\n  }\n}\n"
       }
     },
     {
@@ -4041,9 +5004,63 @@ export const COMPOSITION_GALLERY = {
           ],
           "pagination": {
             "pageSize": 10
+          },
+          "__esPlusSource": {
+            "contract": "es-plus.page-source@1",
+            "generator": "es-plus",
+            "target": "antdv",
+            "mode": "schema",
+            "config": {
+              "name": "DeptManage",
+              "apiUrl": "/api/depts",
+              "fields": [
+                {
+                  "prop": "deptName",
+                  "label": "部门名称",
+                  "formtype": "Input",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "leader",
+                  "label": "负责人",
+                  "formtype": "Input",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "memberCount",
+                  "label": "人数",
+                  "formtype": "InputNumber",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": false
+                },
+                {
+                  "prop": "remark",
+                  "label": "备注",
+                  "formtype": "Input",
+                  "attrs": {
+                    "type": "textarea"
+                  },
+                  "inQuery": false,
+                  "inTable": false,
+                  "inForm": true
+                }
+              ],
+              "actions": [
+                "add",
+                "edit"
+              ],
+              "target": "antdv",
+              "mode": "schema"
+            },
+            "lossy": []
           }
         },
-        "code": "export const pageSchema = {\n  \"columns\": [\n    {\n      \"prop\": \"deptName\",\n      \"label\": \"部门名称\"\n    },\n    {\n      \"prop\": \"leader\",\n      \"label\": \"负责人\"\n    },\n    {\n      \"prop\": \"memberCount\",\n      \"label\": \"人数\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/depts\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogFormItems\": [\n    {\n      \"prop\": \"deptName\",\n      \"label\": \"部门名称\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"leader\",\n      \"label\": \"负责人\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"remark\",\n      \"label\": \"备注\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true,\n        \"type\": \"textarea\"\n      }\n    }\n  ],\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  }\n}\n"
+        "code": "export const pageSchema = {\n  \"columns\": [\n    {\n      \"prop\": \"deptName\",\n      \"label\": \"部门名称\"\n    },\n    {\n      \"prop\": \"leader\",\n      \"label\": \"负责人\"\n    },\n    {\n      \"prop\": \"memberCount\",\n      \"label\": \"人数\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/depts\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogFormItems\": [\n    {\n      \"prop\": \"deptName\",\n      \"label\": \"部门名称\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"leader\",\n      \"label\": \"负责人\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"remark\",\n      \"label\": \"备注\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true,\n        \"type\": \"textarea\"\n      }\n    }\n  ],\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  },\n  \"__esPlusSource\": {\n    \"contract\": \"es-plus.page-source@1\",\n    \"generator\": \"es-plus\",\n    \"target\": \"antdv\",\n    \"mode\": \"schema\",\n    \"config\": {\n      \"name\": \"DeptManage\",\n      \"apiUrl\": \"/api/depts\",\n      \"fields\": [\n        {\n          \"prop\": \"deptName\",\n          \"label\": \"部门名称\",\n          \"formtype\": \"Input\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"leader\",\n          \"label\": \"负责人\",\n          \"formtype\": \"Input\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"memberCount\",\n          \"label\": \"人数\",\n          \"formtype\": \"InputNumber\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": false\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"attrs\": {\n            \"type\": \"textarea\"\n          },\n          \"inQuery\": false,\n          \"inTable\": false,\n          \"inForm\": true\n        }\n      ],\n      \"actions\": [\n        \"add\",\n        \"edit\"\n      ],\n      \"target\": \"antdv\",\n      \"mode\": \"schema\"\n    },\n    \"lossy\": []\n  }\n}\n"
       }
     },
     {
@@ -4296,9 +5313,63 @@ export const COMPOSITION_GALLERY = {
           ],
           "pagination": {
             "pageSize": 10
+          },
+          "__esPlusSource": {
+            "contract": "es-plus.page-source@1",
+            "generator": "es-plus",
+            "target": "vue2",
+            "mode": "schema",
+            "config": {
+              "name": "DeptManage",
+              "apiUrl": "/api/depts",
+              "fields": [
+                {
+                  "prop": "deptName",
+                  "label": "部门名称",
+                  "formtype": "Input",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "leader",
+                  "label": "负责人",
+                  "formtype": "Input",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "memberCount",
+                  "label": "人数",
+                  "formtype": "InputNumber",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": false
+                },
+                {
+                  "prop": "remark",
+                  "label": "备注",
+                  "formtype": "Input",
+                  "attrs": {
+                    "type": "textarea"
+                  },
+                  "inQuery": false,
+                  "inTable": false,
+                  "inForm": true
+                }
+              ],
+              "actions": [
+                "add",
+                "edit"
+              ],
+              "target": "vue2",
+              "mode": "schema"
+            },
+            "lossy": []
           }
         },
-        "code": "export const pageSchema = {\n  \"columns\": [\n    {\n      \"prop\": \"deptName\",\n      \"label\": \"部门名称\"\n    },\n    {\n      \"prop\": \"leader\",\n      \"label\": \"负责人\"\n    },\n    {\n      \"prop\": \"memberCount\",\n      \"label\": \"人数\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/depts\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogFormItems\": [\n    {\n      \"prop\": \"deptName\",\n      \"label\": \"部门名称\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"leader\",\n      \"label\": \"负责人\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"remark\",\n      \"label\": \"备注\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true,\n        \"type\": \"textarea\"\n      }\n    }\n  ],\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  }\n}\n"
+        "code": "export const pageSchema = {\n  \"columns\": [\n    {\n      \"prop\": \"deptName\",\n      \"label\": \"部门名称\"\n    },\n    {\n      \"prop\": \"leader\",\n      \"label\": \"负责人\"\n    },\n    {\n      \"prop\": \"memberCount\",\n      \"label\": \"人数\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/depts\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogFormItems\": [\n    {\n      \"prop\": \"deptName\",\n      \"label\": \"部门名称\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"leader\",\n      \"label\": \"负责人\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"remark\",\n      \"label\": \"备注\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true,\n        \"type\": \"textarea\"\n      }\n    }\n  ],\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  },\n  \"__esPlusSource\": {\n    \"contract\": \"es-plus.page-source@1\",\n    \"generator\": \"es-plus\",\n    \"target\": \"vue2\",\n    \"mode\": \"schema\",\n    \"config\": {\n      \"name\": \"DeptManage\",\n      \"apiUrl\": \"/api/depts\",\n      \"fields\": [\n        {\n          \"prop\": \"deptName\",\n          \"label\": \"部门名称\",\n          \"formtype\": \"Input\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"leader\",\n          \"label\": \"负责人\",\n          \"formtype\": \"Input\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"memberCount\",\n          \"label\": \"人数\",\n          \"formtype\": \"InputNumber\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": false\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"attrs\": {\n            \"type\": \"textarea\"\n          },\n          \"inQuery\": false,\n          \"inTable\": false,\n          \"inForm\": true\n        }\n      ],\n      \"actions\": [\n        \"add\",\n        \"edit\"\n      ],\n      \"target\": \"vue2\",\n      \"mode\": \"schema\"\n    },\n    \"lossy\": []\n  }\n}\n"
       }
     },
     {
@@ -4551,9 +5622,63 @@ export const COMPOSITION_GALLERY = {
           ],
           "pagination": {
             "pageSize": 10
+          },
+          "__esPlusSource": {
+            "contract": "es-plus.page-source@1",
+            "generator": "es-plus",
+            "target": "vue3",
+            "mode": "schema",
+            "config": {
+              "name": "DeptManage",
+              "apiUrl": "/api/depts",
+              "fields": [
+                {
+                  "prop": "deptName",
+                  "label": "部门名称",
+                  "formtype": "Input",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "leader",
+                  "label": "负责人",
+                  "formtype": "Input",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "memberCount",
+                  "label": "人数",
+                  "formtype": "InputNumber",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": false
+                },
+                {
+                  "prop": "remark",
+                  "label": "备注",
+                  "formtype": "Input",
+                  "attrs": {
+                    "type": "textarea"
+                  },
+                  "inQuery": false,
+                  "inTable": false,
+                  "inForm": true
+                }
+              ],
+              "actions": [
+                "add",
+                "edit"
+              ],
+              "target": "vue3",
+              "mode": "schema"
+            },
+            "lossy": []
           }
         },
-        "code": "export const pageSchema = {\n  \"columns\": [\n    {\n      \"prop\": \"deptName\",\n      \"label\": \"部门名称\"\n    },\n    {\n      \"prop\": \"leader\",\n      \"label\": \"负责人\"\n    },\n    {\n      \"prop\": \"memberCount\",\n      \"label\": \"人数\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/depts\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogFormItems\": [\n    {\n      \"prop\": \"deptName\",\n      \"label\": \"部门名称\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"leader\",\n      \"label\": \"负责人\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"remark\",\n      \"label\": \"备注\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true,\n        \"type\": \"textarea\"\n      }\n    }\n  ],\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  }\n}\n"
+        "code": "export const pageSchema = {\n  \"columns\": [\n    {\n      \"prop\": \"deptName\",\n      \"label\": \"部门名称\"\n    },\n    {\n      \"prop\": \"leader\",\n      \"label\": \"负责人\"\n    },\n    {\n      \"prop\": \"memberCount\",\n      \"label\": \"人数\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/depts\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogFormItems\": [\n    {\n      \"prop\": \"deptName\",\n      \"label\": \"部门名称\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"leader\",\n      \"label\": \"负责人\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"remark\",\n      \"label\": \"备注\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true,\n        \"type\": \"textarea\"\n      }\n    }\n  ],\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  },\n  \"__esPlusSource\": {\n    \"contract\": \"es-plus.page-source@1\",\n    \"generator\": \"es-plus\",\n    \"target\": \"vue3\",\n    \"mode\": \"schema\",\n    \"config\": {\n      \"name\": \"DeptManage\",\n      \"apiUrl\": \"/api/depts\",\n      \"fields\": [\n        {\n          \"prop\": \"deptName\",\n          \"label\": \"部门名称\",\n          \"formtype\": \"Input\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"leader\",\n          \"label\": \"负责人\",\n          \"formtype\": \"Input\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"memberCount\",\n          \"label\": \"人数\",\n          \"formtype\": \"InputNumber\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": false\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"attrs\": {\n            \"type\": \"textarea\"\n          },\n          \"inQuery\": false,\n          \"inTable\": false,\n          \"inForm\": true\n        }\n      ],\n      \"actions\": [\n        \"add\",\n        \"edit\"\n      ],\n      \"target\": \"vue3\",\n      \"mode\": \"schema\"\n    },\n    \"lossy\": []\n  }\n}\n"
       }
     },
     {
@@ -4824,9 +5949,63 @@ export const COMPOSITION_GALLERY = {
           ],
           "pagination": {
             "pageSize": 10
+          },
+          "__esPlusSource": {
+            "contract": "es-plus.page-source@1",
+            "generator": "es-plus",
+            "target": "antdv",
+            "mode": "schema",
+            "config": {
+              "name": "RoleManage",
+              "apiUrl": "/api/roles",
+              "fields": [
+                {
+                  "prop": "roleName",
+                  "label": "角色名",
+                  "formtype": "Input",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "code",
+                  "label": "编码",
+                  "formtype": "Input",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "enabled",
+                  "label": "启用",
+                  "formtype": "Switch",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "remark",
+                  "label": "备注",
+                  "formtype": "Input",
+                  "attrs": {
+                    "type": "textarea"
+                  },
+                  "inQuery": false,
+                  "inTable": false,
+                  "inForm": true
+                }
+              ],
+              "actions": [
+                "add",
+                "edit"
+              ],
+              "target": "antdv",
+              "mode": "schema"
+            },
+            "lossy": []
           }
         },
-        "code": "export const pageSchema = {\n  \"columns\": [\n    {\n      \"prop\": \"roleName\",\n      \"label\": \"角色名\"\n    },\n    {\n      \"prop\": \"code\",\n      \"label\": \"编码\"\n    },\n    {\n      \"prop\": \"enabled\",\n      \"label\": \"启用\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/roles\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogFormItems\": [\n    {\n      \"prop\": \"roleName\",\n      \"label\": \"角色名\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"code\",\n      \"label\": \"编码\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"enabled\",\n      \"label\": \"启用\",\n      \"formtype\": \"Switch\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"remark\",\n      \"label\": \"备注\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true,\n        \"type\": \"textarea\"\n      }\n    }\n  ],\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  }\n}\n"
+        "code": "export const pageSchema = {\n  \"columns\": [\n    {\n      \"prop\": \"roleName\",\n      \"label\": \"角色名\"\n    },\n    {\n      \"prop\": \"code\",\n      \"label\": \"编码\"\n    },\n    {\n      \"prop\": \"enabled\",\n      \"label\": \"启用\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/roles\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogFormItems\": [\n    {\n      \"prop\": \"roleName\",\n      \"label\": \"角色名\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"code\",\n      \"label\": \"编码\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"enabled\",\n      \"label\": \"启用\",\n      \"formtype\": \"Switch\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"remark\",\n      \"label\": \"备注\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true,\n        \"type\": \"textarea\"\n      }\n    }\n  ],\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  },\n  \"__esPlusSource\": {\n    \"contract\": \"es-plus.page-source@1\",\n    \"generator\": \"es-plus\",\n    \"target\": \"antdv\",\n    \"mode\": \"schema\",\n    \"config\": {\n      \"name\": \"RoleManage\",\n      \"apiUrl\": \"/api/roles\",\n      \"fields\": [\n        {\n          \"prop\": \"roleName\",\n          \"label\": \"角色名\",\n          \"formtype\": \"Input\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"code\",\n          \"label\": \"编码\",\n          \"formtype\": \"Input\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"enabled\",\n          \"label\": \"启用\",\n          \"formtype\": \"Switch\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"attrs\": {\n            \"type\": \"textarea\"\n          },\n          \"inQuery\": false,\n          \"inTable\": false,\n          \"inForm\": true\n        }\n      ],\n      \"actions\": [\n        \"add\",\n        \"edit\"\n      ],\n      \"target\": \"antdv\",\n      \"mode\": \"schema\"\n    },\n    \"lossy\": []\n  }\n}\n"
       }
     },
     {
@@ -5097,9 +6276,63 @@ export const COMPOSITION_GALLERY = {
           ],
           "pagination": {
             "pageSize": 10
+          },
+          "__esPlusSource": {
+            "contract": "es-plus.page-source@1",
+            "generator": "es-plus",
+            "target": "vue2",
+            "mode": "schema",
+            "config": {
+              "name": "RoleManage",
+              "apiUrl": "/api/roles",
+              "fields": [
+                {
+                  "prop": "roleName",
+                  "label": "角色名",
+                  "formtype": "Input",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "code",
+                  "label": "编码",
+                  "formtype": "Input",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "enabled",
+                  "label": "启用",
+                  "formtype": "Switch",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "remark",
+                  "label": "备注",
+                  "formtype": "Input",
+                  "attrs": {
+                    "type": "textarea"
+                  },
+                  "inQuery": false,
+                  "inTable": false,
+                  "inForm": true
+                }
+              ],
+              "actions": [
+                "add",
+                "edit"
+              ],
+              "target": "vue2",
+              "mode": "schema"
+            },
+            "lossy": []
           }
         },
-        "code": "export const pageSchema = {\n  \"columns\": [\n    {\n      \"prop\": \"roleName\",\n      \"label\": \"角色名\"\n    },\n    {\n      \"prop\": \"code\",\n      \"label\": \"编码\"\n    },\n    {\n      \"prop\": \"enabled\",\n      \"label\": \"启用\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/roles\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogFormItems\": [\n    {\n      \"prop\": \"roleName\",\n      \"label\": \"角色名\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"code\",\n      \"label\": \"编码\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"enabled\",\n      \"label\": \"启用\",\n      \"formtype\": \"Switch\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"remark\",\n      \"label\": \"备注\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true,\n        \"type\": \"textarea\"\n      }\n    }\n  ],\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  }\n}\n"
+        "code": "export const pageSchema = {\n  \"columns\": [\n    {\n      \"prop\": \"roleName\",\n      \"label\": \"角色名\"\n    },\n    {\n      \"prop\": \"code\",\n      \"label\": \"编码\"\n    },\n    {\n      \"prop\": \"enabled\",\n      \"label\": \"启用\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/roles\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogFormItems\": [\n    {\n      \"prop\": \"roleName\",\n      \"label\": \"角色名\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"code\",\n      \"label\": \"编码\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"enabled\",\n      \"label\": \"启用\",\n      \"formtype\": \"Switch\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"remark\",\n      \"label\": \"备注\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true,\n        \"type\": \"textarea\"\n      }\n    }\n  ],\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  },\n  \"__esPlusSource\": {\n    \"contract\": \"es-plus.page-source@1\",\n    \"generator\": \"es-plus\",\n    \"target\": \"vue2\",\n    \"mode\": \"schema\",\n    \"config\": {\n      \"name\": \"RoleManage\",\n      \"apiUrl\": \"/api/roles\",\n      \"fields\": [\n        {\n          \"prop\": \"roleName\",\n          \"label\": \"角色名\",\n          \"formtype\": \"Input\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"code\",\n          \"label\": \"编码\",\n          \"formtype\": \"Input\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"enabled\",\n          \"label\": \"启用\",\n          \"formtype\": \"Switch\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"attrs\": {\n            \"type\": \"textarea\"\n          },\n          \"inQuery\": false,\n          \"inTable\": false,\n          \"inForm\": true\n        }\n      ],\n      \"actions\": [\n        \"add\",\n        \"edit\"\n      ],\n      \"target\": \"vue2\",\n      \"mode\": \"schema\"\n    },\n    \"lossy\": []\n  }\n}\n"
       }
     },
     {
@@ -5370,9 +6603,63 @@ export const COMPOSITION_GALLERY = {
           ],
           "pagination": {
             "pageSize": 10
+          },
+          "__esPlusSource": {
+            "contract": "es-plus.page-source@1",
+            "generator": "es-plus",
+            "target": "vue3",
+            "mode": "schema",
+            "config": {
+              "name": "RoleManage",
+              "apiUrl": "/api/roles",
+              "fields": [
+                {
+                  "prop": "roleName",
+                  "label": "角色名",
+                  "formtype": "Input",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "code",
+                  "label": "编码",
+                  "formtype": "Input",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "enabled",
+                  "label": "启用",
+                  "formtype": "Switch",
+                  "inQuery": false,
+                  "inTable": true,
+                  "inForm": true
+                },
+                {
+                  "prop": "remark",
+                  "label": "备注",
+                  "formtype": "Input",
+                  "attrs": {
+                    "type": "textarea"
+                  },
+                  "inQuery": false,
+                  "inTable": false,
+                  "inForm": true
+                }
+              ],
+              "actions": [
+                "add",
+                "edit"
+              ],
+              "target": "vue3",
+              "mode": "schema"
+            },
+            "lossy": []
           }
         },
-        "code": "export const pageSchema = {\n  \"columns\": [\n    {\n      \"prop\": \"roleName\",\n      \"label\": \"角色名\"\n    },\n    {\n      \"prop\": \"code\",\n      \"label\": \"编码\"\n    },\n    {\n      \"prop\": \"enabled\",\n      \"label\": \"启用\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/roles\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogFormItems\": [\n    {\n      \"prop\": \"roleName\",\n      \"label\": \"角色名\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"code\",\n      \"label\": \"编码\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"enabled\",\n      \"label\": \"启用\",\n      \"formtype\": \"Switch\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"remark\",\n      \"label\": \"备注\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true,\n        \"type\": \"textarea\"\n      }\n    }\n  ],\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  }\n}\n"
+        "code": "export const pageSchema = {\n  \"columns\": [\n    {\n      \"prop\": \"roleName\",\n      \"label\": \"角色名\"\n    },\n    {\n      \"prop\": \"code\",\n      \"label\": \"编码\"\n    },\n    {\n      \"prop\": \"enabled\",\n      \"label\": \"启用\"\n    }\n  ],\n  \"tableOptions\": {\n    \"border\": true,\n    \"stripe\": true,\n    \"highlightCurrentRow\": true,\n    \"apiParams\": {\n      \"url\": \"/api/roles\"\n    },\n    \"rowkey\": \"id\"\n  },\n  \"dialogFormItems\": [\n    {\n      \"prop\": \"roleName\",\n      \"label\": \"角色名\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"code\",\n      \"label\": \"编码\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"enabled\",\n      \"label\": \"启用\",\n      \"formtype\": \"Switch\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true\n      }\n    },\n    {\n      \"prop\": \"remark\",\n      \"label\": \"备注\",\n      \"formtype\": \"Input\",\n      \"span\": 24,\n      \"attrs\": {\n        \"clearable\": true,\n        \"type\": \"textarea\"\n      }\n    }\n  ],\n  \"actions\": [\n    \"add\",\n    \"edit\"\n  ],\n  \"pagination\": {\n    \"pageSize\": 10\n  },\n  \"__esPlusSource\": {\n    \"contract\": \"es-plus.page-source@1\",\n    \"generator\": \"es-plus\",\n    \"target\": \"vue3\",\n    \"mode\": \"schema\",\n    \"config\": {\n      \"name\": \"RoleManage\",\n      \"apiUrl\": \"/api/roles\",\n      \"fields\": [\n        {\n          \"prop\": \"roleName\",\n          \"label\": \"角色名\",\n          \"formtype\": \"Input\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"code\",\n          \"label\": \"编码\",\n          \"formtype\": \"Input\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"enabled\",\n          \"label\": \"启用\",\n          \"formtype\": \"Switch\",\n          \"inQuery\": false,\n          \"inTable\": true,\n          \"inForm\": true\n        },\n        {\n          \"prop\": \"remark\",\n          \"label\": \"备注\",\n          \"formtype\": \"Input\",\n          \"attrs\": {\n            \"type\": \"textarea\"\n          },\n          \"inQuery\": false,\n          \"inTable\": false,\n          \"inForm\": true\n        }\n      ],\n      \"actions\": [\n        \"add\",\n        \"edit\"\n      ],\n      \"target\": \"vue3\",\n      \"mode\": \"schema\"\n    },\n    \"lossy\": []\n  }\n}\n"
       }
     }
   ],
@@ -5449,8 +6736,8 @@ export const COMPOSITION_GALLERY = {
       "shape": "full",
       "apiUrl": "/api/users",
       "kind": "page",
-      "codeEqual": true,
-      "generatedEqualIgnoringTargetImports": true,
+      "codeEqual": false,
+      "generatedEqualIgnoringTargetImports": false,
       "hostEntryEqualIgnoringTargetImports": true,
       "factsEqual": true,
       "rendererByTarget": {
@@ -5459,16 +6746,16 @@ export const COMPOSITION_GALLERY = {
         "antdv": null
       },
       "codeBytesByTarget": {
-        "vue3": 2901,
-        "vue2": 2901,
-        "antdv": 2901
+        "vue3": 5880,
+        "vue2": 5880,
+        "antdv": 5882
       },
       "warningsByTarget": {
         "vue3": [],
         "vue2": [],
         "antdv": []
       },
-      "note": "schema 模式：同一份 surfaces 在三端产出逐字节相同的产物；target 只体现在宿主预检文案与告警。"
+      "note": "三端产物存在结构性差异 —— 这是组合可见性的信号，请对照源码与告警。"
     },
     {
       "baseId": "comp-full-02",
@@ -5476,8 +6763,8 @@ export const COMPOSITION_GALLERY = {
       "shape": "full",
       "apiUrl": "/api/orders",
       "kind": "page",
-      "codeEqual": true,
-      "generatedEqualIgnoringTargetImports": true,
+      "codeEqual": false,
+      "generatedEqualIgnoringTargetImports": false,
       "hostEntryEqualIgnoringTargetImports": true,
       "factsEqual": true,
       "rendererByTarget": {
@@ -5486,16 +6773,16 @@ export const COMPOSITION_GALLERY = {
         "antdv": null
       },
       "codeBytesByTarget": {
-        "vue3": 4530,
-        "vue2": 4530,
-        "antdv": 4530
+        "vue3": 8967,
+        "vue2": 8967,
+        "antdv": 8969
       },
       "warningsByTarget": {
         "vue3": [],
         "vue2": [],
         "antdv": []
       },
-      "note": "schema 模式：同一份 surfaces 在三端产出逐字节相同的产物；target 只体现在宿主预检文案与告警。"
+      "note": "三端产物存在结构性差异 —— 这是组合可见性的信号，请对照源码与告警。"
     },
     {
       "baseId": "comp-table-form-01",
@@ -5503,8 +6790,8 @@ export const COMPOSITION_GALLERY = {
       "shape": "table+form",
       "apiUrl": "/api/depts",
       "kind": "page",
-      "codeEqual": true,
-      "generatedEqualIgnoringTargetImports": true,
+      "codeEqual": false,
+      "generatedEqualIgnoringTargetImports": false,
       "hostEntryEqualIgnoringTargetImports": true,
       "factsEqual": true,
       "rendererByTarget": {
@@ -5513,16 +6800,16 @@ export const COMPOSITION_GALLERY = {
         "antdv": null
       },
       "codeBytesByTarget": {
-        "vue3": 1004,
-        "vue2": 1004,
-        "antdv": 1004
+        "vue3": 2195,
+        "vue2": 2195,
+        "antdv": 2197
       },
       "warningsByTarget": {
         "vue3": [],
         "vue2": [],
         "antdv": []
       },
-      "note": "schema 模式：同一份 surfaces 在三端产出逐字节相同的产物；target 只体现在宿主预检文案与告警。"
+      "note": "三端产物存在结构性差异 —— 这是组合可见性的信号，请对照源码与告警。"
     },
     {
       "baseId": "comp-table-form-02",
@@ -5530,8 +6817,8 @@ export const COMPOSITION_GALLERY = {
       "shape": "table+form",
       "apiUrl": "/api/roles",
       "kind": "page",
-      "codeEqual": true,
-      "generatedEqualIgnoringTargetImports": true,
+      "codeEqual": false,
+      "generatedEqualIgnoringTargetImports": false,
       "hostEntryEqualIgnoringTargetImports": true,
       "factsEqual": true,
       "rendererByTarget": {
@@ -5540,16 +6827,16 @@ export const COMPOSITION_GALLERY = {
         "antdv": null
       },
       "codeBytesByTarget": {
-        "vue3": 1148,
-        "vue2": 1148,
-        "antdv": 1148
+        "vue3": 2325,
+        "vue2": 2325,
+        "antdv": 2327
       },
       "warningsByTarget": {
         "vue3": [],
         "vue2": [],
         "antdv": []
       },
-      "note": "schema 模式：同一份 surfaces 在三端产出逐字节相同的产物；target 只体现在宿主预检文案与告警。"
+      "note": "三端产物存在结构性差异 —— 这是组合可见性的信号，请对照源码与告警。"
     }
   ]
 }

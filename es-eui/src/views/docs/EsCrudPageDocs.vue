@@ -140,6 +140,16 @@
               <td>—</td>
               <td>—</td>
             </tr>
+            <tr>
+              <td>__esPlusSource</td>
+              <td>
+                生成器写入的出处（<code>es-plus.page-source@1</code>）：运行时忽略。
+                MCP <code>read_page</code> 把它无损解压回生成器当时的输入，<code>lossy[]</code>
+                说明输入与产物的差异
+              </td>
+              <td>EsPlusPageSource</td>
+              <td>—</td>
+            </tr>
           </tbody>
         </table>
       </div>

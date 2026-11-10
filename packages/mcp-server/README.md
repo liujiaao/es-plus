@@ -269,11 +269,11 @@ AI 会自动调用 MCP Server 的 `generate_scene`（前门）工具。你只填
 
 ## 工具 (Tools)
 
-MCP Server 默认（`full` profile）暴露 **18 个工具**，AI 编码工具会根据你的描述自动选择调用。
+MCP Server 默认（`full` profile）暴露 **19 个工具**，AI 编码工具会根据你的描述自动选择调用。
 
 > **生成路径优先级**：`generate_scene` 是**前门 / 场景路由器**（先声明要建什么：crud / table / form / dialog，再填该场景的意图表；产物与对应旧工具逐字节相同）。`generate_composition` 是**组合页**（把多个独立片段装成一张能跑的 `Page.vue`，接线由运行时契约确定，也接受显式 `wires`）。`generate_crud` 是 `scene='crud'` 的**兼容入口（adapter）**，产物逐字节相同，保留旧工具名。`generate_crud_from_config` 是 **ADVANCED**（已持有类型化配置时直通，与前者共用同一生成器）。`generate_crud_schema` 是 **LEGACY FALLBACK**（无 LLM 的正则兜底，准确率受关键词表覆盖度限制）。
 >
-> 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 6 个重量级/兼容/legacy 入口（`generate_crud`、`generate_form` / `generate_table` / `generate_dialog`、1 个 ADVANCED 与 1 个 LEGACY），只留场景路由器、组合页与确定性支撑工具（共 12 个）。隐藏标准不是「旧不旧」，而是 **`generate_scene` 能否逐字节复现**：四个 scene 复用同一组发射器（`check-scene-parity` 守卫）。效果是宿主每轮的 `tools/list` 从 ~339 KB 降到 ~21 KB（`check:surface-budget` 守卫）。
+> 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 6 个重量级/兼容/legacy 入口（`generate_crud`、`generate_form` / `generate_table` / `generate_dialog`、1 个 ADVANCED 与 1 个 LEGACY），只留场景路由器、组合页与确定性支撑工具（共 13 个）。隐藏标准不是「旧不旧」，而是 **`generate_scene` 能否逐字节复现**：四个 scene 复用同一组发射器（`check-scene-parity` 守卫）。效果是宿主每轮的 `tools/list` 从 ~339 KB 降到 ~21 KB（`check:surface-budget` 守卫）。
 
 ### generate_scene（前门 / 场景路由器 / SCENE ROUTER）
 
@@ -409,6 +409,21 @@ validate_config({ config: JSON.stringify(yourConfig), type: "structured-crud-con
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | `pages` | array | 页面清单；每页 `{ name?, scene, intent }` 或 `{ name?, parts: [{ scene, intent }], extensionPoints?, hostCode? }` |
+
+### read_page
+
+从**上一轮生成物**里读回生成器当时的输入。页面自带出处（schema 模式的 pageSchema 里有 `__esPlusSource`，sfc 模式是 `<script>` 里的 `// __esPlusSource: {…}` 注释），所以这是**无损解压**，不从产物反推配置。返回三类东西：
+
+- `config`：生成器真正喂给发射器的那份配置（已归一、已剔除未知键），直接改它做下一轮；
+- `lossy[]`：输入与产物为何不完全一致 —— `dropped`（未知键 / 非 JSON 值）、`ignored-in-mode`（该模式不执行，如 schema 模式的 `permissions`）、`not-expressible`（行内函数）、`normalized`（确定性修复改写过的键）；
+- `intent` + `surfacesLossy[]`：机械投影出的 `surfaces`，可直接传给 `generate_scene`（`scene='crud'`）；投影表达不了的键（如显式 `columns`）逐条列出，绝不静默丢。
+
+W4 之前生成的页面、手写页面没有出处：工具**明确报错并给提示**，不做有损反推。
+
+| 参数 | 类型 | 说明 |
+|------|------|------|
+| `code` | string | 生成物全文：`schema.ts` / `Page.vue`（sfc 模式）/ 裸 pageSchema JSON |
+| `label` | string? | 报错信息里指代这份输入的名字（通常是文件名） |
 
 ### list_form_types
 

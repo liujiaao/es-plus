@@ -61,6 +61,28 @@ const crlfText = lfText.replace(/\n/g, '\r\n')
   eq(m.features.scriptStrings, 0, '纯 JSON 没有内嵌脚本串')
 }
 
+// ── 2b) W4 出处不计入尺子 ────────────────────────────────────────────────────
+{
+  const withSource = {
+    ...schema,
+    __esPlusSource: {
+      contract: 'es-plus.page-source@1',
+      generator: 'es-plus',
+      target: 'vue3',
+      mode: 'schema',
+      // 出处按定义重复一份配置（这里让重复量足够大，任何按整文件的计数都会露馅）
+      config: { fields: [{ prop: 'a', dataOptions: [{ label: 'x', value: 1 }] }], dialogs: { add: {} } },
+      lossy: [],
+    },
+  }
+  const plain = aiMetricsOf(lfText)
+  const m = aiMetricsOf(`${JSON.stringify(withSource, null, 2)}\n`)
+  eq(m.lines, plain.lines, '出处不计入行数')
+  eq(m.bytes, plain.bytes, '出处不计入字节')
+  eq(m.features.dataOptions, plain.features.dataOptions, '出处里的 dataOptions 不计入（不是页面配置）')
+  eq(m.features.dialogs, plain.features.dialogs, '出处里的 dialogs 不计入')
+}
+
 // ── 3) 内嵌脚本可见 ──────────────────────────────────────────────────────────
 {
   const withScript = JSON.parse(lfText)

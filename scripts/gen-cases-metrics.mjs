@@ -168,25 +168,43 @@ function measureAi(rel) {
  */
 export function aiMetricsOf(rawText) {
   const text = toLF(rawText)
-  const parts = blocks(text)
-  const schema = JSON.parse(text)
-  const json = JSON.stringify(schema)
+  const parsed = JSON.parse(text)
+  // W4：pageSchema 自带的出处（`__esPlusSource`）是**生成器元数据**，不是宿主代码 ——
+  // 里面按定义重复一份原始配置（含 inQuery/inTable、dialogs.formItems…）。把它计入
+  // 行数 / 字节 / dataOptions，会让「AI 产物」凭空翻倍，尺子量的就不再是页面配置。
+  // 度量只看运行时 schema；文件本身仍保留出处（read_page 要读它）。
+  let runtimeText = text
+  if (parsed && typeof parsed === 'object' && '__esPlusSource' in parsed) {
+    delete parsed.__esPlusSource
+    runtimeText = `${JSON.stringify(parsed, null, 2)}\n`
+  }
+  const parts = blocks(runtimeText)
+  const json = JSON.stringify(parsed)
   return {
-    lines: nonEmptyLines(text),
-    bytes: Buffer.byteLength(text),
+    lines: nonEmptyLines(runtimeText),
+    bytes: Buffer.byteLength(runtimeText),
     events: countEvents(parts.template),
     functions: countFunctions(parts.script),
     vIf: countVIf(parts.template),
     features: {
-      formItems: (schema.formItems ?? []).length,
-      columns: (schema.columns ?? []).length,
-      dialogs: Object.keys(schema.dialogs ?? {}).length,
-      actions: (schema.actions ?? []).length,
+      formItems: (parsed.formItems ?? []).length,
+      columns: (parsed.columns ?? []).length,
+      dialogs: Object.keys(parsed.dialogs ?? {}).length,
+      actions: (parsed.actions ?? []).length,
       dataOptions: (json.match(/"dataOptions"/g) || []).length,
       permissionValue: (json.match(/"permissionValue"/g) || []).length,
       scriptStrings: (json.match(/"(?:formatter|render)"/g) || []).length,
     },
   }
+}
+
+/** 三栏展示用：与度量同一口径 —— 剔除出处（生成器元数据，不是宿主代码）。 */
+function displayArtifactText(rel) {
+  const text = toLF(readText(join(ROOT, rel)))
+  const parsed = JSON.parse(text)
+  if (!parsed || typeof parsed !== 'object' || !('__esPlusSource' in parsed)) return text
+  delete parsed.__esPlusSource
+  return `${JSON.stringify(parsed, null, 2)}\n`
 }
 
 /** 三栏源码模块（单源，另写三份站点副本 —— 与 A8 的片段源码模块同一套做法）。 */
@@ -205,7 +223,7 @@ function renderNvsSources(scenarios) {
         es: { file: s.es.file, text: toLF(readText(join(ROOT, s.es.file))) },
         ai: {
           file: ai.artifact,
-          text: toLF(readText(join(ROOT, ai.artifact))),
+          text: displayArtifactText(ai.artifact),
           meta: {
             caseId: ai.caseId,
             model: meta.model ?? null,
@@ -335,7 +353,7 @@ function main() {
     $comment:
       '由 scripts/gen-cases-metrics.mjs 从 docs/examples/{native,es}/*.vue 与 AI 产物实测生成，禁止手改。Cases 页展示的行数/事件/函数/v-if 就是这里算出来的，改示例即改数字；scenarios[].ai 是 /native-vs-ai 的第三栏（同一把尺子量 AI 产物）。',
     method:
-      '同一场景两侧实现同一功能范围（无省略号、无 stub）；lines = 整文件非空行（含数据与 schema，不藏配置成本）；events = 模板事件绑定数；functions = script 自写函数数；vIf = v-if/v-else-if 分支数；reduction = (native - es) / native。第三栏（ai）用同一把尺子量 AI 产出的纯 JSON：没有 <template>/<script>，故 events/functions/vIf 由计数器算得为 0；lines 是 JSON 物理行（不是复杂度信号，页面里明写）。',
+      '同一场景两侧实现同一功能范围（无省略号、无 stub）；lines = 整文件非空行（含数据与 schema，不藏配置成本）；events = 模板事件绑定数；functions = script 自写函数数；vIf = v-if/v-else-if 分支数；reduction = (native - es) / native。第三栏（ai）用同一把尺子量 AI 产出的纯 JSON：没有 <template>/<script>，故 events/functions/vIf 由计数器算得为 0；lines 是 JSON 物理行（不是复杂度信号，页面里明写）。AI 产物里的 `__esPlusSource` 是生成器出处（回读用），不是宿主配置 —— 度量与三栏展示都先剔除它，否则同一份配置会被重复计一遍。',
     scenarios,
     totals: { native: sideTotals('native'), es: sideTotals('es') },
   }

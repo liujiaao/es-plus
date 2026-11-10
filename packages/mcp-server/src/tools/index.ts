@@ -17,6 +17,7 @@ import { registerIngestSchema } from "./ingest-schema.js";
 import { registerRefineConfig } from "./refine-config.js";
 import { registerValidateIntent } from "./validate-intent.js";
 import { registerCoverageReport } from "./coverage-report.js";
+import { registerReadPage } from "./read-page.js";
 import { resolveToolProfile, type ToolProfile } from "../profile.js";
 import { withArgGuard } from "./_arg-guard.js";
 
@@ -31,7 +32,8 @@ import { withArgGuard } from "./_arg-guard.js";
  *   · 保留 `generate_scene`（唯一生成入口，四个 scene 全覆盖）、
  *     `generate_composition`（片段装页）、`validate_config`、`ingest_schema`、
  *     `refine_config`、`list_form_types`、`get_component_api`、`scaffold_page`、
- *     `doctor_page`、`detect_project_target`、`validate_intent`、`coverage_report`；
+ *     `doctor_page`、`detect_project_target`、`validate_intent`、`coverage_report`、
+ *     `read_page`（回读上一轮产物，闭合「改一列 → 再生成」）；
  *   · 隐藏 6 个：`generate_crud`（兼容 adapter —— `generate_scene` 的 scene='crud'
  *     逐字节相同）、`generate_form` / `generate_table` / `generate_dialog`
  *     （单面片段 —— `generate_scene` 的 scene='form'|'table'|'dialog' 逐字节相同，
@@ -88,6 +90,10 @@ export function registerTools(server: McpServer, profile: ToolProfile = resolveT
   // 宿主抽取契约（P13）：意图生成前校验 + 逐页覆盖分级。都只判不改、不生成代码。
   registerValidateIntent(server);
   registerCoverageReport(server);
+  // W4 回读：解压生成物里的出处（`__esPlusSource`）。两种 profile 都注册 ——
+  // front-door 没有 generate_crud_from_config，而「回读 → 改 → 再生成」正是那一档
+  // 最需要的闭环（工具同时返回 surfaces 投影，可直接喂 generate_scene）。
+  registerReadPage(server, profile);
   registerGetComponentApi(server);
   registerScaffoldPage(server);
   registerDoctorPage(server);

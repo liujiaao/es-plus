@@ -509,7 +509,8 @@ export const docsData: Record<string, any> = {
         { name: 'actions (deprecated)', type: 'CrudAction[]', default: '-', desc: '旧版快捷动作，建议改用 toolbarBtns + operationColumn' },
         { name: 'dialogFormItems (deprecated)', type: 'FormItemOption[]', default: '-', desc: '旧版单弹窗表单，建议改用 dialogs' },
         { name: 'dialogOptions (deprecated)', type: 'DialogOptions', default: '-', desc: '旧版单弹窗配置，建议改用 dialogs' },
-        { name: 'queryBtns (deprecated)', type: 'BtnConfig[]', default: '-', desc: '旧版查询按钮，建议改用 toolbarBtns' }
+        { name: 'queryBtns (deprecated)', type: 'BtnConfig[]', default: '-', desc: '旧版查询按钮，建议改用 toolbarBtns' },
+        { name: '__esPlusSource', type: 'EsPlusPageSource', default: '-', desc: '生成器写入的出处（es-plus.page-source@1）：运行时忽略；MCP read_page 把它无损解压回生成器当时的输入，lossy[] 说明输入与产物的差异' }
       ],
       'CrudBtnConfig': [
         { name: 'name', type: 'string', default: '必填', desc: '按钮文本' },

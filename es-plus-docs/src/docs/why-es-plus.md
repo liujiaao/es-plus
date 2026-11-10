@@ -356,7 +356,7 @@ ES-Plus 的解法是 **拆出 `@es-plus/core` + 三个渲染器**：
 
 > **架构澄清（重要）**：ES-Plus 的 MCP Server **自身不调用 LLM**。它是"工具提供者"——暴露 schema、约定、few-shot 示例给**宿主 LLM（Claude Code / Cursor 等）**，由宿主做真正的语义推理（自然语言 → 结构化 config），ES-Plus 负责把推理结果**确定性编译**成多端可运行的代码。所谓"AI 原生"，准确说是"**AI 推理 + 协议约束 + 确定性编译 + CI 可编译保证**"，而不是"组件库自己会写代码"。
 
-1. **MCP server** 暴露 18 个 tools、9 类 resources 与 3 个 prompts（设 `ESPLUS_MCP_PROFILE=front-door` 时收缩到 12 个：隐藏兼容入口、3 个单面片段与 2 个高级/legacy 工具，宿主每轮的 `tools/list` 从 ~339 KB 降到 ~21 KB），AI 通过协议读取
+1. **MCP server** 暴露 19 个 tools、9 类 resources 与 3 个 prompts（设 `ESPLUS_MCP_PROFILE=front-door` 时收缩到 13 个：隐藏兼容入口、3 个单面片段与 2 个高级/legacy 工具，宿主每轮的 `tools/list` 从 ~339 KB 降到 ~21 KB），AI 通过协议读取
 2. **配置由 zod schema 强约束**，AI 生成的内容直接校验，错了立即重试
 3. **CI 矩阵**：vue3 × vue2 × schema mode × sfc mode，每次 push 都跑 `vite build`，证明 AI 生成的代码**真的能编**
 
@@ -613,7 +613,7 @@ ES-Plus 的差异化：**Schema 跨 Vue 2 / Vue 3 / AntDV 共享 + AI 原生工�
 
 这一节是 ES-Plus 区别于其他**所有**中后台组件库的关键。
 
-### 7.1 MCP Server 暴露的 18 个 Tools
+### 7.1 MCP Server 暴露的 19 个 Tools
 
 参见 [packages/mcp-server/src/tools/index.ts](../packages/mcp-server/src/tools/index.ts)：
 
@@ -628,6 +628,7 @@ ES-Plus 的差异化：**Schema 跨 Vue 2 / Vue 3 / AntDV 共享 + AI 原生工�
 | `generate_crud_schema` | **LEGACY FALLBACK**：自然语言 → CrudPageSchema | ⚠️ **无 LLM 回退**：本地正则/关键词解析（`schema-generator.ts`），覆盖有限，仅适合不能推理的宿主 |
 | `validate_config` | zod 校验配置 | AI 生成错配置立即拦截，自动重试 |
 | `refine_config` | 对已定配置做一轮纠正并回显 diff | 收敛回路：确定性校验 + diff，不回灌模型 |
+| `read_page` | **回读闭环**：从上一轮生成物无损读回出处（`__esPlusSource`），并机械投影出可直接喂前门的 `surfaces` | 改一列 / 加个弹窗时不用从源码反推——反推会把猜测固化成下一轮输入；`lossy[]` 逐条说明输入与产物为何不同 |
 | `list_form_types` | 返回 16 种 formtype 清单 + 说明 | AI 不再猜哪些控件名合法 |
 | `get_component_api` | 返回组件的 prop / event / slot | AI 看到的就是协议级 API 文档 |
 | `scaffold_page` | 多页面脚手架生成 | 一次性创建一组关联页面 |

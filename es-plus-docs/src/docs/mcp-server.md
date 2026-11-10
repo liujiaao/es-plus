@@ -250,7 +250,7 @@ mcp-server-es-plus --help        # 用法说明
 
 ## MCP Tools（可调用工具）
 
-配置完成后，AI 工具会自动发现并使用以下 **18 个工具**（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 6 个重量级/兼容/legacy 入口，只留场景路由器、组合页与确定性支撑工具）：
+配置完成后，AI 工具会自动发现并使用以下 **19 个工具**（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 6 个重量级/兼容/legacy 入口，只留场景路由器、组合页与确定性支撑工具）：
 
 | 工具 | 定位 | front-door |
 |------|------|:----------:|
@@ -266,6 +266,7 @@ mcp-server-es-plus --help        # 用法说明
 | `refine_config` | 对已 pin 的配置做一轮精修：校验 + 结构化 diff | ✅ |
 | `validate_intent` | **生成前校验**：能力报告（accepted/degraded/unsupported/missing）+ 逐字段问题（面归属、重复 prop、缺 formtype、label 不在规格里） | ✅ |
 | `coverage_report` | **覆盖分级**：按 P9 能力台账给规格清单逐页判定 L1 直出 / L2 直出+扩展点 / L3 需宿主代码 | ✅ |
+| `read_page` | **回读闭环**：从上一轮生成物无损读回出处（`__esPlusSource`），并机械投影出可直接喂前门的 `surfaces`；`lossy[]` 逐条说明输入与产物的差异 | ✅ |
 | `list_form_types` | 列出全部 `formtype` 及其渲染器 | ✅ |
 | `get_component_api` | 组件 API / 类型文档 | ✅ |
 | `scaffold_page` | 最小页面脚手架 | ✅ |
@@ -610,6 +611,25 @@ AI：[调用 scaffold_page { name: "order-list", features: ["query", "table", "d
 | previous | string | 否 | 上一版已 pin 配置的 JSON 字符串（首轮省略） |
 | revised | string | ✅ | 本轮修订后的配置 JSON 字符串 |
 
+### read_page
+
+**功能**：从**上一轮生成物**里读回生成器当时的输入。页面自带出处 —— schema 模式的 pageSchema 里有 `__esPlusSource`，sfc 模式是 `<script>` 里的 `// __esPlusSource: {…}` 单行注释 —— 因此这是**无损解压**，不是从产物反推配置（反推会把猜测固化成下一轮生成的输入）。
+
+返回：
+
+- `config`：生成器真正喂给发射器的那份配置（已归一、已剔除未知键），直接改它做下一轮；
+- `lossy[]`：输入与产物为何不完全一致 —— `dropped`（未知键 / 非 JSON 值）、`ignored-in-mode`（该模式不执行，如 schema 模式的 `permissions`、sfc 模式的 `dialogs`）、`not-expressible`（行内函数）、`normalized`（确定性修复改写过的键）；
+- `intent` + `surfacesLossy[]`：机械投影出的 `surfaces`，可直接传给 `generate_scene`（`scene='crud'`）；投影表达不了的键（如显式 `columns`）逐条列出。
+
+W4 之前生成的页面、手写页面没有出处：工具**明确报错并给提示**，不做有损反推。
+
+**输入参数**：
+
+| 参数 | 类型 | 必填 | 说明 |
+|------|------|------|------|
+| code | string | ✅ | 生成物全文：`schema.ts` / `Page.vue`（sfc 模式）/ 裸 pageSchema JSON |
+| label | string | 否 | 报错信息里指代这份输入的名字（通常是文件名） |
+
 ### doctor_page
 
 **功能**：对宿主**入口文件**做静态检查，对照 es-plus 的 preflight 清单：UI 库、`ESPlus` 插件注册、`httpRequest`、`permission`、`t`、JSX transform。可一并传入「页面由哪份配置生成」（只要求该页面真正用到的能力）与 `vite.config`（自动导入 / JSX 插件）。
@@ -837,4 +857,4 @@ MCP Server 生成的是标准 @es-plus/vue3 配置代码。如果需要调整风
 | 1.1.0 | 新增 `generate_crud_from_config` 工具，支持多弹窗配置生成 |
 | 1.0.0 | 初始发布：5 Tools + 8 Resources + 2 Prompts |
 
-> 想看某一版**准确的**工具/资源清单，以运行时为准：`validate_config` 之类的工具名可直接在客户端工具面板查看，或用 `check:tool-surface` 的源码断言（`full` 18 / `front-door` 12）。
+> 想看某一版**准确的**工具/资源清单，以运行时为准：`validate_config` 之类的工具名可直接在客户端工具面板查看，或用 `check:tool-surface` 的源码断言（`full` 19 / `front-door` 13）。

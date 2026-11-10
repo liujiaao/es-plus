@@ -77,7 +77,10 @@ describe('generateFromConfig（sfc 模式）— 扩展点语法闸', () => {
       } as any)
     expect(run).not.toThrow()
     const { code, warnings } = run()
-    expect(code).not.toContain('{{{')
+    // W4：出处注释故意保留宿主原配置，畸形串就写在里面（它是数据、不在注释外）。
+    // 断言「没内联坏串」要看注释之外的正文。
+    const runtime = code.replace(/^[ \t]*\/\/ __esPlusSource:.*$/gm, '')
+    expect(runtime).not.toContain('{{{')
     expect(warnings.some((w) => w.includes('amount') && w.includes('formatter'))).toBe(true)
     assertScriptCompiles(code)
   })
