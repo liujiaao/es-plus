@@ -281,7 +281,15 @@ const FieldConfigBaseSchema = z.object({
       "Form-group key for the FORM face. Fields sharing a key are rendered inside that group's container; declare the containers in `formLayout.layout` (query form) or `dialogs[k].formLayout.layout` (dialog form). Ignored by the table column. Omit to follow the layout's `ungrouped` strategy."
     ),
   required: z.boolean().optional(),
-  rules: z.array(FieldRuleSchema).optional(),
+  rules: z
+    .array(FieldRuleSchema)
+    .optional()
+    .describe(
+      "Validation rules for this field. Use `pattern`/`min`/`max`/`type` for format constraints and `trigger` for when validation runs; `message` is REQUIRED. " +
+        "A rule carrying `type` is dispatched ONLY to that type validator (async-validator `getValidationMethod`) — a `pattern` on the SAME rule is silently ignored, so when the user states BOTH a regex and a type, emit them as TWO separate rules. " +
+        "For a plain text length cap (e.g. '最多 20 字') prefer `attrs.maxlength`; a `min`/`max` rule validates values with a message but does not block typing. " +
+        "Emit these rather than dropping a format/range requirement the user stated."
+    ),
   attrs: z.record(z.string(), z.unknown()).optional().describe("Extra component props, e.g. { type: 'textarea', maxlength: 200 }"),
   dataOptions: z.array(DataOptionSchema).optional().describe('Static options for Select/Radio/Checkbox/Cascader/TreeSelect/Autocomplete. Use this for known fixed enums.'),
   apiParams: z.object({
@@ -301,7 +309,12 @@ const FieldConfigBaseSchema = z.object({
   render: z.string().optional().describe(
     "Extension point: a render-function source string for a custom TABLE CELL, e.g. \"(_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.statusLabel)\" — honored on the table face (wired to a scoped slot in the wrapper SFC). A FORM-control render cannot be inlined (form items are serialized as JSON data in both modes), so it is preserved as a marked TODO(es-plus) marker in the generated SFC — NOT silently delivered; prefer the declarative form capabilities (formItemOptions/attrs/dataOptions/reactions) when a field needs custom FORM behaviour. Emit this (rather than dropping the requirement) when business logic exceeds the declarative schema."
   ),
-  permissionValue: z.string().optional(),
+  permissionValue: z
+    .string()
+    .optional()
+    .describe(
+      "Permission CODE gating this field (RBAC, checked by the host's global permission(code)) — NOT a data-driven condition: use `isHidden` for show/hide by another field's value, `reactions` for options/required/disabled linkage."
+    ),
   isHidden: HiddenConditionListSchema.optional().describe(
     "Conditional visibility for this field, expressed as PLAIN JSON DATA — never a JS function string (functions cannot be inlined into a schema-mode pageSchema). Semantics: the field is HIDDEN when the condition HOLDS (`{ field: 'payType', op: 'eq', value: 'cash' }` = hidden while payType is cash). An ARRAY of conditions is AND (hidden only when all hold) and may mix the two forms. TWO forms, never mixed within one node: (1) legacy condition `{ field, op, value }` whose `op` is one of eq | ne | in | nIn | empty | notEmpty | truthy | falsy (default eq) — preferred for simple comparisons; (2) a JSON expression (JSONLogic-shaped) when a plain condition can't express it — e.g. OR, ordering, or nesting: `{ or: [ { '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] } ] }`. Expression ops (closed set): var == != > >= < <= in nin empty notEmpty truthy falsy and or not if. An expression op inside a legacy `{field, op, value}` node is INVALID (runtime warns and treats the field as visible) — use form (2) for `>`, `!=`, etc. Applies to the query/filter form and to add/edit dialog forms (its `inQuery`/`inForm` placement) — NOT to the table column (`inTable`). Evaluated live against the form model by the three renderers."
   ),
@@ -653,6 +666,45 @@ const DialogConfigSchema = z.object({
     .describe(
       "Declarative footer buttons. When omitted a cancel+confirm pair is generated automatically by <es-crud-page>. 'confirm' / 'cancel' get their click handler attached by the runtime from `action`; 'custom' (or an omitted action) gets NO handler — in mode:'schema' the generated wrapper is template-only, so a custom button stays dead (use mode:'sfc' to wire it, or drop it).",
     ),
+})
+
+/**
+ * 片段 `generate_dialog` 的 `options` 形状（AI-28 / W2）—— `DialogConfigSchema` 的
+ * **声明式底座子集**：只保留三端 es-dialog 真消费、且由 `DIALOG_OPTION_ORDER` 逐个
+ * 发射的数据键（`width` 由生成器单发，故不在顺序表里）。
+ *
+ * 为什么在这里 pick、而不是让 mcp 再写一份：`generate_dialog` 与声明式
+ * `dialogs[k]` 用的是同一批运行时键。此前 mcp 侧手写镜像（13 行 describe + 键表），
+ * 与本文件的差异只能靠 `check-fragment-contract` 逐键对账；pick 之后不再有第二份键表。
+ */
+export const DialogBlockOptionsSchema = DialogConfigSchema.pick({
+  width: true,
+  maxHeight: true,
+  isDraggable: true,
+  fullscreen: true,
+  isHiddenFooter: true,
+  showClose: true,
+  destroyOnClose: true,
+  modal: true,
+  closeOnClickModal: true,
+  closeOnPressEscape: true,
+  hiddenFullBtn: true,
+  appendTo: true,
+  cacheKey: true,
+})
+
+/**
+ * 单面字段（surfaces 的 query/table/form 元素）—— `FieldConfigSchema` 去掉三面成员标志。
+ *
+ * 成员关系由 `composeCrudConfig` 按「字段落在哪个面」推导，调用方不该也**不能**传；
+ * 同时这是片段工具（`generate_form` / `generate_table` / `generate_dialog`）与旧前门
+ * `generate_crud` 的字段形状来源。此前它是 mcp 侧 120 行的手写 Zod 镜像，与
+ * `compose-crud-config.ts` 的 `SurfaceField` 接口靠正则对账（W2 退役）。
+ */
+export const SurfaceFieldSchema = FieldConfigSchema.omit({
+  inQuery: true,
+  inTable: true,
+  inForm: true,
 })
 
 export const StructuredCrudConfigSchema = z.object({

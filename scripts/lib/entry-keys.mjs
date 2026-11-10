@@ -220,6 +220,19 @@ export function keysInBlock(src, startMarker, closeLine, indent, label) {
 export const DERIVED_CONFIG_SHAPE_MARKER = 'const configShape = StructuredCrudConfigSchema.shape;'
 
 /**
+ * W2：片段工具容器形状的派生标记（`_fragment-shapes.ts`）。
+ *
+ * 与 `DERIVED_CONFIG_SHAPE_MARKER` 同一范式：标记存在 → 该形状就是 shared 权威 schema
+ * 的同名块，`readReachability` 直接复用 shared 切片；标记不存在 → 保留字面量切片兜底。
+ * 手写副本被写回来由 `check-fragment-contract` 的 `assertDerivedShapes()` 显式报红。
+ */
+export const FRAGMENT_DERIVED_MARKERS = {
+  tableOptions: 'export const tableBlockOptionsSchema = deriveSchema(crudShape.tableOptions',
+  formLayout: 'export const formLayoutSchema = deriveSchema(crudShape.formLayout',
+  pagination: 'export const tablePaginationSchema = deriveSchema(crudShape.pagination',
+}
+
+/**
  * `DIALOG_KEY_UNREACHABLE` —— 运行时 `CrudDialogConfig` 消费、但 AI 面（两处 AI Zod 的
  * `DialogConfigSchema`）够不到的键，**逐行**写明原因与档位。
  *
@@ -439,6 +452,12 @@ export function readReachability() {
   )
 
   // Wave 4：三个独立工具的顶层形状（泛化 —— 不再只切 crudShape）+ 容器级工具镜像。
+  //
+  // W2：`_fragment-shapes.ts` 的容器形状改为从 shared 派生，源码里不再有
+  // `export const tableBlockOptionsSchema = z.object({…})` 可切。派生标记存在时直接复用
+  // 上面已切好的 shared 同名块（注意 shared 的键缩进是 4）；字面量写法保留兜底。
+  // 只切字面量会在派生后返回 null；更糟的是若把 null 当空集放行，所有「仅 X 有」断言
+  // 都会变成恒真（本仓踩过的假绿模式，见 check-schema-contract 的 configShape）。
   const fragmentShapes = {}
   for (const [name, def] of Object.entries(FRAGMENT_TOOL_SRC)) {
     const src = stripComments(read(def.file))
@@ -446,24 +465,36 @@ export function readReachability() {
     if (block === null) return null
     fragmentShapes[name] = topLevelKeys(block)
   }
-  const fragmentTableOptionsBlock = sliceBlock(
-    fragmentShapesSrc,
+  const fragmentContainer = (marker, sharedBlock, startMarker, label) => {
+    if (fragmentShapesSrc.includes(marker)) {
+      return { block: sharedBlock, indent: 4 }
+    }
+    return {
+      block: sliceBlock(fragmentShapesSrc, startMarker, '});', label),
+      indent: 2,
+    }
+  }
+  const fragmentTableOptions = fragmentContainer(
+    FRAGMENT_DERIVED_MARKERS.tableOptions,
+    tableBlock,
     'export const tableBlockOptionsSchema = z.object({',
-    '});',
     '_fragment-shapes.ts tableBlockOptionsSchema'
   )
-  const fragmentFormLayoutBlock = sliceBlock(
-    fragmentShapesSrc,
+  const fragmentFormLayout = fragmentContainer(
+    FRAGMENT_DERIVED_MARKERS.formLayout,
+    formLayoutBlock,
     'export const formLayoutSchema = z.object({',
-    '});',
     '_fragment-shapes.ts formLayoutSchema'
   )
-  const fragmentPaginationBlock = sliceBlock(
-    fragmentShapesSrc,
+  const fragmentPagination = fragmentContainer(
+    FRAGMENT_DERIVED_MARKERS.pagination,
+    paginationBlock,
     'export const tablePaginationSchema = z.object({',
-    '});',
     '_fragment-shapes.ts tablePaginationSchema'
   )
+  const fragmentTableOptionsBlock = fragmentTableOptions.block
+  const fragmentFormLayoutBlock = fragmentFormLayout.block
+  const fragmentPaginationBlock = fragmentPagination.block
 
   if (
     crudBlock === null ||
@@ -493,9 +524,9 @@ export function readReachability() {
     configShapeKeys: topLevelKeys(configShapeBlock),
     dialogKeys: topLevelKeys(dialogBlock),
     fragmentShapes,
-    fragmentTableOptionsKeys: topLevelKeys(fragmentTableOptionsBlock),
-    fragmentFormLayoutKeys: topLevelKeys(fragmentFormLayoutBlock),
-    fragmentPaginationKeys: topLevelKeys(fragmentPaginationBlock),
+    fragmentTableOptionsKeys: topLevelKeys(fragmentTableOptionsBlock, fragmentTableOptions.indent),
+    fragmentFormLayoutKeys: topLevelKeys(fragmentFormLayoutBlock, fragmentFormLayout.indent),
+    fragmentPaginationKeys: topLevelKeys(fragmentPaginationBlock, fragmentPagination.indent),
   }
 }
 

@@ -50,6 +50,20 @@ function nodeType(schema: z.ZodType): string {
   return (schema as unknown as { _zod?: { def?: { type?: string } } })._zod?.def?.type ?? "";
 }
 
+/**
+ * 派生结果是否已经是「键可省略」的包装。
+ *
+ * **不能用 `schema.isOptional()`**：zod 4 里 `z.unknown()` / `z.any()` 的
+ * `isOptional()` 是 `true`（它们接受 `undefined`），但在 object 里 `z.unknown()`
+ * 仍要求**键存在**——缺键时报 `expected nonoptional`。于是
+ * `value: z.unknown().optional()` 会被误判成「已可选」而丢掉 `ZodOptional` 包装，
+ * 任何省略该键的合法配置都会被判红（`isHidden` 的 `{ field, op }` 就是这种形状：
+ * 43–46 号 golden 全部因此过不了前门）。判据必须看**包装层**，不看值域。
+ */
+function isOmissibleOptional(schema: z.ZodType): boolean {
+  return nodeType(schema) === "optional";
+}
+
 function copyDescription<T extends z.ZodType>(source: z.ZodType, out: T): T {
   const desc = source.description;
   return desc ? (out.describe(desc) as T) : out;
@@ -103,14 +117,14 @@ export function deriveSchema<S extends z.ZodType>(
   // 在 zod 里意味着字段可缺省，只剥成必填会把合法配置判红。故外层补 `.optional()`。
   if (type === "default") {
     const inner = recurse(def.innerType);
-    const out = inner.isOptional() ? inner : inner.optional();
+    const out = isOmissibleOptional(inner) ? inner : inner.optional();
     memo.set(schema, out);
     return copyDescription(schema, out) as z.ZodType<z.infer<S>>;
   }
 
   if (type === "optional") {
     const inner = recurse(def.innerType);
-    const out = inner.isOptional() ? inner : inner.optional();
+    const out = isOmissibleOptional(inner) ? inner : inner.optional();
     memo.set(schema, out);
     return copyDescription(schema, out) as z.ZodType<z.infer<S>>;
   }

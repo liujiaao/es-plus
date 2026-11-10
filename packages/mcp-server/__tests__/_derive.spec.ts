@@ -64,6 +64,22 @@ describe("deriveSchema —— 默认值与省略语义", () => {
     const derived = deriveSchema(StructuredCrudConfigSchema);
     expect(hasDefaults(derived)).toBe(false);
   });
+
+  it("`z.unknown().optional()` 的省略语义不能被 isOptional() 吃掉", () => {
+    // shared 的 `isHidden.value` 就是这个形状：值域接受 undefined，但 **object 里键
+    // 仍必须存在**（zod 4 报 `expected nonoptional`）。若派生按 `isOptional()` 判断
+    // 「已经是可选的」而丢掉 ZodOptional 包装，`{ field, op }` 这种省略 value 的
+    // 合法条件会被判红（43–46 号 golden 曾因此全部过不了前门）。
+    const shared = z.object({
+      field: z.string(),
+      value: z.unknown().optional(),
+      any: z.any().optional(),
+    });
+    const derived = deriveSchema(shared);
+    expect(derived.safeParse({ field: "a" }).success).toBe(true);
+    expect(derived.safeParse({ field: "a", value: null }).success).toBe(true);
+    expect(derived.parse({ field: "a" })).toEqual({ field: "a" });
+  });
 });
 
 describe("deriveSchema —— 未知键策略", () => {

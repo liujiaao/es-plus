@@ -41,6 +41,8 @@ export {
 } from './doctor.js'
 export {
   StructuredCrudConfigSchema,
+  SurfaceFieldSchema,
+  DialogBlockOptionsSchema,
   normalizeTableBtn,
   type StructuredCrudConfigInput,
 } from './structured-config.schema.js'

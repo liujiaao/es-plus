@@ -2,23 +2,25 @@
 /**
  * fragment 词汇 ↔ mcp 工具镜像 同步校验
  *
- * 背景:片段工具(generate_form/table/dialog)与前门(generate_crud)在 mcp-server 侧
- * **手写**了一份 `surfaceFieldSchema`(packages/mcp-server/src/tools/_fragment-shapes.ts),
- * 作为 shared 权威 `SurfaceField`(packages/shared/src/compose-crud-config.ts)的镜像。
- * (这份副本最初是为了绕开「shared 用 zod4、mcp-server 用 zod3」的跨版本不可复用;
- *  2026-11-07 起 workspace 已统一到单份 zod 4,副本保留为刻意独立维护的工具契约。)
+ * 背景:片段工具(generate_form/table/dialog)与前门(generate_crud)的字段词汇/容器选项，
+ * 2026-11 W2 起**不再由 mcp 手写镜像**：`_fragment-shapes.ts` 从 shared 的权威 Zod
+ * （`SurfaceFieldSchema` / `StructuredCrudConfigSchema.shape.*` / `DialogBlockOptionsSchema`）
+ * 派生。故本脚本的「Zod 一侧」改为**运行时读取**（esbuild 现打包源码，`captureFrontDoor()`
+ * 已经导出这些形状），不再切源码字面量 —— 派生结果没有可切的对象字面量，硬切只会让
+ * 守卫在「选择器失配 → 空集」时假绿。
  *
- * 手写副本就会漂移:给 SurfaceField 加了字段却忘了同步镜像 → MCP 工具会**静默
- * 丢弃**那个入参(zod 不认识的 key 被 strip),LLM 以为传了、生成器却没收到。本脚本在
- * PR 上就把这类漂移打红。
+ * 为什么要对账:接口/枚举是手写的（`SurfaceField` / `TableBlockOptions` /
+ * `DialogBlockOptions` / `EsFormLayout` / `EsTablePagination` / 发射枚举），派生只保证
+ * 「Zod 与 shared 的 Zod 同源」，不保证「shared 的 Zod 与这些手写接口同步」。这条守卫
+ * 仍然把两侧钉在一起；任一侧加键而另一侧没跟上 → 红。
  *
  * 校验项:
- *  1. 键集一致:SurfaceField(接口)的属性集 === surfaceFieldSchema(镜像)的顶层键集。
+ *  1. 键集一致:SurfaceField(接口)的属性集 === surfaceFieldSchema(运行时派生形状)的顶层键集。
  *  2. 成员标志必须双双缺席:inQuery/inTable/inForm 由 composeCrudConfig 推导,
  *     不在任何「单面字段」里出现——两处都不许冒出来(冒出来说明有人把组合层的概念
  *     漏进了单面词汇)。
  *  3. dialog 底座选项(AI-28)三处一致:shared `DialogBlockOptions`(接口) ===
- *     `dialogOptionsSchema`(镜像),且**两者的键集都 ⊆ core `DialogOptions`
+ *     `dialogOptionsSchema`(运行时形状),且**两者的键集都 ⊆ core `DialogOptions`
  *     的具名键** —— 往任一侧加一个 core 不认的键都会红。
  *  4. 选项**发射顺序**全覆盖:上条的键集必须恰等于 `DIALOG_OPTION_ORDER ∪ {width}`。
  *     这是「输入形状承诺了、生成器却读不到」这一类静默丢弃的守卫 —— 接口里有一个
@@ -26,16 +28,20 @@
  *  5. 教学面不得教幻影键:`resources/types.ts` 的 `TYPES_FALLBACK_VUE3.DialogOptions`
  *     具名键 ⊆ core 的具名键,且**必须覆盖** `dialogOptionsSchema` 的全部键 ——
  *     `generate_dialog` 的 `options` 收的每个键,宿主要在类型资源里看得到。
- *  6. 片段 `tableOptions`(Wave 4):shared `TableBlockOptions` === mcp 镜像
- *     `tableBlockOptionsSchema`,两者都 ⊆ core `TableOptions` 的具名键;且键集恰等于
- *     `TABLE_BLOCK_ALWAYS ∪ TABLE_BLOCK_OPTION_ORDER`(两者不重叠)—— 接口声明了却不在
- *     发射枚举里 = 接受入参却永不注入产物。
+ *  6. 片段 `tableOptions`(Wave 4):shared `TableBlockOptions` === 运行时派生形状,两者都
+ *     ⊆ core `TableOptions` 的具名键;且键集恰等于 `TABLE_BLOCK_ALWAYS ∪
+ *     TABLE_BLOCK_OPTION_ORDER`(两者不重叠)—— 接口声明了却不在发射枚举里 = 接受入参
+ *     却永不注入产物。
  *  7. 片段 `formLayout` / `pagination`(Wave 4):`EsFormLayout` / `EsTablePagination`
- *     各自 ≡ `FORM_LAYOUT_KEYS` / `PAGINATION_KEYS` ≡ mcp 镜像(三处全等)。
+ *     各自 ≡ `FORM_LAYOUT_KEYS` / `PAGINATION_KEYS` ≡ 运行时派生形状(三处全等)。
  *     `formLayout` 另有**兄弟键**表 `FORM_LAYOUT_SIBLING_KEYS`（`layout` 分组容器：
  *     映射到 `layoutFormProps` 顶层而非 `formLayProps`）；接口键集 ≡ 两表之并。
  *     片段与**权威 schema** 同名嵌套块的等价性由 `check-entry-contract.mjs` 断言(6),
- *     两条守卫各守一侧:本脚本守手写副本漂移,那条守片段↔权威收窄。
+ *     两条守卫各守一侧:本脚本守「派生形状 ↔ 手写接口」,那条守「片段 ↔ 权威收窄」。
+ *  8. 发射必须由冻结数组驱动（而非逐键手写循环 —— 那正是死键的温床）。
+ *  9. `reactions` 结构不得退回 `any[]`（prompt 自省直接读形状；曾因此教模型把
+ *     `fulfill.required` 写成裸 boolean）—— 运行时断言它是带 `dependencies/when/fulfill`
+ *     的对象数组。
  *
  * 用法:node scripts/check-fragment-contract.mjs
  * 退出码:0 = 同步;1 = 发现漂移。
@@ -43,6 +49,7 @@
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join } from 'node:path'
+import { captureFrontDoor } from './lib/front-door.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const ROOT = join(__dirname, '..')
@@ -120,78 +127,135 @@ function constArrayMembers(src, name, label) {
 
 const diff = (a, b) => [...a].filter((k) => !b.has(k))
 
-function main() {
-  let ok = true
+/**
+ * 运行时取 Zod 对象的顶层键。
+ *
+ * 派生形状没有源码字面量可切，只能读实例。zod 4 的公开面是 `.shape`；同时兼容
+ * `_zod.def.shape`（跨副本/未来内部变动时不至于静默返回空集 —— 空集会让所有
+ * 差集断言恒真，这是本仓踩过的假绿模式）。
+ *
+ * 顶层可能带一层包装：`_fragment-shapes.ts` 对 `tableOptions` / `pagination` /
+ * `formLayout` 保留了 shared 的 `.optional()`（派生只剥 `.default()`，容器整体可省略
+ * 是真实语义）。读键前先把 optional/nullable/default 这层拆掉，否则拿到的是包装层、
+ * 键集为空。
+ */
+function runtimeKeys(schema, label) {
+  const WRAPPERS = new Set(['optional', 'nullable', 'default', 'prefault', 'catch', 'readonly', 'nonoptional'])
+  let cur = schema
+  for (let i = 0; i < 8 && cur; i++) {
+    const def = cur?._zod?.def ?? cur?._def
+    if (!def || !WRAPPERS.has(def.type) || !def.innerType) break
+    cur = def.innerType
+  }
+  const shape = cur?.shape ?? cur?._zod?.def?.shape ?? cur?._def?.shape
+  if (!shape || typeof shape !== 'object' || Object.keys(shape).length === 0) {
+    fail(`无法从运行时形状 ${label} 读取键集（若派生层或 zod 版本变了，请同步本守卫）`)
+    return null
+  }
+  return Object.keys(shape)
+}
 
-  // ── 1. SurfaceField 接口键集 ──
+/**
+ * W2 棘轮：`_fragment-shapes.ts` 必须保持派生形态，不得把手写副本写回来。
+ * 与 `check-schema-contract` 对 `configShape` 的处理同一范式。
+ */
+function assertDerivedShapes() {
+  const src = read(FRAGMENT_SHAPES_SRC)
+  let ok = true
+  const markers = [
+    'export const tableBlockOptionsSchema = deriveSchema(crudShape.tableOptions',
+    'export const tablePaginationSchema = deriveSchema(crudShape.pagination',
+    'export const formLayoutSchema = deriveSchema(crudShape.formLayout',
+    'export const dialogOptionsSchema = deriveSchema(DialogBlockOptionsSchema',
+    'const derivedSurface = deriveSchema(SurfaceFieldSchema',
+  ]
+  for (const m of markers) {
+    if (!src.includes(m)) {
+      ok = fail(
+        `_fragment-shapes.ts 缺少派生标记 ${JSON.stringify(m)} —— shared 权威 schema 才是单源（W2 棘轮，回滚请同批恢复本守卫并说明理由）`
+      )
+    }
+  }
+  for (const name of [
+    'tableBlockOptionsSchema',
+    'tablePaginationSchema',
+    'formLayoutSchema',
+    'dialogOptionsSchema',
+    'surfaceFieldBase',
+    'surfaceFieldSchema',
+  ]) {
+    if (new RegExp(`export const ${name} = z\\s*\\n?\\s*\\.object\\(`).test(src)) {
+      ok = fail(`_fragment-shapes.ts 的 ${name} 又出现了手写 z.object 字面量 —— shared 权威 Zod 才是单源（W2）`)
+    }
+  }
+  return ok
+}
+
+async function main() {
+  const captured = await captureFrontDoor()
+  try {
+    await run(captured.mod)
+  } finally {
+    captured.cleanup()
+  }
+}
+
+async function run(mod) {
+  let ok = assertDerivedShapes()
+
+  // ── 1. SurfaceField 接口键集 × 2. 运行时派生形状键集 ──
   const sfBlock = sliceBlock(read(SURFACE_FIELD_SRC), 'export interface SurfaceField {', '}', 'SurfaceField')
-  // ── 2. surfaceFieldSchema(镜像)顶层键集 ──
-  // P1-3 第二期把镜像拆成 base + `.extend({ children })`（children 的元素就是 base，
-  // 「只许一层」由结构锁死）。键集 = base 块 ∪ extend 块。
-  const sfBaseBlock = sliceBlock(
-    read(FRAGMENT_SHAPES_SRC),
-    'const surfaceFieldBase = z.object({',
-    '});',
-    'surfaceFieldBase'
-  )
-  const sfExtendBlock = sliceBlock(
-    read(FRAGMENT_SHAPES_SRC),
-    'export const surfaceFieldSchema = surfaceFieldBase.extend({',
-    '});',
-    'surfaceFieldSchema'
-  )
-  const zBlock =
-    sfBaseBlock !== null && sfExtendBlock !== null ? `${sfBaseBlock}\n${sfExtendBlock}` : null
-  if (sfBlock === null || zBlock === null) process.exit(1)
+  const zKeysList = runtimeKeys(mod.surfaceFieldSchema, 'surfaceFieldSchema')
+  if (sfBlock === null || zKeysList === null) process.exit(1)
 
   const sfKeys = new Set(topLevelKeys(sfBlock))
-  const zKeys = new Set(topLevelKeys(zBlock))
+  const zKeys = new Set(zKeysList)
 
   const missingInZod = [...sfKeys].filter((k) => !zKeys.has(k))
   const extraInZod = [...zKeys].filter((k) => !sfKeys.has(k))
 
   if (missingInZod.length) {
     ok = fail(
-      `surfaceFieldSchema 镜像 缺少 SurfaceField 的字段：${missingInZod.join(', ')}` +
-        '（给 SurfaceField 加了字段，但没同步 _fragment-shapes.ts —— MCP 工具会静默丢弃该入参）'
+      `surfaceFieldSchema 缺少 SurfaceField 的字段：${missingInZod.join(', ')}` +
+        '（给 SurfaceField 加了字段，但 shared 的 SurfaceFieldSchema 没跟上 —— MCP 工具会静默丢弃该入参）'
     )
   }
   if (extraInZod.length) {
     ok = fail(
-      `surfaceFieldSchema 镜像 多出 SurfaceField 没有的字段：${extraInZod.join(', ')}` +
-        '（镜像里凭空多了 key —— 要么 SurfaceField 漏加，要么镜像拼错）'
+      `surfaceFieldSchema 多出 SurfaceField 没有的字段：${extraInZod.join(', ')}` +
+        '（shared 的 SurfaceFieldSchema 凭空多了 key —— 要么 SurfaceField 漏加，要么 schema 拼错）'
     )
   }
 
   // ── 3. 成员标志双双缺席 ──
   for (const flag of MEMBERSHIP_FLAGS) {
     if (sfKeys.has(flag)) ok = fail(`SurfaceField 不应包含成员标志 "${flag}"（它由 composeCrudConfig 推导）`)
-    if (zKeys.has(flag)) ok = fail(`surfaceFieldSchema 镜像 不应包含成员标志 "${flag}"（它由 composeCrudConfig 推导）`)
+    if (zKeys.has(flag)) ok = fail(`surfaceFieldSchema 不应包含成员标志 "${flag}"（它由 composeCrudConfig 推导）`)
   }
 
-  // ── 4. dialog 底座选项(AI-28)：双份镜像 + 都 ⊆ core DialogOptions ──
+  // ── 4. dialog 底座选项(AI-28)：接口 ≡ 运行时派生形状，且都 ⊆ core DialogOptions ──
   const dboBlock = sliceBlock(read(FRAGMENT_GENERATOR_SRC), 'export interface DialogBlockOptions {', '}', 'DialogBlockOptions')
-  const dozBlock = sliceBlock(read(FRAGMENT_SHAPES_SRC), 'export const dialogOptionsSchema = z.object({', '});', 'dialogOptionsSchema')
+  const dozKeysList = runtimeKeys(mod.dialogOptionsSchema, 'dialogOptionsSchema')
   const orderBlock = sliceBlock(read(FRAGMENT_GENERATOR_SRC), 'const DIALOG_OPTION_ORDER = [', '] as const', 'DIALOG_OPTION_ORDER')
   const coreDlgBlock = sliceBlock(read(CORE_TYPES_SRC), 'export interface DialogOptions {', '}', 'core DialogOptions')
   const fbDlgBlock = sliceBlock(read(RESOURCE_TYPES_SRC), 'export interface DialogOptions {', '}', 'TYPES_FALLBACK_VUE3.DialogOptions')
-  if (dboBlock === null || dozBlock === null || orderBlock === null || coreDlgBlock === null || fbDlgBlock === null) process.exit(1)
+  if (dboBlock === null || dozKeysList === null || orderBlock === null || coreDlgBlock === null || fbDlgBlock === null) process.exit(1)
 
   const dboKeys = new Set(topLevelKeys(dboBlock))
-  const dozKeys = new Set(topLevelKeys(dozBlock))
+  const dozKeys = new Set(dozKeysList)
   const orderKeys = new Set(quotedMembers(orderBlock))
   const coreDlgKeys = new Set(topLevelKeys(coreDlgBlock))
   const fbDlgKeys = new Set(topLevelKeys(fbDlgBlock))
 
-  // 4a. 双份镜像逐键一致（zod 对象是 passthrough：未知键由闸门报错而非静默 strip，
-  //     所以键集跑偏不会自己暴露——镜像漂移必须在这里静态钉住）。
+  // 4a. 接口声明与工具形状逐键一致（工具形状是 passthrough：未知键由闸门报错而非
+  //     静默 strip，所以键集跑偏不会自己暴露——必须在这里静态钉住）。
   const onlyShared = diff(dboKeys, dozKeys)
   const onlyZod = diff(dozKeys, dboKeys)
   if (onlyShared.length) {
-    ok = fail(`dialogOptionsSchema 镜像 缺少 DialogBlockOptions 的键：${onlyShared.join(', ')}（工具入参会静默 strip）`)
+    ok = fail(`dialogOptionsSchema 缺少 DialogBlockOptions 的键：${onlyShared.join(', ')}（工具入参会静默 strip）`)
   }
   if (onlyZod.length) {
-    ok = fail(`dialogOptionsSchema 镜像 多出 DialogBlockOptions 没有的键：${onlyZod.join(', ')}（镜像凭空多键 = core 侧描述落后）`)
+    ok = fail(`dialogOptionsSchema 多出 DialogBlockOptions 没有的键：${onlyZod.join(', ')}（凭空多键 = core 侧描述落后）`)
   }
 
   // 4b. 两者都 ⊆ core DialogOptions 的具名键（不含 [key: string]: unknown 索引签名）。
@@ -229,31 +293,26 @@ function main() {
     )
   }
 
-  // ── 6. 片段 tableOptions(Wave 4)：shared 接口 ≡ mcp 镜像 ⊆ core TableOptions ──
+  // ── 6. 片段 tableOptions(Wave 4)：shared 接口 ≡ 运行时派生形状 ⊆ core TableOptions ──
   const fgenSrc = read(FRAGMENT_GENERATOR_SRC)
   const fshapesSrc = read(FRAGMENT_SHAPES_SRC)
   const tboBlock = sliceBlock(fgenSrc, 'export interface TableBlockOptions {', '}', 'TableBlockOptions')
-  const tbozBlock = sliceBlock(
-    fshapesSrc,
-    'export const tableBlockOptionsSchema = z.object({',
-    '});',
-    'tableBlockOptionsSchema'
-  )
+  const tbozKeysList = runtimeKeys(mod.tableBlockOptionsSchema, 'tableBlockOptionsSchema')
   const coreTblBlock = sliceBlock(read(CORE_TYPES_SRC), 'export interface TableOptions {', '}', 'core TableOptions')
-  if (tboBlock === null || tbozBlock === null || coreTblBlock === null) process.exit(1)
+  if (tboBlock === null || tbozKeysList === null || coreTblBlock === null) process.exit(1)
 
   const tboKeys = new Set(topLevelKeys(tboBlock))
-  const tbozKeys = new Set(topLevelKeys(tbozBlock))
+  const tbozKeys = new Set(tbozKeysList)
   const coreTblKeys = new Set(topLevelKeys(coreTblBlock))
 
-  // 6a. 双份镜像逐键一致（zod 无 passthrough：跑偏了就是静默 strip）。
+  // 6a. 接口声明与工具形状逐键一致（容器形状保持 strip：跑偏了就是静默 strip）。
   const tboOnlyShared = diff(tboKeys, tbozKeys)
   const tboOnlyZod = diff(tbozKeys, tboKeys)
   if (tboOnlyShared.length) {
-    ok = fail(`tableBlockOptionsSchema 镜像 缺少 TableBlockOptions 的键：${tboOnlyShared.join(', ')}（工具入参会静默 strip）`)
+    ok = fail(`tableBlockOptionsSchema 缺少 TableBlockOptions 的键：${tboOnlyShared.join(', ')}（工具入参会静默 strip）`)
   }
   if (tboOnlyZod.length) {
-    ok = fail(`tableBlockOptionsSchema 镜像 多出 TableBlockOptions 没有的键：${tboOnlyZod.join(', ')}（镜像凭空多键）`)
+    ok = fail(`tableBlockOptionsSchema 多出 TableBlockOptions 没有的键：${tboOnlyZod.join(', ')}（凭空多键）`)
   }
 
   // 6b. ⊆ core TableOptions 的具名键（承诺的选项运行时必须读得懂）。
@@ -285,27 +344,27 @@ function main() {
     ok = fail(`TABLE_BLOCK_ALWAYS 与 TABLE_BLOCK_OPTION_ORDER 重复键：${tboDuplicated.join(', ')}（产物会重复发射同一选项）`)
   }
 
-  // ── 7. 片段 formLayout / pagination(Wave 4)：接口 ≡ 发射枚举 ≡ mcp 镜像 ──
+  // ── 7. 片段 formLayout / pagination(Wave 4)：接口 ≡ 发射枚举 ≡ 运行时派生形状 ──
   const pairSpecs = [
     {
       label: 'formLayout',
       iface: 'export interface EsFormLayout {',
       constName: 'FORM_LAYOUT_KEYS',
       siblingName: 'FORM_LAYOUT_SIBLING_KEYS',
-      zod: 'export const formLayoutSchema = z.object({',
+      runtime: ['formLayoutSchema', mod.formLayoutSchema],
     },
     {
       label: 'pagination',
       iface: 'export interface EsTablePagination {',
       constName: 'PAGINATION_KEYS',
-      zod: 'export const tablePaginationSchema = z.object({',
+      runtime: ['tablePaginationSchema', mod.tablePaginationSchema],
     },
   ]
   for (const spec of pairSpecs) {
     const ifaceBlock = sliceBlock(fgenSrc, spec.iface, '}', `${spec.label} interface`)
-    const zodBlock = sliceBlock(fshapesSrc, spec.zod, '});', `${spec.label} zod mirror`)
+    const zodKeysList = runtimeKeys(spec.runtime[1], spec.runtime[0])
     const constKeys = constArrayMembers(fgenSrc, spec.constName, spec.constName)
-    if (ifaceBlock === null || zodBlock === null || constKeys === null) process.exit(1)
+    if (ifaceBlock === null || zodKeysList === null || constKeys === null) process.exit(1)
     // 兄弟键（映射到 layoutFormProps 顶层而非 formLayProps）同样必须被冻结表覆盖，
     // 接口键集 = formLayProps 键 ∪ 兄弟键。
     const siblingKeys = spec.siblingName
@@ -313,7 +372,7 @@ function main() {
       : []
     if (siblingKeys === null) process.exit(1)
     const ifaceKeys = new Set(topLevelKeys(ifaceBlock))
-    const zodKeys = new Set(topLevelKeys(zodBlock))
+    const zodKeys = new Set(zodKeysList)
     const constSet = new Set([...constKeys, ...siblingKeys])
     const ifaceOnly = [...ifaceKeys].filter((k) => !constSet.has(k))
     const constOnly = [...constSet].filter((k) => !ifaceKeys.has(k))
@@ -326,10 +385,10 @@ function main() {
     const zodOnlyIface = diff(zodKeys, ifaceKeys)
     const ifaceOnlyZod = diff(ifaceKeys, zodKeys)
     if (zodOnlyIface.length) {
-      ok = fail(`${spec.label} 镜像多出接口没有的键：${zodOnlyIface.join(', ')}`)
+      ok = fail(`${spec.label} 工具形状多出接口没有的键：${zodOnlyIface.join(', ')}`)
     }
     if (ifaceOnlyZod.length) {
-      ok = fail(`${spec.label} 镜像缺少接口的键：${ifaceOnlyZod.join(', ')}（工具入参会静默 strip）`)
+      ok = fail(`${spec.label} 工具形状缺少接口的键：${ifaceOnlyZod.join(', ')}（工具入参会静默 strip）`)
     }
   }
 
@@ -348,69 +407,48 @@ function main() {
     }
   }
 
-  // ── 9. reactions 结构镜像（AI-47）──
-  // 片段侧刻意**不**镜像递归算子校验（归 shared 权威 Zod），但结构键必须一致：
-  // 形状少一个键 = 工具入参静默 strip；多一个键 = 教出一个运行时读不懂的键。
-  // 这组键也是 prompt 自省的直接输入（`reactions` 曾因 `z.any()` 被渲染成 `any[]`，
-  // 模型把 `fulfill.required` 写成裸 `true`）。
+  // ── 9. reactions 结构（AI-47 → W2 运行时断言）──
+  // 片段 prompt 直接自省工具形状；`reactions` 一旦退回 `any[]`，模型就会把
+  // `fulfill.required` 写成裸 `true`。W2 起该形状由 shared 派生，故不再切源码文本，
+  // 而是读运行时的 JSON Schema：它必须是「对象数组」，且元素带 dependencies/when/fulfill，
+  // fulfill 带 dataOptions/required/disabled/value。
   {
-    const sharedSchemaSrc = read('packages/shared/src/structured-config.schema.ts')
-    const keysAt = (block, indent) => {
-      const re = new RegExp(`^ {${indent}}([A-Za-z_$][\\w$]*)\\??\\s*:`, 'gm')
-      return [...block.matchAll(re)].map((m) => m[1])
-    }
-    // shared 的 ReactionSchema 是 `z\n  .object({`（键缩进 4），且块尾跟 `.refine(...)` ——
-    // 用下一个顶层 const 当边界，避免把 refine 的键算进来。
-    const shReactionStart = 'const ReactionSchema = z'
-    const i = sharedSchemaSrc.indexOf(shReactionStart)
-    const j = sharedSchemaSrc.indexOf('const FieldConfigSchema', i)
-    let shReactionBlock = i === -1 || j === -1 ? null : sharedSchemaSrc.slice(i + shReactionStart.length, j)
-    // shared 的属性键在 `.object({ ... })` 里；块尾的顶层 `.refine(...)`（缩进 2）
-    // 也有 `message` 键，不计入结构镜像。注意 `dependencies` 内部还有一个缩进 6 的
-    // `.refine(isSafeProp, …)` —— 必须按缩进定位顶层那条，否则会把块截断成一行。
-    if (shReactionBlock) {
-      const refineAt = shReactionBlock.indexOf('\n  .refine(')
-      if (refineAt !== -1) shReactionBlock = shReactionBlock.slice(0, refineAt)
-    }
-    const shFulfillBlock = sliceBlock(sharedSchemaSrc, 'const ReactionFulfillSchema = z.object({', '})', 'shared ReactionFulfillSchema')
-    const fgReactionBlock = sliceBlock(fshapesSrc, 'const ReactionSchema = z.object({', '});', 'fragment ReactionSchema')
-    const fgFulfillBlock = sliceBlock(fshapesSrc, 'const ReactionFulfillSchema = z.object({', '});', 'fragment ReactionFulfillSchema')
-    if (shReactionBlock === null || shFulfillBlock === null || fgReactionBlock === null || fgFulfillBlock === null) {
-      process.exit(1)
-    }
-    const pairs = [
-      ['ReactionSchema', keysAt(shReactionBlock, 4), keysAt(fgReactionBlock, 2)],
-      ['ReactionFulfillSchema', keysAt(shFulfillBlock, 2), keysAt(fgFulfillBlock, 2)],
-    ]
-    for (const [label, sharedKeys, fragmentKeys] of pairs) {
-      const a = new Set(sharedKeys)
-      const b = new Set(fragmentKeys)
-      const onlyShared = diff(a, b)
-      const onlyFragment = diff(b, a)
-      if (onlyShared.length) {
-        ok = fail(`片段 ${label} 缺少 shared 的键：${onlyShared.join(', ')}（工具入参会静默 strip）`)
+    const schemaOf = mod.z.toJSONSchema(mod.surfaceFieldSchema, {
+      io: 'input',
+      unrepresentable: 'any',
+    })
+    const reactions = schemaOf?.properties?.reactions
+    const items = reactions?.items?.properties
+    if (!items) {
+      ok = fail('surfaceFieldSchema.reactions 没有结构（prompt 会退回 `any[]`，模型又把 fulfill.required 写成裸 boolean）')
+    } else {
+      for (const k of ['dependencies', 'when', 'fulfill']) {
+        if (!(k in items)) ok = fail(`surfaceFieldSchema.reactions 的元素缺少 ${k} —— prompt 自省会教出不完整的结构`)
       }
-      if (onlyFragment.length) {
-        ok = fail(`片段 ${label} 多出 shared 没有的键：${onlyFragment.join(', ')}（教出一个运行时读不懂的键）`)
+      const fulfill = items.fulfill?.properties
+      if (!fulfill) {
+        ok = fail('surfaceFieldSchema.reactions 的 fulfill 没有结构（选项联动/值回写表达不了）')
+      } else {
+        for (const k of ['dataOptions', 'required', 'disabled', 'value']) {
+          if (!(k in fulfill)) ok = fail(`surfaceFieldSchema.reactions 的 fulfill 缺少 ${k}（prompt 自省教不全）`)
+        }
       }
-    }
-    // 形状必须真的被字段引用（否则退回 `z.any()` 时上面的一致性检查仍在，却在教 `any[]`）。
-    // 正则兼容 CRLF（仓库在 Windows 上检出时是 CRLF）。
-    if (!/reactions:\s*z\s*\r?\n\s*\.array\(ReactionSchema\)/.test(fshapesSrc)) {
-      ok = fail('surfaceFieldSchema.reactions 不再是 z.array(ReactionSchema) —— prompt 会退回 `any[]`，模型又把 fulfill.required 写成裸 boolean')
     }
   }
 
   if (ok) {
     console.log(
-      `✅ fragment 词汇同步（SurfaceField ${sfKeys.size} 键 === surfaceFieldSchema 镜像 ${zKeys.size} 键，成员标志均未泄漏；` +
-        `dialog 选项 ${dboKeys.size} 键双份一致 ⊆ core ${coreDlgKeys.size} 键，发射顺序全覆盖，教学面覆盖 ${dozKeys.size} 键；` +
-        `tableOptions ${tboKeys.size} 键双份一致 ⊆ core TableOptions ${coreTblKeys.size} 键，发射枚举全覆盖；` +
-        `formLayout / pagination 接口 ≡ 发射枚举 ≡ mcp 镜像；reactions 结构 ≡ shared 权威）`
+      `✅ fragment 词汇同步（SurfaceField ${sfKeys.size} 键 === 派生 surfaceFieldSchema ${zKeys.size} 键，成员标志均未泄漏；` +
+        `dialog 选项 ${dboKeys.size} 键接口一致 ⊆ core ${coreDlgKeys.size} 键，发射顺序全覆盖，教学面覆盖 ${dozKeys.size} 键；` +
+        `tableOptions ${tboKeys.size} 键接口一致 ⊆ core TableOptions ${coreTblKeys.size} 键，发射枚举全覆盖；` +
+        `formLayout / pagination 接口 ≡ 发射枚举 ≡ 工具形状；reactions 结构完整；形状全部由 shared 派生）`
     )
     process.exit(0)
   }
   process.exit(1)
 }
 
-main()
+await main().catch((err) => {
+  console.error(err)
+  process.exit(1)
+})

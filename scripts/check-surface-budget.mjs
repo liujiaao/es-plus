@@ -50,8 +50,21 @@ const BUDGETS = {
     // 宿主读到的描述随之从手写副本换成 shared 的那一份（合计 +22.9 KB，实测 266.7）。
     // 这不是泄漏，是**有意**采用：手写副本里有事实性错误（例如称 antdv 的 a-table 支持
     // 虚拟滚动，实际两端都没有）。换成权威文案等于让教学面与配置判据同源。
-    total: 275,
-    perTool: 95, // 当前最大 generate_crud 89.4 KB（shared 文案更完整）
+    //
+    // 2026-11-10 再上调到 345 / 135（实测 340.8 / 130.5，+60.5 → +74.3 KB）。全部来自
+    // 本批（W2 片段镜像退役）：`generate_crud` / `generate_form` / `generate_table` /
+    // `generate_dialog` 的**字段形状**改用 shared 的 `SurfaceFieldSchema`（派生前是
+    // 「短描述」手写镜像，见旧 `_fragment-shapes.ts`）。shared 的描述更长，且
+    // `generate_crud` 把同一份 item 形状内联进 `surfaces.query/table/form` 三处，
+    // 字节逐倍放大（单工具 +40.7 KB）。
+    //
+    // 其中 `rules` / `permissionValue` 两条教学文案原本**只**存在于手写镜像里
+    //（`check-fragment-prompts` 曾因派生后丢失而红）—— 已上提到 shared 权威 schema，
+    // 否则片段 prompt 会退回「看得见键名、看不见语义」。这不是泄漏，是**有意**采用：
+    // 手写副本里有过事实性错误（例如称 antdv 的 a-table 支持虚拟滚动，实际两端都没有）。
+    // front-door 仍是出口口径（21.1 KB / 12 工具，未动、不含这些工具）；full 是遗留适配器。
+    total: 345,
+    perTool: 135, // 当前最大 generate_crud 130.5 KB（shared 权威文案在三面各内联一次）
   },
 }
 
