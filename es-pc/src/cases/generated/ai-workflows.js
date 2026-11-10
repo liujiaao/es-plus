@@ -52,9 +52,9 @@ export const AI_WORKFLOWS = {
           "args": {
             "packageJson": "{\"dependencies\":{\"vue\":\"^3.4.0\",\"element-plus\":\"^2.4.0\",\"@es-plus/vue3\":\"^1.0.0\"}}"
           },
-          "result": "Detected target: vue3 (confidence: high)\nReasoning: Project already depends on @es-plus/vue3.\nSignals found in dependencies:\n  - @es-plus/vue3: ^1.0.0\n  - vue: ^3.4.0\n  - element-plus: ^2.4.0\nNext step: pass target='vue3' to generate_scene / generate_composition / generate_crud / generate_form / generate_table / generate_dialog / get_component_api / etc.",
+          "result": "Detected target: vue3 (confidence: high)\nReasoning: Project already depends on @es-plus/vue3.\nSignals found in dependencies:\n  - @es-plus/vue3: ^1.0.0\n  - vue: ^3.4.0\n  - element-plus: ^2.4.0\nNext step: pass target='vue3' to generate_scene (scene='crud' for a page; 'table' / 'form' / 'dialog' for one fragment) / generate_composition / get_component_api / etc.",
           "truncated": false,
-          "bytes": 356
+          "bytes": 361
         },
         {
           "tool": "generate_crud",

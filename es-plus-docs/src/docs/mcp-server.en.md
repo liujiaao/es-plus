@@ -256,20 +256,20 @@ Once configured, ask the AI things like:
 - *"Add a status filter (enum: active/archived) to the search form."*
 - *"Make the price column right-aligned and format as currency."*
 
-The AI calls the MCP server's `generate_scene` front door (or a standalone fragment tool) and returns valid `@es-plus/vue3` JSON config — including `httpRequest`, `dataOptions`, `triggerEvent` flags, and dialog handlers.
+The AI calls the MCP server's `generate_scene` front door (scene `crud` / `table` / `form` / `dialog`) and returns valid `@es-plus/vue3` JSON config — including `httpRequest`, `dataOptions`, `triggerEvent` flags, and dialog handlers.
 
 ## Tools Exposed by the Server
 
-The default `full` profile exposes **19 tools**. With `ESPLUS_MCP_PROFILE=front-door`, three are hidden (one advanced + two legacy parsers) and only the scene router, the page composer, the front door, the single-surface fragments, and the deterministic support tools remain.
+The default `full` profile exposes **19 tools**. With `ESPLUS_MCP_PROFILE=front-door`, seven heavyweight/compat/legacy entries are hidden and only the scene router, the page composer, and the deterministic support tools remain.
 
 | Tool | Purpose | front-door |
 |------|---------|:----------:|
 | `generate_scene` | **FRONT DOOR / SCENE ROUTER** — pick what is being built (`crud` / `table` / `form` / `dialog`) and pass that scene's intent table; output is byte-identical to the matching legacy tool. | ✅ |
 | `generate_composition` | **PAGE COMPOSER** — assemble multiple standalone fragments (`table` / `form` / `dialog`) into one working `Page.vue`; wiring is derived from the artifact runtime contract and explicit `wires` are accepted (multi-table master-detail, multi-dialog). A wire target must be a channel the page can actually call (`ARTIFACT_RUNTIME.invokable`: table `refresh`/`reload`, form `validate`/`resetFields`, component dialog `open`/`close`; `form.model` is data, not a method); `open` is only reachable from a `row-action` (it carries the row); a composable dialog has no template ref and can only be opened by row-button dispatch; `when.rowAction` must be a declared `rowButtons` key, otherwise the generated branch never fires. Row-action wires pass the whole row by default — use `to.model` (`{ departmentId: '$row.departmentId' }`) to pass only chosen fields. The default `behavior` is `data-wiring`, which only derives table reload/refresh (no POST/PUT/DELETE/GET — use scene 'crud' for built-in requests); `ui-only` turns query/reset/success into page events. A form fragment only emits what its `buttons` render — `none` (the default) renders no buttons at all, `query` emits query+reset, `submit` emits submit+reset — so wires from a channel the form cannot emit are named in `warnings` (composition never rewrites a node's intent, and a page that declares `save` with no save button is a dead branch). With more than one table and no `role: 'master'` there is no single default table, so data wiring is upgraded to page events and named in the artifact/envelope `warnings` (the page's per-node `<nodeCamel>Refresh` / `<nodeCamel>Reload` methods — node `order-list` exposes `orderListRefresh`/`orderListReload` — or declare `role: 'master'`). Invalid wiring is rejected at plan time with the node named in the error, and the page's `emits` face is projected from the final wires. | ✅ |
-| `generate_crud` | **COMPAT ENTRY (adapter)** — same bytes as `generate_scene` with `scene: 'crud'`; fill the `surfaces` intent table. Kept for hosts that already call this name. | ✅ |
-| `generate_form` | **Fragment** — a self-contained `<es-form>` SFC (own model + `formItemList`) | ✅ |
-| `generate_table` | **Fragment** — a self-contained `<es-table>` SFC (columns, options, data source, pagination) | ✅ |
-| `generate_dialog` | **Fragment** — a reusable `useXxxDialog()` composable (default) or a self-contained `<es-dialog>` SFC | ✅ |
+| `generate_crud` | **COMPAT ENTRY (adapter)** — same bytes as `generate_scene` with `scene: 'crud'`; fill the `surfaces` intent table. Kept for hosts that already call this name. | ⛔ |
+| `generate_form` | **Fragment** — a self-contained `<es-form>` SFC (own model + `formItemList`); reachable in front-door as `generate_scene` scene `'form'` | ⛔ |
+| `generate_table` | **Fragment** — a self-contained `<es-table>` SFC (columns, options, data source, pagination); reachable as scene `'table'` | ⛔ |
+| `generate_dialog` | **Fragment** — a reusable `useXxxDialog()` composable (default) or a self-contained `<es-dialog>` SFC; reachable as scene `'dialog'` | ⛔ |
 | `detect_project_target` | Read the host `package.json` and pick `vue3` / `vue2` / `antdv` — **run this before any `generate_*`** | ✅ |
 | `validate_config` | Validate a config against the live schema (judge-only; it does not rewrite) | ✅ |
 | `ingest_schema` | Draft a config from OpenAPI / JSON Schema / sample JSON / TS interface / SQL DDL (deterministic, a head start you then edit) | ✅ |
@@ -284,7 +284,7 @@ The default `full` profile exposes **19 tools**. With `ESPLUS_MCP_PROFILE=front-
 | `generate_crud_page` | **LEGACY FALLBACK** (no-LLM) — build a CRUD page from natural-language intent via a regex/keyword parser; accuracy is bounded by keyword coverage. | ⛔ |
 | `generate_crud_schema` | **LEGACY FALLBACK** (no-LLM) — `CrudPageSchema` JSON + wrapper SFC from the same regex parser. | ⛔ |
 
-The profile only changes which tools are *listed* — the hidden three share the same deterministic generator as `generate_crud`. Prompts, resources and tool descriptions are adapted from the same profile, so the host is never told to call a tool that isn't registered.
+The profile only changes which tools are *listed*: the hidden compat entry and fragment tools are reproducible byte-for-byte through `generate_scene`'s matching scene (same emitters, asserted by `check-scene-parity`); the advanced/legacy three stay available in `full`. This cuts the host's per-turn `tools/list` payload from ~171 KB to ~21 KB. Prompts, resources and tool descriptions are adapted from the same profile, so the host is never told to call a tool that isn't registered.
 
 ## Resources Exposed by the Server
 

@@ -139,7 +139,7 @@ export const SURFACES_EXAMPLES: SurfacesExample[] = [
     label: "Standalone table — a list that sits beside other UI (no table-less surfaces)",
     nl: "给我一个服务器日志表格：IP、级别、消息、时间，数据来自 /api/logs，我要把它放进自己的面板里。",
     reasoning:
-      "用户要的就是一张表、要嵌进自定义面板 → 只填 table。注意：这里 table 存在 → 仍是组合→generateFromConfig 路线（会产出整页 schema+包装 SFC）。若要真正可嵌入的裸 <es-table> 片段，用独立工具 generate_table；前门填 table 面产出的是整页。",
+      "用户要的就是一张表、要嵌进自定义面板 → 只填 table。注意：这里 table 存在 → 仍是组合→generateFromConfig 路线（会产出整页 schema+包装 SFC）。若要真正可嵌入的裸 <es-table> 片段，用 `generate_scene` 的 scene='table'；前门填 table 面产出的是整页。",
     route: "compose→generateFromConfig",
     input: {
       name: "ServerLog",
@@ -331,7 +331,7 @@ function buildContent(): string {
   const intro = [
     "# Natural-language → `generate_scene` (scene='crud') surfaces — few-shot examples",
     "",
-    "`generate_scene` (scene='crud') is the FRONT DOOR; `generate_crud` is the same route under a compatibility name and produces identical bytes. Your only real decision is filling `surfaces`:",
+    "`generate_scene` (scene='crud') is the FRONT DOOR. Your only real decision is filling `surfaces`:",
     "which of **query / table / form / dialog** the request implies, and the fields in each.",
     "Routing is then deterministic — you never pick a tool or orchestrate several:",
     "",
@@ -348,7 +348,7 @@ function buildContent(): string {
     "",
     "**Field-level extras:** a field entry may also carry `isHidden` (conditional visibility — plain JSON, **condition-true ⇒ hidden**; the key is `isHidden`, NOT `isVisible`, so write the hide condition), `reactions` (field linkage: `[{dependencies, when, fulfill}]`, plain JSON, never a callback) and `labelKey` (i18n label key) directly on the field object — the same field vocabulary as the config path. Only `query`/`form` fields honor `isHidden`/`reactions`.",
     "",
-    "For an explicit single-component ask (or a fragment next to non-es-plus UI), the standalone tools `generate_form` / `generate_table` / `generate_dialog` take the same field vocabulary.",
+    "For an explicit single-component ask (or a fragment next to non-es-plus UI), use `generate_scene` with scene='form' / 'table' / 'dialog' — same field vocabulary.",
     "",
     "---",
     "",

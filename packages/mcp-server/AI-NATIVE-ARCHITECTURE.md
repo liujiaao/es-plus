@@ -73,7 +73,7 @@ MCP server **不调用模型、不写文件、不持有会话**。所有“理�
                                 │ MCP (stdio)
 ┌───────────────────────────────▼─────────────────────────────────────┐
 │ packages/mcp-server（无状态、无模型、纯函数）                         │
-│  · tools    19 个（full）/ 16 个（front-door）                       │
+│  · tools    19 个（full）/ 12 个（front-door）                       │
 │  · resources 9 族（conventions / types / examples / nl-to-config /   │
 │              surfaces / crud-page-schema / schemas /                │
 │              design-extraction / capabilities）                     │
@@ -172,7 +172,7 @@ surfaces
 
 ---
 
-## 4. 工具手册（full 19 / front-door 16）
+## 4. 工具手册（full 19 / front-door 12）
 
 ### 4.0 工具面 profile（AN-26）
 
@@ -181,8 +181,12 @@ surfaces
 | profile | 注册数 | 隐藏 |
 |---|---|---|
 | `full`（**默认**） | 19 | — |
-| `front-door` | 16 | `generate_crud_from_config`（ADVANCED）、`generate_crud_page` / `generate_crud_schema`（LEGACY FALLBACK） |
+| `front-door` | 12 | `generate_crud`（兼容入口）、`generate_form` / `generate_table` / `generate_dialog`（单面片段）、`generate_crud_from_config`（ADVANCED）、`generate_crud_page` / `generate_crud_schema`（LEGACY FALLBACK） |
 
+- 隐藏标准不是「旧不旧」，而是 **`generate_scene` 能否逐字节复现**：四个 scene 复用同一组
+  发射器，`check:scene-parity` 证明产物相同。被隐藏的 7 个工具的名称因此**不进入** front-door
+  的任何描述/提示词/资源（`check:tool-surface` 反向断言），宿主不会拿到 tool not found。
+  收益是宿主每轮 `tools/list` 从 ~244 KB 降到 ~21 KB（`check:surface-budget` 守卫，预算 40 KB）。
 - 默认 `full` 是**刻意**的：§9.4 的废弃流程要求开关「默认关闭」，且存量宿主与本站文档仍在
   调 `generate_crud_from_config`；改默认会让它们在同一个小版本里静默失败。待 AN-25 收敛完成
   后再翻转默认值。
@@ -190,6 +194,8 @@ surfaces
   tool-not-found。
 - 守卫 `check:tool-surface`：唯一 `FRONT DOOR` 措辞、两档工具集合精确互补、解析器大小写/空白
   归一。`__tests__/tool-surface.spec.ts` 在进程内做同一组断言，防止守卫与测试分叉。
+- 守卫 `check:surface-budget`：读 `tools-list.snapshot.json` 的预算棘轮（front-door 总量 40 KB /
+  单工具 10 KB，full 总量 250 KB / 单工具 85 KB）；`tools:list:check` 先证明快照与源码一致。
 
 ### 4.1 总览矩阵
 
@@ -680,7 +686,7 @@ __tests__/golden/cases/
 | 路径 | 职责 |
 |---|---|
 | `src/index.ts` | server 创建、instructions |
-| `src/tools/index.ts` | 19 工具注册（full；front-door 16） |
+| `src/tools/index.ts` | 19 工具注册（full；front-door 12） |
 | `src/tools/generate-crud.ts` | 前门 + surfaces 形状 |
 | `src/tools/generate-from-config.ts` | 配置直通 + 语义告警 |
 | `src/tools/_fragment-shapes.ts` | 片段/前门字段形状 |

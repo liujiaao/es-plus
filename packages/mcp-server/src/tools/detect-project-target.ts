@@ -178,7 +178,9 @@ export function registerDetectProjectTarget(server: McpServer, profile: ToolProf
   // 第一步之后就断了（宿主拿到 tool not found，或干脆跳过探目标去默认 vue3）。
   const generators =
     profile === "front-door"
-      ? "generate_scene / generate_composition / generate_crud / generate_form / generate_table / generate_dialog / get_component_api"
+      // front-door 只有场景路由器一个生成入口：四个 scene 覆盖页面与单面片段，
+      // 不能再点名兼容 adapter 或片段工具（它们在这一档不注册）。
+      ? "generate_scene (scene='crud' for a page; 'table' / 'form' / 'dialog' for one fragment) / generate_composition / get_component_api"
       // full 档同时注册前门与 legacy。这里必须把**首选入口**放前面：只点名
       // generate_crud_page / generate_crud_schema 会把宿主引向两个自述「LEGACY
       // FALLBACK…use generate_crud instead」的解析器，而首选链路（generate_scene /

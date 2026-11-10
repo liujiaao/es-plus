@@ -28,14 +28,22 @@ import { withArgGuard } from "./_arg-guard.js";
  * profile 适配，故不能让它们反向依赖这一层的工具注册模块。这里 re-export，
  * 既有 `import { resolveToolProfile } from "./tools/index.js"` 不受影响。
  *
- * `front-door`：只留「场景路由器 + 组合页 + 前门 + 确定性支撑 + 单面片段」。
- *   · 保留 `generate_scene`（场景第一入口）、`generate_composition`（片段装页）、
- *     `generate_crud`（兼容前门）、`generate_form/table/dialog`（单组件显式诉求，
- *     前门描述里明确让宿主在这种场景改用它们）、`validate_config`、`ingest_schema`、
+ * `front-door`：只留「场景路由器 + 组合页 + 确定性支撑」。
+ *   · 保留 `generate_scene`（唯一生成入口，四个 scene 全覆盖）、
+ *     `generate_composition`（片段装页）、`validate_config`、`ingest_schema`、
  *     `refine_config`、`list_form_types`、`get_component_api`、`scaffold_page`、
- *     `doctor_page`、`detect_project_target`；
- *   · 隐藏 `generate_crud_from_config`（hand-authored 高级路径）、
- *     `generate_crud_page` / `generate_crud_schema`（regex 解析的 legacy fallback）。
+ *     `doctor_page`、`detect_project_target`、`validate_intent`、`coverage_report`；
+ *   · 隐藏 7 个：`generate_crud`（兼容 adapter —— `generate_scene` 的 scene='crud'
+ *     逐字节相同）、`generate_form` / `generate_table` / `generate_dialog`
+ *     （单面片段 —— `generate_scene` 的 scene='form'|'table'|'dialog' 逐字节相同，
+ *     由 `check-scene-parity` 证明）、`generate_crud_from_config`（hand-authored
+ *     高级路径）、`generate_crud_page` / `generate_crud_schema`（regex legacy）。
+ *
+ * 为什么连兼容入口与片段工具一起藏：它们各自编码了一整套 JSON Schema
+ * （2026-11-10 实测 `generate_crud` 80.9 KB、片段三件 68.9 KB），宿主每轮都要读；
+ * 而 `generate_scene` 的 intent 是一个不展开的 record（1.9 KB）。同一个发射器、
+ * 同一份形状（`SCENE_INTENT_SCHEMAS` 直接复用 `crudShape` / `*Shape`），产物逐字节
+ * 相同，所以「少 4 个入口」不损失任何能力。full 档保留它们做兼容，默认档不受影响。
  */
 export { resolveToolProfile, type ToolProfile };
 
@@ -46,18 +54,21 @@ export function registerTools(server: McpServer, profile: ToolProfile = resolveT
   server = withArgGuard(server);
 
   registerDetectProjectTarget(server, profile);
-  // Scene router — the scene-first entry (P2). Same emitters as the tools below.
-  registerGenerateScene(server);
+  // Scene router — the scene-first entry and, under front-door, the ONLY generator.
+  // Full keeps the flat entries below for compatibility; both paths share the same
+  // emitters (`SCENE_INTENT_SCHEMAS` reuses the flat shapes verbatim).
+  registerGenerateScene(server, profile);
   // Page composer — assembles standalone fragments into one page (P6b).
   registerGenerateComposition(server);
-  // Front door — the preferred entry for any composite / CRUD request.
-  registerGenerateCrud(server);
-  // Standalone single-surface tools (explicit single-component asks, or embedding
-  // a fragment next to native/third-party components).
-  registerGenerateForm(server);
-  registerGenerateTable(server);
-  registerGenerateDialog(server);
   if (!frontDoorOnly) {
+    // Front door adapter — byte-identical to scene='crud'.
+    registerGenerateCrud(server);
+    // Standalone single-surface tools (explicit single-component asks, or embedding
+    // a fragment next to native/third-party components). front-door reaches the
+    // same artifacts through scene='form' / 'table' / 'dialog'.
+    registerGenerateForm(server);
+    registerGenerateTable(server);
+    registerGenerateDialog(server);
     // LEGACY FALLBACK — regex/keyword parsers kept for quick prototypes; the
     // descriptions say so and point at the front door / advanced path.
     registerGenerateCrudPage(server);

@@ -58,7 +58,15 @@ async function resourceText(profile: "full" | "front-door", uri: string): Promis
   return res.contents[0].text as string;
 }
 
-const HIDDEN = ["generate_crud_from_config", "generate_crud_page", "generate_crud_schema"];
+const HIDDEN = [
+  "generate_crud",
+  "generate_form",
+  "generate_table",
+  "generate_dialog",
+  "generate_crud_from_config",
+  "generate_crud_page",
+  "generate_crud_schema",
+];
 
 describe("crud-page 提示词", () => {
   it("full：保持原引导（DRAFT config → generate_crud_from_config）", async () => {
@@ -199,8 +207,8 @@ describe("工具描述（tools/list 的第一句）", () => {
   const full = captureToolDescriptions("full");
   const frontDoor = captureToolDescriptions("front-door");
 
-  it("front-door：16 个已注册工具的描述都不把宿主指向被隐藏的工具", () => {
-    expect(Object.keys(frontDoor)).toHaveLength(16);
+  it("front-door：12 个已注册工具的描述都不把宿主指向被隐藏的工具", () => {
+    expect(Object.keys(frontDoor)).toHaveLength(12);
     for (const [name, { desc }] of Object.entries(frontDoor)) {
       for (const hidden of HIDDEN) {
         expect(desc, `${name} 的描述里出现了未注册的 ${hidden}`).not.toContain(hidden);
@@ -219,7 +227,6 @@ describe("工具描述（tools/list 的第一句）", () => {
     // 前门自己的描述不再把「高级路径」当作参照（键集语义改指配置块，两种档位同一句）
     expect(full.generate_crud.desc).not.toContain("generate_crud_from_config");
     expect(paramDesc(full.generate_crud, "tableOptions")).toContain("StructuredCrudConfig.tableOptions");
-    expect(paramDesc(frontDoor.generate_crud, "tableOptions")).not.toContain("generate_crud_from_config");
   });
 
   it("refine_config：两种档位都点名「块级差异」，加弹窗/改布局不再算「无差异」", () => {
@@ -230,8 +237,9 @@ describe("工具描述（tools/list 的第一句）", () => {
     }
   });
 
-  it("ingest_schema / detect_project_target：front-door 下改指前门与单面工具", () => {
+  it("ingest_schema / detect_project_target：front-door 下改指场景路由器", () => {
     expect(frontDoor.ingest_schema.desc).toContain("`generate_scene`'s (scene='crud') `surfaces`");
-    expect(frontDoor.detect_project_target.desc).toContain("generate_scene / generate_composition");
+    expect(frontDoor.detect_project_target.desc).toContain("generate_scene (scene='crud' for a page");
+    expect(frontDoor.detect_project_target.desc).toContain("generate_composition");
   });
 });

@@ -257,16 +257,16 @@ mcp-server-es-plus --help        # 用法说明
 
 ## MCP Tools（可调用工具）
 
-配置完成后，AI 工具会自动发现并使用以下 **19 个工具**（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 1 个高级 + 2 个 legacy 工具，只留场景路由器、组合页、前门、单面片段与支撑工具）：
+配置完成后，AI 工具会自动发现并使用以下 **19 个工具**（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 7 个重量级/兼容/legacy 入口，只留场景路由器、组合页与确定性支撑工具）：
 
 | 工具 | 定位 | front-door |
 |------|------|:----------:|
 | `generate_scene` | **前门 / 场景路由器**：按「要建什么」（crud / table / form / dialog）+ 场景意图表生成，产物与旧工具逐字节相同 | ✅ |
 | `generate_composition` | **组合页**：把多个独立片段（table / form / dialog）装成一张能跑的 `Page.vue`，接线由运行时契约确定，也接受显式 `wires` | ✅ |
-| `generate_crud` | **兼容入口（adapter）**：与 `generate_scene` 的 `scene='crud'` 逐字节相同，保留旧工具名 | ✅ |
-| `generate_form` | 单面片段：独立 `<es-form>` SFC | ✅ |
-| `generate_table` | 单面片段：独立 `<es-table>` SFC | ✅ |
-| `generate_dialog` | 单面片段：独立 `useXxxDialog()` composable 或 `<es-dialog>` SFC | ✅ |
+| `generate_crud` | **兼容入口（adapter）**：与 `generate_scene` 的 `scene='crud'` 逐字节相同，保留旧工具名 | ⛔ |
+| `generate_form` | 单面片段：独立 `<es-form>` SFC | ⛔ |
+| `generate_table` | 单面片段：独立 `<es-table>` SFC | ⛔ |
+| `generate_dialog` | 单面片段：独立 `useXxxDialog()` composable 或 `<es-dialog>` SFC | ⛔ |
 | `detect_project_target` | 读宿主 `package.json` 判定 `vue3` / `vue2` / `antdv` | ✅ |
 | `validate_config` | 确定性校验配置（只判不改） | ✅ |
 | `ingest_schema` | OpenAPI / JSON Schema / 示例 JSON / TS 接口 / SQL DDL → 草拟配置 | ✅ |
@@ -281,13 +281,13 @@ mcp-server-es-plus --help        # 用法说明
 | `generate_crud_page` | **LEGACY FALLBACK**：正则/关键词解析（无 LLM 兜底） | ⛔ |
 | `generate_crud_schema` | **LEGACY FALLBACK**：正则 → CrudPageSchema + 包装 SFC | ⛔ |
 
-> profile 是**工具面**的开关，不是能力差异：被隐藏的三个工具与 `generate_crud` 共用同一套确定性生成器，隐藏它们只是为了让宿主在前门与 legacy 路径之间没有选择歧义。提示词、resources 与工具描述会按同一份 profile 同步调整。
+> profile 是**工具面**的开关，不是能力差异：被隐藏的兼容入口与三个单面片段，产物都能由 `generate_scene` 的对应 `scene` 逐字节复现（同一组发射器，`check-scene-parity` 断言）；高级/legacy 三个则只在 `full` 档可见。隐藏它们是为了让宿主在前门与旧入口之间没有选择歧义，同时把每轮必读的 `tools/list` 从约 171 KB 压到约 21 KB。提示词、resources 与工具描述会按同一份 profile 同步调整。
 
 ### generate_scene（前门 / 场景路由器 / SCENE ROUTER）
 
-**功能**：按「用户要建什么」而不是「记得哪个工具名」来生成。入参是 `{ scene, intent }`：`scene` 取 `crud` / `table` / `form` / `dialog`，`intent` 是该场景的意图表 —— `scene: 'crud'` 时与 `generate_crud` 的入参完全相同（`name` / `apiUrl` / `surfaces` / 可选旋钮），片段场景则与 `generate_table` / `generate_form` / `generate_dialog` 的入参相同。路由与发射由确定性代码完成，产物与对应旧工具**逐字节相同**，因此可以在两者之间无感切换。
+**功能**：按「用户要建什么」而不是「记得哪个工具名」来生成。入参是 `{ scene, intent }`：`scene` 取 `crud` / `table` / `form` / `dialog`，`intent` 是该场景的意图表 —— `scene: 'crud'` 时与 `generate_crud` 的入参完全相同（`name` / `apiUrl` / `surfaces` / 可选旋钮），片段场景则与 `generate_table` / `generate_form` / `generate_dialog` 的入参相同。路由与发射由确定性代码完成，产物与对应旧工具**逐字节相同**，因此可以在 `full` 档的旧入口与 `front-door` 档的场景入口之间无感切换。
 
-**何时使用**：当你想显式命名产物类别（页面 / 独立表格 / 独立表单 / 弹窗）时。多个片段要装进**同一张页面**时用 `generate_composition`；普通列表/表格页面用 `scene: 'crud'`（`generate_crud` 是同一条路径的兼容别名）。
+**何时使用**：当你想显式命名产物类别（页面 / 独立表格 / 独立表单 / 弹窗）时。多个片段要装进**同一张页面**时用 `generate_composition`；普通列表/表格页面用 `scene: 'crud'`（`full` 档的 `generate_crud` 是同一条路径的兼容别名，`front-door` 档不注册）。
 
 ### generate_composition（组合页 / PAGE COMPOSER）
 
@@ -884,4 +884,4 @@ MCP Server 生成的是标准 @es-plus/vue3 配置代码。如果需要调整风
 | 1.1.0 | 新增 `generate_crud_from_config` 工具，支持多弹窗配置生成 |
 | 1.0.0 | 初始发布：5 Tools + 8 Resources + 2 Prompts |
 
-> 想看某一版**准确的**工具/资源清单，以运行时为准：`validate_config` 之类的工具名可直接在客户端工具面板查看，或用 `check:tool-surface` 的源码断言（`full` 19 / `front-door` 16）。
+> 想看某一版**准确的**工具/资源清单，以运行时为准：`validate_config` 之类的工具名可直接在客户端工具面板查看，或用 `check:tool-surface` 的源码断言（`full` 19 / `front-door` 12）。

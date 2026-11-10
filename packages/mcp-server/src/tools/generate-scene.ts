@@ -11,6 +11,7 @@ import {
   type ScenePlan,
 } from "@es-plus/shared";
 import { registerArtifactTool, withEnvelope } from "./_artifact-content.js";
+import type { ToolProfile } from "../profile.js";
 import { crudShape } from "./generate-crud.js";
 import { tableShape } from "./generate-table.js";
 import { formShape } from "./generate-form.js";
@@ -44,7 +45,7 @@ const sceneShape = {
   intent: z
     .record(z.string(), z.any())
     .describe(
-      "The scene's intent table. scene='crud': the same keys as the generate_crud compat entry (name/apiUrl/surfaces/…). scene='table'|'form'|'dialog': the same keys as generate_table/generate_form/generate_dialog (fields/…). Fill only the keys for the chosen scene; unknown keys are rejected with a did-you-mean.",
+      "The scene's intent table. scene='crud': the page intent (name/apiUrl/surfaces/…). scene='table'|'form'|'dialog': that standalone artifact's intent (fields/…). Fill only the keys for the chosen scene; unknown keys are rejected with a did-you-mean.",
     ),
 } as const;
 
@@ -82,11 +83,15 @@ function invalidIntentError(scene: SceneId, issues: z.ZodIssue[]): string {
   ].join("\n");
 }
 
-export function registerGenerateScene(server: McpServer) {
+export function registerGenerateScene(server: McpServer, profile: ToolProfile = "full") {
+  const description =
+    profile === "front-door"
+      ? "FRONT DOOR — SCENE ROUTER: the scene-first way to generate es-plus code. Call with `scene` = what the user is building ('crud' page / standalone 'table' / standalone 'form' / 'dialog') and `intent` = that scene's intent table. For scene='crud' the intent is the page intent (name, apiUrl, surfaces — your one reasoning step is still filling `surfaces`); for scene='table'|'form'|'dialog' it is that standalone artifact's intent (fields/…). Routing and emission are deterministic. When the client supports MCP structured output, the artifact envelope (`contract` / `files` / `config` / `warnings` / `fingerprint`) is also returned as `structuredContent`; the text content is unchanged. Use generate_composition when several of these pieces must live TOGETHER in one page."
+      : "FRONT DOOR — SCENE ROUTER: the scene-first way to generate es-plus code. Call with `scene` = what the user is building ('crud' page / standalone 'table' / standalone 'form' / 'dialog') and `intent` = that scene's intent table. For scene='crud' the intent is exactly the generate_crud argument object (name, apiUrl, surfaces — your one reasoning step is still filling `surfaces`); for the fragment scenes it is exactly the generate_table / generate_form / generate_dialog argument object. Routing and emission are deterministic, and the output is byte-identical to the corresponding legacy tool. When the client supports MCP structured output, the artifact envelope (`contract` / `files` / `config` / `warnings` / `fingerprint`) is also returned as `structuredContent`; the text content is unchanged. Use generate_composition when several of these pieces must live TOGETHER in one page; `generate_crud` remains available as the compatibility entry for a plain list/table page and produces the same bytes as scene='crud'.";
   registerArtifactTool(
     server,
     "generate_scene",
-    "FRONT DOOR — SCENE ROUTER: the scene-first way to generate es-plus code. Call with `scene` = what the user is building ('crud' page / standalone 'table' / standalone 'form' / 'dialog') and `intent` = that scene's intent table. For scene='crud' the intent is exactly the generate_crud argument object (name, apiUrl, surfaces — your one reasoning step is still filling `surfaces`); for the fragment scenes it is exactly the generate_table / generate_form / generate_dialog argument object. Routing and emission are deterministic, and the output is byte-identical to the corresponding legacy tool. When the client supports MCP structured output, the artifact envelope (`contract` / `files` / `config` / `warnings` / `fingerprint`) is also returned as `structuredContent`; the text content is unchanged. Use generate_composition when several of these pieces must live TOGETHER in one page; `generate_crud` remains available as the compatibility entry for a plain list/table page and produces the same bytes as scene='crud'.",
+    description,
     sceneShape,
     async (args: any) => {
       const scene: SceneId = isScene(args.scene) ? args.scene : DEFAULT_SCENE;

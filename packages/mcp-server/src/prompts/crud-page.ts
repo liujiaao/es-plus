@@ -53,12 +53,13 @@ function buildSystemPrompt(target: Target, profile: ToolProfile = "full"): strin
 (query / table / form / dialog + their field lists) and call \`generate_scene\`
 with \`scene: 'crud'\` rather than hand-writing the SFC — routing to the
 golden-covered generator is deterministic code, not your choice. For an explicit
-single-component ask use \`generate_form\` / \`generate_table\` /
-\`generate_dialog\`; put several of them on one page with \`generate_composition\`;
-never hand-assemble a CRUD page from them. (This server runs
-\`ESPLUS_MCP_PROFILE=front-door\`: \`generate_crud_from_config\`,
-\`generate_crud_page\` and \`generate_crud_schema\` are NOT registered.
-\`generate_crud\` is the same route under a compatibility name.)`
+single-component ask use \`scene: 'form'\` / \`'table'\` / \`'dialog'\` — each emits
+the same standalone artefact the old per-tool entry did; put several of them on
+one page with \`generate_composition\`; never hand-assemble a CRUD page from them.
+(This server runs
+\`ESPLUS_MCP_PROFILE=front-door\`: \`generate_crud\`, \`generate_form\`,
+\`generate_table\`, \`generate_dialog\`, \`generate_crud_from_config\`,
+\`generate_crud_page\` and \`generate_crud_schema\` are NOT registered.)`
       : `Preferred path: for most requests, DRAFT a StructuredCrudConfig and call the
 \`generate_crud_from_config\` tool rather than hand-writing the SFC — it maps
 your typed config to correct, compilable per-target code deterministically. Use

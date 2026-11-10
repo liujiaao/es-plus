@@ -273,7 +273,7 @@ MCP Server 默认（`full` profile）暴露 **19 个工具**，AI 编码工具�
 
 > **生成路径优先级**：`generate_scene` 是**前门 / 场景路由器**（先声明要建什么：crud / table / form / dialog，再填该场景的意图表；产物与对应旧工具逐字节相同）。`generate_composition` 是**组合页**（把多个独立片段装成一张能跑的 `Page.vue`，接线由运行时契约确定，也接受显式 `wires`）。`generate_crud` 是 `scene='crud'` 的**兼容入口（adapter）**，产物逐字节相同，保留旧工具名。`generate_crud_from_config` 是 **ADVANCED**（已持有类型化配置时直通，与前者共用同一生成器）。`generate_crud_page` / `generate_crud_schema` 是 **LEGACY FALLBACK**（无 LLM 的正则兜底，准确率受关键词表覆盖度限制）。
 >
-> 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏上述 1 个 ADVANCED + 2 个 LEGACY 工具，只留场景路由器、组合页、兼容入口、单面片段与确定性支撑工具（共 16 个）。
+> 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 7 个重量级/兼容/legacy 入口（`generate_crud`、`generate_form` / `generate_table` / `generate_dialog`、1 个 ADVANCED 与 2 个 LEGACY），只留场景路由器、组合页与确定性支撑工具（共 12 个）。隐藏标准不是「旧不旧」，而是 **`generate_scene` 能否逐字节复现**：四个 scene 复用同一组发射器（`check-scene-parity` 守卫）。效果是宿主每轮的 `tools/list` 从 ~244 KB 降到 ~21 KB（`check:surface-budget` 守卫）。
 
 ### generate_scene（前门 / 场景路由器 / SCENE ROUTER）
 

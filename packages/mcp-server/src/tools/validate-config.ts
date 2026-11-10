@@ -152,6 +152,10 @@ export function registerValidateConfig(server: McpServer, profile: ToolProfile =
     profile === "front-door"
       ? `${STRUCTURED_CRUD_TYPE} (the structured CRUD config the front door composes for you; validate a hand-authored one here)`
       : `${STRUCTURED_CRUD_TYPE} (the input of generate_crud_from_config)`;
+  const fragmentHint =
+    profile === "front-door"
+      ? `${ES_TABLE_TYPE} / ${ES_FORM_TYPE} / ${ES_DIALOG_TYPE} (the intents of generate_scene's 'table' / 'form' / 'dialog' scenes). `
+      : `${ES_TABLE_TYPE} / ${ES_FORM_TYPE} / ${ES_DIALOG_TYPE} (the inputs of generate_table / generate_form / generate_dialog). `;
   server.tool(
     "validate_config",
     "Validate an es-plus JSON configuration against its schema. Returns validation errors and fix suggestions. READ-ONLY: it judges and never repairs — format mistakes that the generators auto-fix (key aliases, relocated/nested keys, null placeholders, 'false'-style string booleans, dialog shorthands like dialogs:[\"add\"]) are reported here as errors. Use this to inspect a config; the generator tools repair such mistakes before generating (they report each repair).",
@@ -165,7 +169,7 @@ export function registerValidateConfig(server: McpServer, profile: ToolProfile =
         .describe(
           `Schema type to validate against. Available: ${listAvailableSchemas().join(", ")}, ` +
             `${structuredHint}, ` +
-            `${ES_TABLE_TYPE} / ${ES_FORM_TYPE} / ${ES_DIALOG_TYPE} (the inputs of generate_table / generate_form / generate_dialog). ` +
+            fragmentHint +
             `Defaults to "form-item".`
         ),
     },

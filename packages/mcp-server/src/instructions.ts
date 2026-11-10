@@ -14,18 +14,19 @@ export function buildInstructions(profile: ToolProfile = "full"): string {
 
   // ① 工具清单：只列**已注册**的生成入口。
   const codeGenTools = fd
-    ? "generate_scene / generate_composition / generate_crud /\ngenerate_form / generate_table / generate_dialog /\nscaffold_page / get_component_api"
+    ? "generate_scene / generate_composition / scaffold_page / get_component_api"
     : "generate_scene / generate_composition / generate_crud /\ngenerate_crud_from_config / generate_form / generate_table /\ngenerate_dialog / generate_crud_page / generate_crud_schema /\nscaffold_page / get_component_api";
 
   // ② 「高级路径仍可用」那一段：front-door 档下必须换成事实陈述。
   const advancedNote = fd
     ? `(\`generate_scene\` is the front door in this profile: pick \`scene\` ('crud' /
-'table' / 'form' / 'dialog') and fill that scene's \`intent\`. For a plain page
+'table' / 'form' / 'dialog') and fill that scene's \`intent\`. For a page
 \`scene: 'crud'\` composes a typed \`StructuredCrudConfig\` and runs the same
-deterministic generator; \`generate_crud\` takes that same intent table under a
-compatibility name and produces identical bytes. \`generate_composition\` puts
-1–3 standalone fragments on one page. \`validate_config\` and \`refine_config\`
-still accept a config you hand-author — they just don't emit code.)`
+deterministic generator; for a standalone fragment use \`table\` / \`form\` /
+\`dialog\` — those scenes emit exactly the artefacts the per-tool entries used to.
+\`generate_composition\` puts 1–3 standalone fragments on one page.
+\`validate_config\` and \`refine_config\` still accept a config you hand-author —
+they just don't emit code.)`
     : `(\`generate_crud_from_config\` remains available if you want to hand-author a full
 typed \`StructuredCrudConfig\` directly — \`generate_scene\` (scene='crud') and
 \`generate_crud\` are thinner intent layers over the same deterministic
@@ -37,21 +38,42 @@ fallback for hosts that can't reason.)`;
     ? "5. **Call** `generate_scene` (scene='crud'), then **read the\n   returned warnings"
     : "5. **Call** `generate_scene` (scene='crud') or its compatibility alias\n   `generate_crud`/`generate_crud_from_config`, then **read the\n   returned warnings";
 
-  // ④ 档位说明：只在 front-door 追加（回答「为什么工具表里少三个」）。
+  // ④ 档位说明：只在 front-door 追加（回答「为什么工具表里少七个」）。
   const profileNote = fd
     ? `
 ## Tool profile (front-door)
 
-This server runs with \`ESPLUS_MCP_PROFILE=front-door\`: \`generate_crud_from_config\`
-(advanced, hand-authored config) and \`generate_crud_page\` / \`generate_crud_schema\`
-(legacy regex fallbacks) are NOT registered. Use \`generate_scene\` for every
-request — \`scene: 'crud'\` for list/table pages, \`table\` / \`form\` / \`dialog\` for
-an explicit single component; \`generate_composition\` assembles several of those
-fragments into one page; \`generate_crud\` is the same route under a compatibility
-name (identical bytes). Restart the server without
-\`ESPLUS_MCP_PROFILE\` (or set it to \`full\`) to expose the advanced/legacy tools.
+This server runs with \`ESPLUS_MCP_PROFILE=front-door\`: \`generate_crud\`
+(the compat adapter), \`generate_form\` / \`generate_table\` / \`generate_dialog\`
+(the per-surface entries), \`generate_crud_from_config\` (advanced, hand-authored
+config) and \`generate_crud_page\` / \`generate_crud_schema\` (legacy regex
+fallbacks) are NOT registered. Use \`generate_scene\` for every generation
+request — \`scene: 'crud'\` for list/table pages, \`table\` / \`form\` / \`dialog\`
+for one standalone component; each scene emits exactly the artefact its old
+per-tool entry did (same shapes, same emitters, byte-identical output).
+\`generate_composition\` assembles several fragments into one page. Restart the
+server without \`ESPLUS_MCP_PROFILE\` (or set it to \`full\`) to expose the
+compat/advanced/legacy entries.
 `
     : "";
+
+  // ⑤ 正文里指名工具的两段：front-door 档下不能出现未注册的工具名。
+  const compatNote = fd
+    ? "There is no separate compatibility alias to choose between — `scene: 'crud'`\nis the page route."
+    : "**`generate_crud` is the same route under a compatibility name** (identical\nbytes) — use it only if a host prompt already names it.";
+  const standaloneNote = fd
+    ? `Use \`scene: 'form' | 'table' | 'dialog'\` ONLY for an explicit single-component
+ask, or to produce a fragment you'll drop next to native / third-party components:
+
+  - \`scene: 'form'\`   — one \`<es-form>\` SFC (filter / settings / embedded form)
+  - \`scene: 'table'\`  — one \`<es-table>\` SFC (list that sits beside other UI)
+  - \`scene: 'dialog'\` — one \`useXxxDialog()\` composable (reusable add/edit modal)`
+    : `Use a standalone tool ONLY for an explicit single-component ask, or to produce a
+fragment you'll drop next to native / third-party components:
+
+  - \`generate_form\`  — one \`<es-form>\` SFC (filter / settings / embedded form)
+  - \`generate_table\` — one \`<es-table>\` SFC (list that sits beside other UI)
+  - \`generate_dialog\`— one \`useXxxDialog()\` composable (reusable add/edit modal)`;
 
   return `# es-plus MCP server
 
@@ -96,15 +118,9 @@ is deterministic code, not your choice:
 So "which tool / how many tools" collapses to "set the surfaces that match the
 request". Table-only, query+table, table+add/edit, full CRUD, dialog-only — all
 are just different \`surfaces\` subsets of the SAME \`{ scene: 'crud', intent }\`
-call. **\`generate_crud\` is the same route under a compatibility name** (identical
-bytes) — use it only if a host prompt already names it.
+call. ${compatNote}
 
-Use a standalone tool ONLY for an explicit single-component ask, or to produce a
-fragment you'll drop next to native / third-party components:
-
-  - \`generate_form\`  — one \`<es-form>\` SFC (filter / settings / embedded form)
-  - \`generate_table\` — one \`<es-table>\` SFC (list that sits beside other UI)
-  - \`generate_dialog\`— one \`useXxxDialog()\` composable (reusable add/edit modal)
+${standaloneNote}
 
 When several of those pieces must live TOGETHER in one page (but the request is
 not a CRUD page), use **\`generate_composition\`** — it wires row actions to

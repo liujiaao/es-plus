@@ -106,6 +106,10 @@ export const GUARD_GROUPS = Object.freeze([
       'check:contract',
       'check:tool-shapes',
       'check:tool-surface',
+      // 顺序有依赖：tools:list:check 先证明快照与源码一致，check:surface-budget
+      // 只读快照，否则量的是陈旧产物。
+      'tools:list:check',
+      'check:surface-budget',
       'check:doc-drift',
       'check:render-plan',
       'check:threeway',

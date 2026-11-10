@@ -10,12 +10,14 @@
 | 批次 | 内容 | 状态 | 出口标准 | 判定 |
 |---|---|---|---|---|
 | **A** | W1 标准 + W2 1 小时 spike + `tools/list` 快照 | ✅ 完成 | 冻结产物重算，中文腿不变、英文腿可解释 | zh 未变、en 可逐维解释；spike 与快照今日落盘 |
-| **B** | W2 单源派生 + W3 工具收缩 | ✗ 未开始 | 守卫净减 ≥2,000 行；`tools/list` <40 KB | 镜像仍在（790 行）、宿主侧 171.1 KB |
+| **B** | W2 单源派生 + W3 工具收缩 | ◐ 部分（W3 ✅ / W2 ✗） | 守卫净减 ≥2,000 行；`tools/list` <40 KB | front-door 已降到 **21.1 KB / 12 工具**（<40 KB 达成）；W2 的 790 行镜像未动，故「净减 ≥2,000 行」未达成 |
 | **C** | W4 回读闭环 + W5 弱维度 | ✗ 未开始（W5 半套） | 往返测试绿；membership/dataOptions 有归因数据 | 无 `read_page`/`__esPlusSource`；产物无逐行 misses |
 | **D** | W6 legacy 退役 | ◐ 部分 | 无 importer；资源文案不再失实 | 文案已实（a5554f3）；importer 仍有 6 处 |
 
 A 批的「W1 标准」早在 `86316bf`（`+en-text-agnostic-v1`）与 `fc59d13`（`+label-typographic-v1`）
 落地；本日补的是 A 批剩下的两件：**W2 1 小时 spike** 与 **`tools/list` 快照**。
+B 批当日完成的是 **W3 工具收缩**（前门 16 → 12 工具、171.1 → 21.1 KB）与预算守卫；
+**W2 单源派生未动**，B 批的「净减 ≥2,000 行」仍未达成（见 §二 W2 与 §四）。
 
 ## 二、逐项核对（源码证据）
 
@@ -55,16 +57,17 @@ A 批的「W1 标准」早在 `86316bf`（`+en-text-agnostic-v1`）与 `fc59d13`
   「zod 3 与 zod 4 两代不能复用」，已改为当前事实（统一在 v4；镜像暂留的真实原因是
   `.default()` 注入、strip-vs-strict 与 profile 相关描述）。
 
-### W3 · 收工具面 —— ✗ 未开始
+### W3 · 收工具面 —— ✅ 完成（2026-11-10）
 
-宿主侧实测（`npm run tools:list:snapshot`，真 SDK 的 `client.listTools()`）：
+收缩前后的宿主侧实测（`npm run tools:list:snapshot`，真 SDK 的 `client.listTools()`）：
 
 | profile | 工具数 | 总字节 | 描述 | schema |
 |---|---|---|---|---|
-| front-door | 16 | **171.1 KB** | 14.0 KB | 157.1 KB |
-| full | 19 | **243.8 KB** | 16.2 KB | 227.7 KB |
+| front-door（收缩前） | 16 | 171.1 KB | 14.0 KB | 157.1 KB |
+| **front-door（收缩后）** | **12** | **21.1 KB** | 8.9 KB | 12.2 KB |
+| full（未变） | 19 | 243.8 KB | 16.2 KB | 227.6 KB |
 
-单工具（front-door，描述+schema）：
+收缩前各工具对 front-door 体积的贡献：
 
 | 工具 | 体积 | 占比 |
 |---|---|---|
@@ -74,19 +77,43 @@ A 批的「W1 标准」早在 `86316bf`（`+en-text-agnostic-v1`）与 `fc59d13`
 | `generate_form` | 20.2 KB | 12% |
 | `generate_scene` | **1.9 KB**（schema 0.9 KB） | 1% |
 
-full 档另有 `generate_crud_from_config` 70.6 KB，与 `generate_crud` 近乎重复。
-`<40 KB` 的出口要求把前四个大工具并进 `generate_scene` 的 intent record —— 这正是
-`generate_scene` 只有 1.9 KB 的原因，也是唯一可行的路径。
+**做法**：front-door 不再注册 7 个工具 —— `generate_crud`（`scene='crud'` 的兼容 adapter）、
+`generate_form` / `generate_table` / `generate_dialog`（三个单面片段，对应 `generate_scene` 的
+另外三个 scene）、`generate_crud_from_config`（ADVANCED）、`generate_crud_page` /
+`generate_crud_schema`（LEGACY）。隐藏标准不是「旧不旧」，而是 **`generate_scene` 能否逐字节
+复现**：四个 scene 复用同一组发射器，`check:scene-parity` 继续证明产物相同。
+
+改到的面（一处漏掉宿主就会拿到 tool not found）：
+
+- `src/tools/index.ts`：注册分支按 profile 拆开；
+- `generate-scene.ts` / `generate-composition.ts`：描述改为 profile 相关，front-door 档不点名被隐藏的工具；
+- `validate-config.ts`：片段类型名从「`generate_table` 的入参」改述为「scene `'table'` 的 intent」；
+- `detect-project-target.ts`：front-door 的 `generators` 只列 `generate_scene` / `generate_composition` / `get_component_api`；
+- `instructions.ts`、`prompts/crud-page.ts`、`resources/conventions.ts`、`resources/surfaces-examples.ts`：同源改写；
+- `src/profile.ts` 头注、`es-plus-docs/src/docs/mcp-server.{md,en.md}`、两份 README、
+  `AI-NATIVE-ARCHITECTURE.md`、`server.json`（registry manifest）与 `docs/why-es-plus.{md,en.md}`：
+  计数 16 → 12、隐藏名单 3 → 7。
+
+**新增守卫**：
+
+- `scripts/check-surface-budget.mjs`（`check:surface-budget`）：读快照做预算棘轮 ——
+  front-door 总量 40 KB / 单工具 10 KB，full 总量 250 KB / 单工具 85 KB，并断言
+  front-door 至少比 full 小 4 倍（防止重量级工具漏回前门）。
+- `tools:list:check` 首次入闸，排在预算守卫之前：先证明快照与源码一致，预算才量的不是陈旧产物。
+- `check-tool-surface` 的 `FRONT_DOOR_HIDDEN` 扩到 7，并对每个隐藏工具做反向断言。
+- **`check-doc-drift` 的一处自相矛盾已修**：`STALE` 黑名单里钉着 `| \`front-door\` | 12 |`，
+  收缩后 12 变成**正确值**，静态黑名单反而把正确文档判红。该数字已由动态断言覆盖，黑名单条目删除。
 
 已修 / 已否决：
 
 - ✅ `resources/examples.ts:27` 的失实文案已在 `a5554f3` 改为「legacy 引擎、仅作形状参考」，
   并由 `front-door-profile.spec.ts` 反向断言锁住。
 - ❌ **默认 profile 翻 `front-door` 已否决**：`profile.ts:19` 与 ARCHITECTURE §4.0/§9.4
-  写明「AN-25 收敛后才翻」，翻转会与文档决策对打。
+  写明「AN-25 收敛后才翻」，翻转会与文档决策对打。**因此 `<40 KB` 是「可达且已有守卫」，
+  不是默认档的事实**：默认 full 仍是 243.8 KB（兼容性决定，见 `check:surface-budget` 的棘轮）。
 - ✅ `cli-flags.ts` 的过期工具计数（「all 15 tools」）已在 `a5554f3` 改为 19 / 16。
-- ❌ **`check:surface-budget` 守卫尚未建立**；工具合并（片段三工具 → `generate_scene`）
-  未动，`generate_crud` 仍是独立注册项（虽然与 `generate_scene('crud')` 已共用同一条实现）。
+- ⏳ **`check:surface-budget` 已建立**；`generate_crud` 仍是 full 档的独立注册项
+  （与 `generate_scene('crud')` 共用同一条实现），但 front-door 已不再暴露它。
 
 ### W4 · 回读闭环 —— ✗ 未开始
 
@@ -135,8 +162,8 @@ full 档另有 `generate_crud_from_config` 70.6 KB，与 `generate_crud` 近乎�
   - `--check` 逐工具报告「新增 / 删除 / 定义变化」，带 KB 增量。
 - 基线：`packages/mcp-server/tools-list.snapshot.json`（424 KB）。
 - npm：`tools:list:snapshot` / `tools:list:check`。
-- **没有**进 `check:consistency`：它是 W2/W3 的审阅基线，等 `check:surface-budget`（B 批）
-  建立后再决定是否入闸，避免现在多一步 400 KB 的逐字节比对。
+- 2026-11-10 W3 起 `tools:list:check` 与 `check:surface-budget` 已入 `check:consistency`
+  （`cross-target` 组，顺序：快照一致性 → 预算），不再是只能手动运行的审阅基线。
 
 注意：两个 profile 的工具定义**不共用**。front-door 不只隐藏 3 个工具，还会改写描述与
 入参字段的 `describe`（`validate_config` 的 `structured-crud-config` 一句就不同）。快照
@@ -167,7 +194,7 @@ tools/list」。它钉住的是**能力前提**：`registerTool({ inputSchema: S
 
 | 批次 | 现在就能做 | 必须先解决 |
 |---|---|---|
-| B | 建 `check:surface-budget`（先锁 171.1 KB / 16 工具，再逐版收紧）；`generate_crud` 与 `generate_crud_from_config` 共用一条实现已是事实（`generate-crud.ts:158` → `emitSceneArtifact`） | W2 的默认值/strict/描述三件事；片段三工具并入 `generate_scene` 的逐字节 parity |
+| B | ✅ W3 已落地（前门 12 工具 / 21.1 KB，`check:surface-budget` 入闸）；W2 的默认值/strict/描述三件事仍未动，故「守卫净减 ≥2,000 行」未达成 | W2 三件事 + `_front-door-knobs.ts`（241 行）/ `_fragment-shapes.ts`（549 行）/ `configShape` 的镜像退役 |
 | C | `misses[]` 落 artifact（`scoreAll` 已有 `attrMisses`，只是没写出去）；往返测试骨架 | `__esPlusSource` 的发射位置与 `lossy[]` 契约；生成 → 回读 → 再生成的字节级断言 |
 | D | 拆 `generateScaffold` / `generateAppEntry` 的独立批次 | 逐消费方改指（CLI create / MCP examples 资源 / docs 回退 / demo） |
 

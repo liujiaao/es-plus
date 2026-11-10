@@ -63,26 +63,31 @@ describe("registerTools — full profile", () => {
   });
 });
 
+/** front-door 相对 full 隐藏的 7 个入口（2026-11-10 W3：场景路由器收缩）。 */
+const FRONT_DOOR_HIDDEN = [
+  "generate_crud",
+  "generate_form",
+  "generate_table",
+  "generate_dialog",
+  "generate_crud_from_config",
+  "generate_crud_page",
+  "generate_crud_schema",
+];
+
 describe("registerTools — front-door profile", () => {
   const tools = capture("front-door");
   const names = tools.map((t) => t.name);
 
-  it("隐藏 1 个高级 + 2 个 legacy 工具", () => {
-    for (const hidden of [
-      "generate_crud_from_config",
-      "generate_crud_page",
-      "generate_crud_schema",
-    ]) {
+  it("隐藏兼容 adapter、三个单面片段与 1 高级 + 2 legacy", () => {
+    for (const hidden of FRONT_DOOR_HIDDEN) {
       expect(names).not.toContain(hidden);
     }
   });
 
-  it("前门、单面片段与支撑工具一个不少", () => {
-    for (const kept of FULL_TOOLS.filter(
-      (n) => !["generate_crud_from_config", "generate_crud_page", "generate_crud_schema"].includes(n),
-    )) {
-      expect(names).toContain(kept);
-    }
+  it("场景路由器、组合页与确定性支撑工具一个不少", () => {
+    const kept = FULL_TOOLS.filter((n) => !FRONT_DOOR_HIDDEN.includes(n));
+    expect(names).toEqual(kept);
+    expect(names).toHaveLength(12);
   });
 });
 

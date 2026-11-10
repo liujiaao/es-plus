@@ -273,12 +273,14 @@ For large datasets, use server-side pagination with \`apiParams\` +
       ? `# Structured Config (the model generate_scene fills for you)
 
 ## When to Use
-This server runs \`ESPLUS_MCP_PROFILE=front-door\`: \`generate_crud_from_config\`,
-\`generate_crud_page\` and \`generate_crud_schema\` are NOT registered.
+This server runs \`ESPLUS_MCP_PROFILE=front-door\`: \`generate_crud\`,
+\`generate_form\`, \`generate_table\`, \`generate_dialog\`,
+\`generate_crud_from_config\`, \`generate_crud_page\` and \`generate_crud_schema\`
+are NOT registered.
 - \`generate_scene\` (scene='crud'): fill its \`surfaces\` intent table
   (query / table / form / dialog) — the routing builds this StructuredCrudConfig
-  for you, deterministically. \`generate_crud\` is the same route under a
-  compatibility name.
+  for you, deterministically. For one standalone component use scene='table' /
+  'form' / 'dialog' (same field vocabulary, same emitters).
 - Read this section to understand that emitted config, and to check a
   hand-authored one with \`validate_config({ type: 'structured-crud-config' })\`
   or \`refine_config\` (both stay available in this profile).`

@@ -14,10 +14,12 @@
  *      （registry 的 canonical entry 是真源；`generate_crud` 是兼容 adapter）；
  *   2. **层级标签**：`generate_crud_from_config` = ADVANCED，
  *      `generate_crud_page` / `generate_crud_schema` = LEGACY FALLBACK；
- *   3. **profile 开关**：`ESPLUS_MCP_PROFILE=front-door` 隐藏 1 个高级 + 2 个 legacy，
- *      其余工具（含场景路由器、组合页、单面片段与支撑工具）一个不少；未设置/未知值 = full。
+ *   3. **profile 开关**：`ESPLUS_MCP_PROFILE=front-door` 隐藏 7 个重量级/兼容/legacy
+ *      入口，只留场景路由器、组合页与确定性支撑工具；未设置/未知值 = full。
+ *      隐藏标准不是「旧不旧」，而是「`generate_scene` 能否逐字节复现」：四个 scene
+ *      复用同一组发射器，`check-scene-parity` 证明产物相同。
  *   4. **引导面同源**：front-door 下没有任何已注册工具的描述（或 initialize 的
- *      instructions）还教宿主「去调」被隐藏的工具 —— 工具表少三个、文案却不改，
+ *      instructions）还教宿主「去调」被隐藏的工具 —— 工具表少七个、文案却不改，
  *      宿主只会拿到 tool not found，且链路上没有任何运行时错误提示这是契约分叉。
  *      full 档反向断言指路**仍存在**，否则该循环会空转（把描述整体删掉也能通过）。
  *
@@ -59,8 +61,16 @@ const FULL_TOOLS = [
   'doctor_page',
 ]
 
-/** `front-door` 相对 `full` 隐藏的 3 个工具（1 个高级 + 2 个 legacy）。 */
-const FRONT_DOOR_HIDDEN = ['generate_crud_from_config', 'generate_crud_page', 'generate_crud_schema']
+/** `front-door` 相对 `full` 隐藏的 7 个工具（2026-11-10 W3：前门收缩到场景路由器）。 */
+const FRONT_DOOR_HIDDEN = [
+  'generate_crud',
+  'generate_form',
+  'generate_table',
+  'generate_dialog',
+  'generate_crud_from_config',
+  'generate_crud_page',
+  'generate_crud_schema',
+]
 
 const tmp = mkdtempSync(join(ROOT, 'node_modules', 'es-tool-surface-'))
 try {
@@ -120,16 +130,18 @@ try {
     fail(`full profile 存在重复注册：${fullNames.length - new Set(fullNames).size} 个重名`)
   }
 
-  // 2. front-door 必须恰好是 full 减去 3 个工具（不能顺手藏起单面片段/支撑工具）。
+  // 2. front-door 必须恰好是 full 减去登记的隐藏集（不能顺手藏起支撑工具）。
+  //    2026-11-10 起隐藏集含 4 个重量级生成入口：它们的形状合计占宿主 payload 的
+  //    绝大部分，而 `generate_scene` 的四个 scene 用同一组发射器、产物逐字节相同
+  //    （`check-scene-parity` 证明）。工具表变小，能力不变。
   const expectedFd = FULL_TOOLS.filter((n) => !FRONT_DOOR_HIDDEN.includes(n))
   const fdMissing = expectedFd.filter((n) => !fdNames.includes(n))
   const fdExtra = fdNames.filter((n) => !expectedFd.includes(n))
   if (fdMissing.length) fail(`front-door profile 漏注册：${fdMissing.join(', ')}`)
   if (fdExtra.length) fail(`front-door profile 不该注册：${fdExtra.join(', ')}`)
-  for (const name of ['generate_form', 'generate_table', 'generate_dialog']) {
-    if (!fdNames.includes(name)) {
-      fail(`front-door profile 隐藏了单面片段工具 ${name}：前门描述明确让宿主在这种场景用它`)
-    }
+  // 反向：隐藏集里的工具必须真的不在 front-door，避免登记表与实现漂移后空转。
+  for (const name of FRONT_DOOR_HIDDEN) {
+    if (fdNames.includes(name)) fail(`front-door 仍注册了登记为隐藏的 ${name}`)
   }
 
   // 3. 唯一 FRONT DOOR 标签。
