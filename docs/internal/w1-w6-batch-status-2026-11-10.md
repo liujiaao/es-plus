@@ -10,16 +10,17 @@
 | 批次 | 内容 | 状态 | 出口标准 | 判定 |
 |---|---|---|---|---|
 | **A** | W1 标准 + W2 1 小时 spike + `tools/list` 快照 | ✅ 完成 | 冻结产物重算，中文腿不变、英文腿可解释 | zh 未变、en 可逐维解释；spike 与快照今日落盘 |
-| **B** | W2 单源派生 + W3 工具收缩 | ◐ 部分（W3 ✅ / W2 主体 ✅，片段镜像待办） | 守卫净减 ≥2,000 行；`tools/list` <40 KB | front-door **21.1 KB / 12 工具**（<40 KB 达成）；W2 已退役旋钮 + configShape 两份镜像（净 **−396 行**，含新增派生层与单测）；「净减 ≥2,000 行」按实测**不可达**，`_fragment-shapes.ts`（549 行）仍待办 |
+| **B** | W2 单源派生 + W3 工具收缩 | ✅ 完成 | 守卫净减 ≥2,000 行；`tools/list` <40 KB | front-door **21.1 KB / 12 工具**（<40 KB 达成）；W2 三份镜像全部清零（旋钮 + configShape + 片段形状），**净 −667 行**；「净减 ≥2,000 行」按实测**不可达**（候选总量 ~1,140 行），出口标准已改判为「镜像清零」 |
 | **C** | W4 回读闭环 + W5 弱维度 | ✗ 未开始（W5 半套） | 往返测试绿；membership/dataOptions 有归因数据 | 无 `read_page`/`__esPlusSource`；产物无逐行 misses |
 | **D** | W6 legacy 退役 | ◐ 部分 | 无 importer；资源文案不再失实 | 文案已实（a5554f3）；importer 仍有 6 处 |
 
 A 批的「W1 标准」早在 `86316bf`（`+en-text-agnostic-v1`）与 `fc59d13`（`+label-typographic-v1`）
 落地；本日补的是 A 批剩下的两件：**W2 1 小时 spike** 与 **`tools/list` 快照**。
 B 批当日完成的是 **W3 工具收缩**（前门 16 → 12 工具、171.1 → 21.1 KB）、预算守卫，
-以及 **W2 单源派生的主体**（前门旋钮 + `generate_crud_from_config` 的 `configShape`）。
+以及 **W2 单源派生的全量**（前门旋钮 + `generate_crud_from_config` 的 `configShape`
++ `_fragment-shapes.ts` 的片段形状，三份手写镜像清零）。
 「净减 ≥2,000 行」实测**不可达**：全部手写镜像合计只有约 1,140 行候选，减去派生层与单测
-后净减约 400 行（见 §二 W2 与 §四）。
+后净减约 667 行；该出口标准已改判为**镜像清零**（见 §二 W2 与 §四）。
 
 ## 二、逐项核对（源码证据）
 
@@ -46,17 +47,18 @@ B 批当日完成的是 **W3 工具收缩**（前门 16 → 12 工具、171.1 �
   —— en 腿字段身份只能退回 `prop`，一行里一个字段名写法不同就整维判负。下一批该打命名与
   few-shot，而不是继续放宽 scorer。
 
-### W2 · 契约单一真源 —— ◐ 主体完成（2026-11-10，片段镜像待办）
+### W2 · 契约单一真源 —— ✅ 完成（2026-11-10）
 
-**已退役的两份镜像**（与 shared `StructuredCrudConfigSchema` 单源）：
+**已退役的三份镜像**（与 shared `StructuredCrudConfigSchema` / `SurfaceFieldSchema` 单源）：
 
 | 文件 | 之前 | 之后 | 做法 |
 |---|---|---|---|
 | `src/tools/_front-door-knobs.ts` | 241 行手写副本 | **48 行**（6 个 `deriveSchema(...)`） | 逐颗旋钮从 `StructuredCrudConfigSchema.shape.<knob>` 派生 |
 | `src/tools/generate-from-config.ts` | 330 行 `configShape` 字面量 + 318 行字段词汇表 | **7 行**（`const configShape = StructuredCrudConfigSchema.shape;`） | 整份 shape 直接复用；死词汇表随 configShape 一起删除 |
+| `src/tools/_fragment-shapes.ts` | **550 行**手写镜像（字段词汇 + 四组容器 + reactions） | **113 行**（容器 4 行派生 + surface 基座 8 行 + 输出适配） | 先把 shared 的 `SurfaceField` 从 TS interface 提升为权威 Zod（`SurfaceFieldSchema = FieldConfigSchema.omit({inQuery,inTable,inForm})`），弹窗底座用 `DialogBlockOptionsSchema = DialogConfigSchema.pick({…13 键})` |
 
 新增派生层 `src/tools/_derive.ts`（204 行，含契约注释）与 `__tests__/_derive.spec.ts`
-（15 例），把 spike 暴露的三个阻塞逐条解决：
+（16 例），把 spike 暴露的三个阻塞逐条解决：
 
 1. **去默认值** —— `.default()` 解包丢弃，但**保留「输入可省略」**（补 `.optional()`）。
    spike 实测的 `withRowkey` 误判（默认 `rowkey:'id'` 当成显式配置）由此消失。
@@ -84,28 +86,50 @@ B 批当日完成的是 **W3 工具收缩**（前门 16 → 12 工具、171.1 �
 - `readDialogContract` 的 `mcpDialogKeys` 同源（W2 后 mcp 的 `dialogs` 就是 shared 的
   `DialogConfigSchema`），但比较保留，用以兜住「派生被改成部分拼装」。
 
+**片段镜像（第二批，同一天）**：`_fragment-shapes.ts` 550 → 113 行。它不是
+`deriveSchema` 的 drop-in，三处**有意差异**写在文件头：
+
+1. **单面字段 / 弹窗选项 `.passthrough()`** —— MCP SDK 进 handler 前先 `safeParse`，
+   `z.object` 默认 strip：`fields[0].formType`、`options.widht` 这类拼写错误会在
+   `_arg-guard` 看到之前消失，did-you-mean 闸门恒空。让错键活到 handler 再判。
+2. **容器选项 `inherit`（保持 strip）** —— 与 shared 一致；未知旋钮丢弃不产生
+   「接受却永不注入」（发射枚举断言兜住）。
+3. **`formtype` 在单面字段上重新设必填** —— shared 用 `.default('Input')`，派生剥默认
+   后会变成可省略；但它是模型必须做的一次判断。表字段（`tableFieldSchema`）例外：
+   表格路径零消费者，放宽为 optional。
+
+`check-fragment-contract` 的 Zod 一侧改为**运行时读取**（`captureFrontDoor()` 现打包源码），
+因为派生结果没有字面量可切；并新增 `assertDerivedShapes()` 反向断言「不再有手写
+`z.object` 字面量」。`entry-keys.readReachability` 的容器键同样按
+`FRAGMENT_DERIVED_MARKERS` 复用 shared 切片（含 optional 包装的拆层）。
+
+派生的第一轮就抓到一个**真实缺陷**（不是既有 bug，是派生暴露的 zod 4 语义坑）：
+`value: z.unknown().optional()` 里 `z.unknown().isOptional()` 为 `true`，按它判断
+「已可选」会丢掉 `ZodOptional` 包装，而 object 里 `z.unknown()` 仍要求键存在 ——
+`isHidden: { field, op }` 这种省略 `value` 的合法条件被判 `expected nonoptional`，
+43–46 号 golden 全部过不了前门。判据改为看**包装层**（`_zod.def.type === 'optional'`），
+`_derive.spec` 加一例钉住。
+
+同时 `rules` / `permissionValue` 两条教学文案原本**只**存在于手写镜像，派生后
+`check-fragment-prompts` 立刻变红（片段 prompt 的唯一教学来源就是 shape 的
+`.describe()`）—— 已上提到 shared 权威 schema，三处一起受益。
+
 **代价与预算**：
 
-- full 档 `tools/list` 243.8 → **266.7 KB**（`generate_crud_from_config` 84.3 KB）。
-  增长全部来自把 shared 的权威文案搬上教学面 —— 手写副本里有事实性错误，例如称
-  antdv 的 `a-table` 支持虚拟滚动（实际两端都没有）。`check:surface-budget` 的 full
-  总量预算由 260 上调到 275，理由写在脚本注释里（棘轮允许有据上调）。
-- front-door 档不变（**21.1 KB / 12 工具**）：前门旋钮的文案本来就与 shared 同源。
+- full 档 `tools/list` 243.8 → **340.8 KB**（`generate_crud` 130.5 KB：
+  `surfaces.query/table/form` 三处各内联一次字段形状）。增长全部来自把 shared 的权威
+  文案搬上教学面 —— 手写副本里有事实性错误，例如称 antdv 的 `a-table` 支持虚拟滚动
+  （实际两端都没有）。`check:surface-budget` 的 full 预算 250/85 → 275/95 → 345/135
+  两次有据上调，理由写在脚本注释里（棘轮允许有据上调）。
+- front-door 档不变（**21.1 KB / 12 工具**）：前门不含这四个工具。
 - `check:consistency` 142/143，唯一红的是 `check:eval-freshness`（语料哈希与 prompt
   指纹都变了 —— 派生的描述进了 prompt 源）。**这是预期**：已发布数字必须由一次新的
   完整测量替换，本批不买这次 token。
 
-**未做（下一批）**：
-
-- `_fragment-shapes.ts`（**549 行**）。它不是 drop-in：片段 surface 刻意**去掉**
-  `inQuery/inTable/inForm` 成员键（由 `composeCrudConfig` 派生），且全层
-  `.passthrough()`，`deriveSchema` 只能做「剥默认值 + 收紧」，做不了「裁剪 + 换措辞」。
-  正确做法是先在 shared 把 `SurfaceField` 提升为 Zod schema（目前只有 TS interface），
-  再让片段形状从它派生。
-- 其余零散镜像（`_fragment-shapes.ts` 之外）经核对均为**有意差异**（片段独有键、profile
-  相关文案），不属可退役集合。
-- 「净减 ≥2,000 行」按实测不可达：全部候选约 1,140 行，退役两份镜像净减 396 行
-  （含派生层与单测）。该数字应从出口标准中删去，或改为「镜像清零」。
+**本批净行数**：三份镜像退役合计 **−667 行**（含派生层 204 行、单测 16 例、守卫改写的
+净增量）。「净减 ≥2,000 行」按实测不可达 —— 全部候选 ~1,140 行；出口标准已改判为
+**镜像清零**（三份副本均已不存在，且由反向断言棘轮钉住）。其余零散「镜像」经核对均为
+**有意差异**（片段独有键、profile 相关文案），不属可退役集合。
 
 ### W3 · 收工具面 —— ✅ 完成（2026-11-10）
 
@@ -116,7 +140,8 @@ B 批当日完成的是 **W3 工具收缩**（前门 16 → 12 工具、171.1 �
 | front-door（收缩前） | 16 | 171.1 KB | 14.0 KB | 157.1 KB |
 | **front-door（收缩后）** | **12** | **21.1 KB** | 8.9 KB | 12.2 KB |
 | full（W3 时未变） | 19 | 243.8 KB | 16.2 KB | 227.6 KB |
-| full（W2 落地后） | 19 | **266.7 KB** | 16.2 KB | 250.5 KB |
+| full（W2 前两份镜像退役） | 19 | 266.7 KB | 16.2 KB | 250.5 KB |
+| **full（W2 片段镜像退役后）** | 19 | **340.8 KB** | 16.2 KB | 324.6 KB |
 
 收缩前各工具对 front-door 体积的贡献：
 
@@ -148,8 +173,8 @@ B 批当日完成的是 **W3 工具收缩**（前门 16 → 12 工具、171.1 �
 **新增守卫**：
 
 - `scripts/check-surface-budget.mjs`（`check:surface-budget`）：读快照做预算棘轮 ——
-  front-door 总量 40 KB / 单工具 10 KB，full 总量 275 KB / 单工具 95 KB（W2 由 250/85
-  有据上调，理由见 W2 节），并断言
+  front-door 总量 40 KB / 单工具 10 KB，full 总量 345 KB / 单工具 135 KB（W2 两次由
+  250/85 有据上调，理由见 W2 节），并断言
   front-door 至少比 full 小 4 倍（防止重量级工具漏回前门）。
 - `tools:list:check` 首次入闸，排在预算守卫之前：先证明快照与源码一致，预算才量的不是陈旧产物。
 - `check-tool-surface` 的 `FRONT_DOOR_HIDDEN` 扩到 7，并对每个隐藏工具做反向断言。
@@ -246,7 +271,7 @@ tools/list」。它钉住的是**能力前提**：`registerTool({ inputSchema: S
 
 | 批次 | 现在就能做 | 必须先解决 |
 |---|---|---|
-| B | ✅ W3 已落地（前门 12 工具 / 21.1 KB，`check:surface-budget` 入闸）；✅ W2 主体：旋钮 + `configShape` 已单源派生（净 −396 行，`_derive.ts` 15 例钉住剥默认/收紧/保文案） | 「净减 ≥2,000 行」实为不可达，应改判据；`_fragment-shapes.ts`（549 行）需先把 shared 的 `SurfaceField` 提升为 Zod schema；`check:eval-freshness` 需要一次付费全量测量（语料哈希与 prompt 指纹均已变） |
+| B | ✅ W3 已落地（前门 12 工具 / 21.1 KB，`check:surface-budget` 入闸）；✅ W2 全量：旋钮 + `configShape` + 片段形状三份镜像全清零（净 −667 行，`_derive.ts` 16 例钉住剥默认/收紧/保文案/`unknown().optional()` 省略语义） | 「净减 ≥2,000 行」实为不可达，已改判为「镜像清零」；full 档 `tools/list` 340.8 KB（shared 权威文案，预算 345/135）；`check:eval-freshness` 需要一次付费全量测量（语料哈希与 prompt 指纹均已变） |
 | C | `misses[]` 落 artifact（`scoreAll` 已有 `attrMisses`，只是没写出去）；往返测试骨架 | `__esPlusSource` 的发射位置与 `lossy[]` 契约；生成 → 回读 → 再生成的字节级断言 |
 | D | 拆 `generateScaffold` / `generateAppEntry` 的独立批次 | 逐消费方改指（CLI create / MCP examples 资源 / docs 回退 / demo） |
 
