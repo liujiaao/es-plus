@@ -101,6 +101,8 @@
     "check:contract": "node scripts/check-contract-consumption.mjs",
     "check:tool-shapes": "node scripts/check-tool-shapes.mjs",
     "check:tool-surface": "node scripts/check-tool-surface.mjs",
+    "tools:list:snapshot": "node scripts/tools-list-snapshot.mjs",
+    "tools:list:check": "node scripts/tools-list-snapshot.mjs --check",
     "check:doc-drift": "node scripts/check-doc-drift.mjs",
     "check:render-plan": "node scripts/check-render-plan.mjs",
     "check:threeway": "node scripts/check-threeway-consistency.mjs",

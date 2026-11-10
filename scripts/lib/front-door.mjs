@@ -55,9 +55,10 @@ export async function captureFrontDoor() {
         "import { buildDesignExtractionContent } from '../../packages/mcp-server/src/resources/design-extraction.ts'",
         "export { composeCrudConfig } from '@es-plus/shared'",
         "export { generateFromConfig } from '@es-plus/shared'",
-        // AN-21: `check-tool-shapes.mjs` introspects the front-door (zod 3) knobs and
-        // the shared authoritative (zod 4) schema in ONE bundle, so each side is read
-        // with its own Zod generation — no cross-version object reuse.
+        // AN-21: `check-tool-shapes.mjs` introspects the hand-written front-door knobs and
+        // the shared authoritative schema in ONE bundle. zod is unified to v4 now, but the
+        // two shapes are still read side by side (and never reused as one object) until the
+        // W2 derivation lands — see docs/internal/w1-w6-batch-status-2026-11-10.md.
         "export { StructuredCrudConfigSchema } from '@es-plus/shared'",
         // AN-09 三端能力矩阵：AI 展示案例的 claim 边界（capability-matrix 生成器与 check-ai-cases 共用）
         "export { CAPABILITIES } from '@es-plus/shared'",

@@ -2,10 +2,17 @@
 /**
  * AN-21：前门旋钮形状 ↔ shared 权威 Zod **逐键对账**。
  *
- * ## 为什么需要它
+ * ## 为什么还需要它（zod 已统一，但派生仍未落地）
  *
- * `generate_crud`（前门）用 zod 3，`StructuredCrudConfigSchema`（shared 权威）用 zod 4，
- * 两代 ZodObject 不能互相复用，只能镜像。镜像一旦漏键，症状是**静默 strip**：
+ * 原由是 workspace 里 zod 3（前门）与 zod 4（shared）并存，ZodObject 不能跨版本复用，
+ * 只能镜像。2026-11 已统一到单份 zod 4（见 `_front-door-knobs.ts` 头注），**技术上已可
+ * 派生**；W2 的 spike（`docs/internal/w1-w6-batch-status-2026-11-10.md`）证明了 SDK 接受
+ * shared 的 ZodObject 作为 `inputSchema`，但也量出直接 `StructuredCrudConfigSchema.pick()`
+ * 有两个未解问题：①`.default()` 会被注入且未知键被静默 strip（前门契约要求「没显式给就
+ * 不填」且未知键必须报错，否则 `withRowkey` 把默认 rowkey 误判成用户配置、
+ * `collectUnknownKeys` 恒空）；②描述是 profile 相关的（front-door 会把指路文案改写掉），
+ * 直接 import 会丢掉这层。体积不是障碍：宿主侧实测派生 82.8 KB vs 手写镜像 78.8 KB
+ * （+5%）。派生落地前，这份镜像仍是唯一源；而镜像一旦漏键，症状是**静默 strip**：
  * 解析成功、无告警，而传进来的旋钮在生成物里凭空消失（`tableOptions.heightType` /
  * `tableBtns.position` 都真出过这个 bug）。类型检查看不出来（`z.any()` 什么都接受），
  * 只有逐键对账能看出来。
@@ -13,14 +20,13 @@
  * ## 怎么对账
  *
  * `scripts/lib/front-door.mjs` 把前门源码现打包成 ESM，同时导出：
- *   · `capture()` → 真 `crudShape`（zod 3）
- *   · `StructuredCrudConfigSchema`（zod 4，经 `@es-plus/shared` 别名进 shared/src）
- *   · `z`（root zod 3）
- * 于是**同一个进程里**两代 Zod 各用各的 API 读取，不跨版本复用对象。
- *
- * 比较的是「键树」而不是键集：`expandConfig.fields[].prop` 这类嵌套键也必须对上，
- * 否则外层形状再完整，内层仍会被 strip。值类型 / describe / default **不比较** ——
- * 前门有意不写 `.default()`（见 `_front-door-knobs.ts` 头注）。
+ *   · `capture()` → 真手写 `crudShape`
+ *   · `StructuredCrudConfigSchema`（shared 权威，经 `@es-plus/shared` 别名进 shared/src）
+ *   · `z`（root zod 4）
+ * 两边的 schema 分别读取、不互相复用对象；解包逻辑仍同时认 zod3 / zod4 的内部词汇，
+ * 防将来或外来副本混入。比较的是「键树」而不是键集：`expandConfig.fields[].prop` 这类
+ * 嵌套键也必须对上，否则外层形状再完整，内层仍会被 strip。值类型 / describe / default
+ * **不比较** —— 前门有意不写 `.default()`（见 `_front-door-knobs.ts` 头注）。
  *
  * 另外两条验收（AN-21）：
  *   1. 未知旋钮/未知子键 → `.strict()` 在工具层报错，而不是静默 strip；

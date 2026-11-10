@@ -2,7 +2,7 @@ import { describe, it, expect } from "vitest";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { emitSceneArtifact } from "@es-plus/shared";
+import { emitSceneArtifact, StructuredCrudConfigSchema } from "@es-plus/shared";
 import { registerTools } from "../src/tools/index.js";
 import { registerResources } from "../src/resources/index.js";
 import { registerPrompts } from "../src/prompts/index.js";
@@ -112,6 +112,47 @@ describe("真实 McpServer 注册（SDK 版本兼容）", () => {
     for (const key of ["name", "apiUrl", "fields", "tableOptions", "tableBtns"]) {
       expect(keys, `generate_crud_from_config 的 inputSchema 缺 ${key}`).toContain(key);
     }
+
+    await client.close();
+    await server.close();
+  });
+
+  /**
+   * W2 spike（2026-11-10）：`generate_crud_from_config` 的手写入参镜像能否被 shared 的
+   * 权威 Zod 对象取代，第一道闸是「SDK 收不收」。zod 已统一到 4，SDK 1.29 的
+   * `registerTool` 接受 `AnySchema`；但真正要证明的是 `tools/list` 那一跳：
+   * `zod-to-json-schema` 必须把 shared 的嵌套/默认值/describe 完整翻出来，否则宿主
+   * 拿到的是空表，模型照着空表填字段。
+   *
+   * 这条只钉**能力前提**，不钉派生方案本身。派生还差两步（见
+   * `docs/internal/w1-w6-batch-status-2026-11-10.md`）：去掉 `.default()` 注入、
+   * 把体积压回预算内。两者任一未达成都不该动 `_front-door-knobs.ts`。
+   */
+  it("W2 spike：shared 的 StructuredCrudConfigSchema 可直接作为 inputSchema 并完整出现在 tools/list", async () => {
+    const server = new McpServer({ name: "test", version: "0.0.0" });
+    expect(() => {
+      server.registerTool(
+        "derived_probe",
+        { description: "probe", inputSchema: StructuredCrudConfigSchema },
+        async () => ({ content: [{ type: "text" as const, text: "ok" }] }),
+      );
+    }).not.toThrow();
+
+    const [clientT, serverT] = InMemoryTransport.createLinkedPair();
+    await server.connect(serverT);
+    const client = new Client({ name: "test-client", version: "0.0.0" });
+    await client.connect(clientT);
+    const { tools } = await client.listTools();
+    const probe = tools.find((t) => t.name === "derived_probe")!;
+    const props = (probe.inputSchema as { properties?: Record<string, unknown> }).properties ?? {};
+    expect(props).toBeTruthy();
+    // 顶层键一个不少 —— 少一个就是静默 strip 的翻版（宿主看不到该旋钮）。
+    for (const key of ["name", "apiUrl", "fields", "tableOptions", "dialogs", "expandConfig"]) {
+      expect(Object.keys(props), `derived inputSchema 缺 ${key}`).toContain(key);
+    }
+    // 嵌套旋钮也要翻出来（只翻顶层等于把整个 tableOptions 藏在 additionalProperties 里）。
+    const tableOptions = props.tableOptions as { properties?: Record<string, unknown> };
+    expect(Object.keys(tableOptions.properties ?? {}).length).toBeGreaterThan(3);
 
     await client.close();
     await server.close();
