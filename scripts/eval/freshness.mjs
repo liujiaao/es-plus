@@ -186,3 +186,58 @@ export function evaluateFailedSidecar(sidecar, { mainArtifact = null } = {}) {
   }
   return { failures }
 }
+
+/**
+ * W5 逐行归因旁路文件 —— 只校验「它属于主产物那一次测量」。
+ *
+ * 归因比读数**更容易**悄悄过期：它会跟着 nightly 一起提交，但没有任何守卫绑定它，
+ * 于是「跨维度命中率」会一直描述几周前那批预测。判据不用时间（一次测量内部的
+ * measuredAt 允许缺省），而用**同一性**：语料哈希、尺子版本、模型、门禁读数、K 必须
+ * 与主产物逐项相同。少一项就说明两份文件不是同一次跑批写的。
+ *
+ * 归因可以来自 `rescore`（零 API 复算），那时 `rulerVersion` 是**当前**尺子、而
+ * 主产物是当次跑批的尺子 —— 这种「新尺子量旧产物」刻意**不**当发布面产物提交；
+ * 若真有人提交，这里会红，提示它不能冒充当前测量的归因。
+ */
+export function evaluateMissesSidecar(misses, { mainArtifact = null } = {}) {
+  const failures = []
+  if (!misses || typeof misses !== 'object') {
+    failures.push('逐行归因旁路文件不是对象')
+    return { failures }
+  }
+  if (!mainArtifact) return { failures }
+  const pairs = [
+    ['corpusHash', misses.corpusHash, mainArtifact.corpusHash],
+    ['rulerVersion', misses.rulerVersion, mainArtifact.rulerVersion],
+    ['model', misses.model, mainArtifact.model],
+  ]
+  for (const [key, a, b] of pairs) {
+    if (a !== b) {
+      failures.push(
+        `逐行归因的 ${key}=${JSON.stringify(a)} 与主产物 ${JSON.stringify(b)} 不同 —— ` +
+          '归因必须与已发布读数来自同一次测量'
+      )
+    }
+  }
+  const gateRate = misses.gate?.rate ?? null
+  const mainRate = mainArtifact.definition95?.rate ?? null
+  if (gateRate !== mainRate) {
+    failures.push(
+      `逐行归因的 gate.rate=${JSON.stringify(gateRate)} 与主产物 definition95.rate=${JSON.stringify(mainRate)} 不同`
+    )
+  }
+  if (misses.convergeK !== mainArtifact.definition95?.k) {
+    failures.push(
+      `逐行归因的 convergeK=${JSON.stringify(misses.convergeK)} 与主产物 definition95.k=${JSON.stringify(mainArtifact.definition95?.k)} 不同`
+    )
+  }
+  if (!Array.isArray(misses.rows) || typeof misses.failing !== 'number' || typeof misses.total !== 'number') {
+    failures.push('逐行归因缺少 rows[] / failing / total（结构不完整，无法用于定位）')
+  } else if (misses.rows.length !== Math.min(misses.failing, 400)) {
+    failures.push(
+      `逐行归因 rows.length=${misses.rows.length} 与 min(failing,400)=${Math.min(misses.failing, 400)} 不符 ` +
+        '（截断规则必须与 summarizeMisses 一致）'
+    )
+  }
+  return { failures }
+}

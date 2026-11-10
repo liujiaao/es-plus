@@ -29,11 +29,11 @@
  * PRD 腿同理：surfaces 需要前门 project 上下文，本工具暂不重建，只报条数。
  */
 
-import { readFileSync } from 'node:fs'
+import { readFileSync, writeFileSync } from 'node:fs'
 import { StructuredCrudConfigSchema } from '@es-plus/shared'
 import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn } from './scorers.mjs'
 import { scoreOptsForLang } from './align.mjs'
-import { computeCrudMetrics, computeFragmentMetrics, CONVERGE_K } from './run-metrics.mjs'
+import { computeCrudMetrics, computeFragmentMetrics, summarizeMisses, CONVERGE_K } from './run-metrics.mjs'
 import { readDump, RULER_VERSION } from './dump.mjs'
 import { scoreFragment } from './fragment-scorers.mjs'
 import { isNotMeasured } from './repair-loop.mjs'
@@ -41,6 +41,7 @@ import { isNotMeasured } from './repair-loop.mjs'
 const argv = process.argv.slice(2)
 let DUMP = null
 let EXPECT = null
+let MISSES_OUT = null
 let AS_JSON = false
 for (let i = 0; i < argv.length; i++) {
   const a = argv[i]
@@ -48,6 +49,12 @@ for (let i = 0; i < argv.length; i++) {
     EXPECT = argv[++i] ?? null
     if (!EXPECT || EXPECT.startsWith('--')) {
       console.error('✗ --expect 需要一个产物路径，例如 --expect __tests__/golden/last-accuracy.json')
+      process.exit(2)
+    }
+  } else if (a === '--misses') {
+    MISSES_OUT = argv[++i] ?? null
+    if (!MISSES_OUT || MISSES_OUT.startsWith('--')) {
+      console.error('✗ --misses 需要一个输出路径（逐行失败归因，零 API 成本）')
       process.exit(2)
     }
   } else if (a === '--json') {
@@ -64,7 +71,7 @@ for (let i = 0; i < argv.length; i++) {
 }
 
 if (!DUMP) {
-  console.error('用法: node scripts/eval/rescore.mjs <dump.jsonl> [--expect <last-accuracy.json>] [--json]')
+  console.error('用法: node scripts/eval/rescore.mjs <dump.jsonl> [--expect <last-accuracy.json>] [--misses <out.json>] [--json]')
   process.exit(2)
 }
 
@@ -210,6 +217,7 @@ for (const e of entries) {
 
 const m = computeCrudMetrics(rows, { convergeK })
 const { fragmentSummary } = computeFragmentMetrics(fragmentRows, isNotMeasured)
+const misses = summarizeMisses(rows, { convergeK })
 const prdCount = entries.filter((e) => e.kind === 'prd').length
 
 // ── 输出 ────────────────────────────────────────────────────────────────────
@@ -253,6 +261,9 @@ const out = {
       }
     : null,
   byCapability: m.byCapability,
+  // W5 归因：逐行失败明细（只观测）。与 `eval-llm.mjs` 同一份 `summarizeMisses`，
+  // 故离线复算出的归因与产物旁路文件结构一致。
+  misses,
   // 门禁口径的逐维视图（A3）：分母只数 pin 了该维的行。旧 dump 没有 pinnedDims（缺省 []）
   // ⟹ 各维分母为 0、rate 为 null —— 不是「全错」，是「这份 dump 记不下来」。
   byCapabilityOnPinned: m.byCapabilityOnPinned,
@@ -299,8 +310,35 @@ if (AS_JSON) {
     )
   }
   console.log(`  fragments:             cases ${out.fragments.cases} · scoped ${pct(out.fragments.scoped)} · core ${pct(out.fragments.core)} · compiles ${pct(out.fragments.compileRate)}`)
+  console.log(
+    `  misses:                ${misses.failing}/${misses.total} 行未过 95% 定义（未测到 ${misses.notMeasured}）· ` +
+      `逐维未命中 ${CAPABILITY_SCORERS.filter(({ key }) => misses.byDimension[key].missed).map(({ key }) => `${key} ${misses.byDimension[key].missed}/${misses.byDimension[key].applicable}`).join(' · ') || '无'}`
+  )
   console.log('  NOT rescored:')
   for (const [k, v] of Object.entries(out.notRescored)) console.log(`    ${k.padEnd(10)} ${v}`)
+}
+
+// ── 逐行归因落盘（W5，零 API 成本）─────────────────────────────────────────────
+//
+// 身份块与 `eval-llm.mjs` 写出的旁路文件同形，但有一处**必须分开**的字段：
+//   · `rulerVersion` = **本次复算用的尺子**（当前代码），不是 dump 当初的尺子；
+//   · `source.dumpRulerVersion` = dump 记下的尺子。
+// 两者不同意味着这份归因是「新尺子量旧产物」—— 数字可比性有限，但归因（哪些 pin
+// 没中）仍指向当时那批预测，不能拿它当「新尺子下的成绩」。
+if (MISSES_OUT) {
+  const missesRecord = {
+    schemaVersion: 1,
+    rulerVersion: RULER_VERSION,
+    corpusHash: meta.corpusHash ?? null,
+    corpusFiles: meta.corpusFiles ?? null,
+    model: meta.model ?? null,
+    convergeK,
+    gate: { metric: 'definition95', rate: out.definition95?.rate ?? null },
+    source: { kind: 'rescore', dump: DUMP, dumpRulerVersion: meta.rulerVersion ?? null },
+    ...misses,
+  }
+  writeFileSync(MISSES_OUT, JSON.stringify(missesRecord, null, 2) + '\n')
+  console.log(`  misses written →      ${MISSES_OUT}`)
 }
 
 // ── 与当次产物比对（`check:rescore-parity` 的实现）─────────────────────────────

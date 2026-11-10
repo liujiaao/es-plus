@@ -20,7 +20,7 @@
  * 用法：node scripts/eval/run-metrics.test.mjs
  * 退出码：0 = 口径全部成立；1 = 至少一条失效。
  */
-import { computeCrudMetrics, computeFragmentMetrics, CONVERGE_K } from './run-metrics.mjs'
+import { computeCrudMetrics, computeFragmentMetrics, summarizeMisses, CONVERGE_K } from './run-metrics.mjs'
 import { CAPABILITY_SCORERS } from './scorers.mjs'
 
 let failures = 0
@@ -209,6 +209,48 @@ function capsAll(pass) {
   // 旧 dump 重建出来的行没有 pinnedDims：不得抛错，也不得把缺省当「pin 了」。
   const legacy = computeCrudMetrics([row({ byCapability: { [k]: { applicable: true, pass: true } } })])
   eq(legacy.byCapabilityOnPinned[k].applicable, 0, '无 pinnedDims 的行不进 pinned 分母')
+}
+
+// ── W5：逐行失败归因 ─────────────────────────────────────────────────────────
+{
+  const [k0, k1] = CAPABILITY_SCORERS.map((s) => s.key)
+  const missCaps = { [k0]: { applicable: true, pass: false }, [k1]: { applicable: true, pass: true } }
+  const passRow = row({ exactIntentScoped: true, byCapability: capsAll(true) })
+  const failRow = row({
+    file: 'fail',
+    exactIntentScoped: false,
+    byCapability: missCaps,
+    scopedMisses: [k0, 'inTable:x'],
+    attrMisses: ['a.formtype (want Input, got Select)'],
+  })
+  const errRow = row({
+    file: 'err',
+    error: 'no answer',
+    errorKind: 'no-answer',
+    byCapability: { [k0]: { applicable: true, pass: false } },
+  })
+  const s = summarizeMisses([passRow, failRow, errRow])
+  eq(s.total, 3, '归因覆盖全量行')
+  eq(s.failing, 2, '只有未过 95% 定义或有 error 的行进 rows[]')
+  eq(s.notMeasured, 1, 'error 行单独计数（不能混成「模型不会」）')
+  eq(s.rows.length, 2, 'rows[] 与 failing 一致（未超上限）')
+  eq(s.rows.find((r) => r.file === 'fail').scopedMisses.length, 2, 'scopedMisses 原样保留（membership 类弱维度的第一手数据）')
+  eq(s.rows.find((r) => r.file === 'fail').attrMisses.length, 1, 'attrMisses 原样保留')
+  eq(s.rows.find((r) => r.file === 'fail').failedCapabilities[0], k0, '失败维度列出具体 key')
+  eq(s.rows.find((r) => r.file === 'err').errorKind, 'no-answer', 'errorKind 与分数分开记')
+  eq(s.byDimension[k0].applicable, 3, '逐维分母数全部 applicable 行（含 pass 行与 error 行，与 byCapability 同分母）')
+  eq(s.byDimension[k0].missed, 2, '逐维未命中数全量统计（不受 rows 截断影响）')
+  eq(s.byDimension[k1].missed, 0, '命中的维度不记 miss')
+  // 收敛腿：≤K 收敛的行算通过，即使 scoped 未命中 —— 与门禁同一条判据。
+  const converged = row({ exactIntentScoped: false, convergence: { firstTurn: CONVERGE_K, attempts: 2 } })
+  eq(summarizeMisses([converged]).failing, 0, '≤K 收敛的行不算失败（归因口径与门禁同源）')
+  // 体积上限：每行 12 条、总行数 400（聚合计数仍是全量）。
+  const noisy = row({ exactIntentScoped: false, attrMisses: Array.from({ length: 30 }, (_, i) => `m${i}`) })
+  eq(summarizeMisses([noisy]).rows[0].attrMisses.length, 12, '单行 attrMisses 截断到 12 条')
+  const many = summarizeMisses(Array.from({ length: 401 }, (_, i) => row({ file: `f${i}`, exactIntentScoped: false })))
+  eq(many.rows.length, 400, '总行数截断到 400')
+  eq(many.truncated, 1, '被截断的条数显式报出（不能静默丢）')
+  eq(many.failing, 401, 'failing 是全量计数，不是截断后长度')
 }
 
 if (failures > 0) {

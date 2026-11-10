@@ -31,6 +31,7 @@ import {
   ACCURACY_FILE,
   CASES_DIR,
   FAILED_ACCURACY_FILE,
+  MISSES_FILE,
   corpusFingerprint,
   currentCommit,
   listCaseFiles,
@@ -41,6 +42,7 @@ import {
   detectBranch,
   evaluateFailedSidecar,
   evaluateFreshness,
+  evaluateMissesSidecar,
   MAX_STALE_DAYS,
 } from './eval/freshness.mjs'
 
@@ -108,6 +110,14 @@ if (existsSync(FAILED_ACCURACY_FILE)) {
     `最近一次跑批失败（诊断见 ${FAILED_ACCURACY_FILE}，${sidecar.measuredAt ?? '时间未知'}）；` +
       `主产物仍是 ${artifact.measuredAt ?? '时间未知'} 的${artifact.measurement ?? '未知'}记录`
   )
+}
+
+// W5 逐行归因旁路：存在时必须属于主产物那一次测量（W5 新增，旧产物没有该文件不报）。
+if (existsSync(MISSES_FILE)) {
+  const misses = readJson(MISSES_FILE, '逐行归因')
+  if (!misses) process.exit(1)
+  failures.push(...evaluateMissesSidecar(misses, { mainArtifact: artifact }).failures)
+  warnings.push(`逐行归因旁路存在（${MISSES_FILE}）—— 已确认与主产物同一次测量`)
 }
 
 for (const w of warnings) console.warn(`⚠️  ${w}`)

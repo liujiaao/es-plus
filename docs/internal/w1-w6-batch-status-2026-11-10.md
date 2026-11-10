@@ -11,7 +11,7 @@
 |---|---|---|---|---|
 | **A** | W1 标准 + W2 1 小时 spike + `tools/list` 快照 | ✅ 完成 | 冻结产物重算，中文腿不变、英文腿可解释 | zh 未变、en 可逐维解释；spike 与快照今日落盘 |
 | **B** | W2 单源派生 + W3 工具收缩 | ✅ 完成 | 守卫净减 ≥2,000 行；`tools/list` <40 KB | front-door **21.1 KB / 12 工具**（<40 KB 达成）；W2 三份镜像全部清零（旋钮 + configShape + 片段形状），**净 −667 行**；「净减 ≥2,000 行」按实测**不可达**（候选总量 ~1,140 行），出口标准已改判为「镜像清零」 |
-| **C** | W4 回读闭环 + W5 弱维度 | ✗ 未开始（W5 半套） | 往返测试绿；membership/dataOptions 有归因数据 | 无 `read_page`/`__esPlusSource`；产物无逐行 misses |
+| **C** | W4 回读闭环 + W5 弱维度 | ◐ W5 ✅ / W4 ✗ | 往返测试绿；membership/dataOptions 有归因数据 | W5 已落盘逐行归因（旁路 + 零 API 复算，membership/dataOptions 均有通道级归因）；W4 仍无 `read_page`/`__esPlusSource`/`lossy[]` |
 | **D** | W6 legacy 退役 | ◐ 部分 | 无 importer；资源文案不再失实 | 文案已实（a5554f3）；importer 仍有 6 处 |
 
 A 批的「W1 标准」早在 `86316bf`（`+en-text-agnostic-v1`）与 `fc59d13`（`+label-typographic-v1`）
@@ -200,22 +200,37 @@ B 批当日完成的是 **W3 工具收缩**（前门 16 → 12 工具、171.1 �
   （formatter 丢弃）、`:843`（apiUrl 折叠）、`:1986` 起注入 `span`/`attrs`/自动 rules。
 - 最小可靠解不变：随 `pageSchema` 发射 `__esPlusSource`，再补 `read_page` 与显式 `lossy[]`。
 
-### W5 · 弱维度归因 —— ◐ 半套
+### W5 · 弱维度归因 —— ✅ 完成（2026-11-10）
 
-- **已有**：`scoreAll` 返回 `attrMisses`；工作区 artifact（deepseek-flash，2026-11-09，
-  ruler 仍是补丁前版本）给出聚合归因：
+**出口标准「membership/dataOptions 有归因数据」已达成**：逐行明细现在会落盘，且离线就能出数。
 
-  | 维度 | 命中 |
-  |---|---|
-  | membership | 64.8%（129/199） |
-  | dataOptions | 48.2%（54/112） |
-  | dialogs | 53.3%（8/15） |
-  | formtype | 85.4%（170/199） |
-  | `definition95` | 88.94%（177/199） |
+- **逐行归因单源**：`scoreAll` 直接把「哪些 pin 没中」算成 `scopedMisses`
+  （`scripts/eval/scorers.mjs`），聚合走新函数 `summarizeMisses`
+  （`scripts/eval/run-metrics.mjs`）—— 与门禁同一份实现，故**在线跑批与离线复算的归因结构一致**。
+  每行保留 `failedCapabilities / scopedMisses（≤12）/ attrMisses（≤12）/ errorKind / firstConvergedTurn`，
+  另给全量的 `byDimension.{applicable,missed}`（聚合计数不受 `rows` 截断影响）。
+- **为什么是旁路文件**：`last-accuracy.json` 的每个字段都被守卫逐项绑定，把 421 行明细塞进去
+  会让「读徽章」的每次校验都拖上一份诊断数据。故写 `__tests__/golden/last-accuracy-misses.json`
+  （`artifact.mjs` 的 `MISSES_FILE`），由 `check:eval-freshness` 用**同一性**（corpusHash /
+  rulerVersion / model / 门禁读数 / K）校验它属于主产物那一次测量；旧产物没有该文件不报红。
+- **零 API 成本出数**：`node scripts/eval/rescore.mjs <dump> --misses <out>` 用同一份
+  `summarizeMisses` 从已落盘预测重建归因；旁路里 `rulerVersion` = **本次复算的尺子**，
+  `source.dumpRulerVersion` = dump 当时那把。两者不同即「新尺子量旧产物」，
+  `evaluateMissesSidecar` 会拒绝把它冒充成当前测量的归因。
+- **实测归因**（`.tmp-eval/pred.jsonl`，223 例 / heldout 199 / 门禁 87.9%，dump 尺子为 W1 补丁前版本，
+  **只作方向性读数，不进任何门禁**）：
 
-- **没有**：artifact 不持久化逐行 `misses[]`（`last-accuracy.json` 的键里没有
-  `misses`/`attrMisses`）。定位仍要手工 rescore dump —— C 批出口「membership/dataOptions
-  有归因数据」只算做到一半，且这份读数的 rulerVersion 早于 W1 两次补丁，**不能当门禁数**。
+  | 弱维度 | 未命中行 | 主因（按 pin / attr 通道计次） |
+  |---|---|---|
+  | membership | 130/421 | `inQuery`（50）与 `inForm`（19）是主通道 —— 命中率仍受 `inQuery` 默认 true 陷阱支配；其次 `propSet`（18）、`columns`（9）、`dialogs`（8） |
+  | dataOptions | 105/217 | 不是「下拉选项没写」，而是 `propSet`（37）连带判负；独立通道只有 `inQuery`（14）/`inForm`（5） |
+  | dialogs / columns / propSet | 20/30 · 31/72 · 132/421 | 与 W3 后的工具面无关，属投影/字段身份问题 |
+
+  ⟹ 下一批该打的是**字段身份（propSet）与可见性布尔**，而不是继续放宽 scorer：
+  membership 的两大通道都是「本该 false 的 `inQuery/inForm` 被留成 true」，
+  dataOptions 的 3/4 未命中是同一行里的 propSet 连带。
+- **未做（刻意）**：不把归因写进 `last-accuracy.json`；不做时间型新鲜度判据
+  （一次测量内 `measuredAt` 允许缺省，同一性比时间更难撒谎）。
 
 ### W6 · legacy 退役 —— ◐ 部分
 

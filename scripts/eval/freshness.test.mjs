@@ -11,6 +11,7 @@ import {
   detectBranch,
   evaluateFailedSidecar,
   evaluateFreshness,
+  evaluateMissesSidecar,
 } from './freshness.mjs'
 
 let checks = 0
@@ -197,6 +198,62 @@ const failed = (over = {}) => ({
     clean(evaluateFailedSidecar(failed())),
     '不传主产物时只做旁路文件自身的形状检查'
   )
+}
+
+// ─── W5 逐行归因旁路：只认「与主产物同一次测量」 ─────────────────────────────
+{
+  // 与 complete() 同身份的一份归因记录。判据是**同一性**而非时间：measuredAt 可以缺省。
+  const missesRec = (over = {}) => ({
+    schemaVersion: 1,
+    rulerVersion: 'ruler-3',
+    corpusHash: 'hash-current',
+    model: 'model-x',
+    convergeK: 3,
+    gate: { metric: 'definition95', rate: 0.8814 },
+    total: 194,
+    failing: 23,
+    notMeasured: 0,
+    byDimension: {},
+    rows: Array.from({ length: 23 }, (_, i) => ({ file: `f${i}` })),
+    truncated: 0,
+    ...over,
+  })
+  const main = complete({ rulerVersion: 'ruler-3', model: 'model-x' })
+
+  check(clean(evaluateMissesSidecar(missesRec(), { mainArtifact: main })), '与主产物同身份的归因必须通过')
+
+  // 这是 W5 最要紧的一条：rescore 用**当前**尺子量旧产物，写出的归因 rulerVersion 与
+  // 主产物不同 —— 若被提交，它会以「同一次测量的归因」的身份出现，必须红。
+  const newRuler = evaluateMissesSidecar(missesRec({ rulerVersion: 'ruler-4' }), { mainArtifact: main })
+  check(!clean(newRuler) && has(newRuler.failures, 'rulerVersion'), '新尺子量旧产物的归因必须判红（不能冒充当前测量的归因）')
+
+  const otherCorpus = evaluateMissesSidecar(missesRec({ corpusHash: 'hash-old' }), { mainArtifact: main })
+  check(!clean(otherCorpus) && has(otherCorpus.failures, 'corpusHash'), '语料哈希不同必须判红')
+
+  const otherModel = evaluateMissesSidecar(missesRec({ model: 'model-y' }), { mainArtifact: main })
+  check(!clean(otherModel) && has(otherModel.failures, 'model'), '模型不同必须判红')
+
+  const otherGate = evaluateMissesSidecar(missesRec({ gate: { metric: 'definition95', rate: 0.75 } }), { mainArtifact: main })
+  check(!clean(otherGate) && has(otherGate.failures, 'gate.rate'), '门禁读数与主产物 definition95.rate 不符必须判红')
+
+  const otherK = evaluateMissesSidecar(missesRec({ convergeK: 2 }), { mainArtifact: main })
+  check(!clean(otherK) && has(otherK.failures, 'convergeK'), 'K 与主产物 definition95.k 不符必须判红')
+
+  // 截断规则与 summarizeMisses 必须一致，否则「全量计数」与「落盘明细」会悄悄分叉。
+  const badLen = evaluateMissesSidecar(missesRec({ failing: 30 }), { mainArtifact: main })
+  check(!clean(badLen) && has(badLen.failures, 'rows.length'), 'rows.length 与 min(failing,400) 不符必须判红')
+  const capped = evaluateMissesSidecar(
+    missesRec({ failing: 500, rows: Array.from({ length: 400 }, (_, i) => ({ file: `g${i}` })) }),
+    { mainArtifact: main }
+  )
+  check(clean(capped), 'failing 超过 400 时 rows 恰好保留 400 条即合法')
+
+  const incomplete = evaluateMissesSidecar(missesRec({ rows: undefined, failing: undefined }), { mainArtifact: main })
+  check(!clean(incomplete), '缺 rows[]/failing/total 必须判红')
+
+  check(!clean(evaluateMissesSidecar(null)), '归因旁路不是对象必须判红')
+  // 不传主产物时无从比对身份（守卫在无主产物时也不该假装校验过）。
+  check(clean(evaluateMissesSidecar(missesRec())), '不传主产物时不做同一性判定')
 }
 
 // ─── 分支检测优先级 ─────────────────────────────────────────────────────────

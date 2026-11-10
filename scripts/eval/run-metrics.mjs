@@ -186,6 +186,70 @@ export function computeCrudMetrics(rows, { convergeK = CONVERGE_K } = {}) {
 }
 
 /**
+ * 逐行失败归因（W5）—— **只观测**，不参与任何门禁/徽章。
+ *
+ * ## 解决什么
+ *
+ * `scoreAll` 早就有 `attrMisses`（字段属性对不上），但产物只留聚合数字：
+ * 「membership 48%」到底是哪些 case、漏的是哪个字段/面，复盘只能手工 rescore 再自己
+ * 重跑判据。这里把失败行原样落盘（受上限约束），让产物自己带证据。
+ *
+ * ## 口径
+ *
+ * · 「失败」= 没过 95% 定义（`meets95Definition`）**或**该行有 error。过了的行不落盘。
+ * · `scopedMisses` = 该行 pin 了但没命中的 token（`inTable:x` / `membership` / …），
+ *   这正是 membership / dataOptions 这类弱维度的第一手数据。
+ * · `errorKind` 与分数**分开**记：`model-failure` 是成绩（在分母里按 0 计），
+ *   `no-answer`/`truncated` 是没测到 —— 两者在归因里不可混为「模型不会」。
+ * · 上限只截断**体积**（400 行 × 每行 12 条），聚合计数始终是全量，`truncated` 显式报出。
+ *
+ * @param {Array<object>} rows 与 computeCrudMetrics 同一份逐行结果
+ * @param {{convergeK?: number}} [opts]
+ */
+export function summarizeMisses(rows, { convergeK = CONVERGE_K } = {}) {
+  const byDimension = {}
+  for (const { key } of CAPABILITY_SCORERS) byDimension[key] = { applicable: 0, missed: 0 }
+
+  const failing = []
+  for (const r of rows) {
+    const caps = r.byCapability ?? {}
+    const failedCapabilities = []
+    for (const { key } of CAPABILITY_SCORERS) {
+      const c = caps[key]
+      if (!c?.applicable) continue
+      byDimension[key].applicable++
+      if (!c.pass) {
+        byDimension[key].missed++
+        failedCapabilities.push(key)
+      }
+    }
+    const passed = !r.error && meets95Definition(r, convergeK)
+    if (passed) continue
+    failing.push({
+      file: r.file,
+      lang: r.lang,
+      heldout: !r.fewshotDerived,
+      ...(r.error ? { errorKind: r.errorKind ?? 'unknown' } : {}),
+      ...(failedCapabilities.length ? { failedCapabilities } : {}),
+      ...(Array.isArray(r.scopedMisses) && r.scopedMisses.length
+        ? { scopedMisses: r.scopedMisses.slice(0, 12) }
+        : {}),
+      ...(Array.isArray(r.attrMisses) && r.attrMisses.length ? { attrMisses: r.attrMisses.slice(0, 12) } : {}),
+      ...(r.convergence ? { firstConvergedTurn: r.convergence.firstTurn } : {}),
+    })
+  }
+
+  return {
+    total: rows.length,
+    failing: failing.length,
+    notMeasured: rows.filter((r) => !!r.error).length,
+    byDimension,
+    rows: failing.slice(0, 400),
+    truncated: Math.max(0, failing.length - 400),
+  }
+}
+
+/**
  * 片段腿汇总（AI-SCENE-COVERAGE §1.2；只观测）。
  *
  * 口径纪律与 CRUD 一致：`model-failure` = 模型答错了 ⟹ **在成绩里**（记 0 分）；

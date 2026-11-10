@@ -45,7 +45,7 @@ import {
 } from '@es-plus/shared'
 import { scoreAll, CAPABILITY_SCORERS, firstConvergedTurn, meets95Definition, describeDimMiss } from './eval/scorers.mjs'
 import { scoreOptsForLang } from './eval/align.mjs'
-import { computeCrudMetrics, computeFragmentMetrics, CONVERGE_K } from './eval/run-metrics.mjs'
+import { computeCrudMetrics, computeFragmentMetrics, summarizeMisses, CONVERGE_K } from './eval/run-metrics.mjs'
 import { createDumpWriter, goldHashOf, RULER_VERSION } from './eval/dump.mjs'
 import { buildInitialMessages, pushAssistant, pushUserCorrection } from './eval/prompt.mjs'
 import { fingerprintPrompts } from './eval/prompt-fingerprint.mjs'
@@ -90,6 +90,7 @@ import {
   CASES_DIR,
   ACCURACY_FILE,
   FAILED_ACCURACY_FILE,
+  MISSES_FILE,
   BADGE_FILE,
   BADGE_SCOPED_FILE,
   artifactIdentity as artifactIdentityOf,
@@ -1543,6 +1544,12 @@ async function main() {
         } catch {
           // 不存在即正确状态。
         }
+        // W5 同理：没有任何「已发布测量」时，逐行归因也没有归属对象。
+        try {
+          unlinkSync(MISSES_FILE)
+        } catch {
+          // 不存在即正确状态。
+        }
         console.error('  (已写入失败记录 + 灰度徽章；数值留待下一次真正测量)')
       }
     } catch (err) {
@@ -2078,7 +2085,21 @@ async function main() {
     } catch {
       // 不存在即正确状态。
     }
-    console.log(`  (persisted to ${ACCURACY_FILE})`)
+    // W5：逐行失败归因与主产物**同一次测量**（同一份 identity）。旁路文件而不是塞进
+    // 主产物，是因为主产物是「已发布读数」的契约，逐行明细只会让它的 diff 变成噪声。
+    // 这里用写主产物**同一批** rows，故 `failing` 与 `definition95` 必然自洽。
+    const misses = {
+      schemaVersion: 1,
+      ...identity,
+      measuredAt: record.measuredAt,
+      model: MODEL,
+      servedModel,
+      convergeK: CONVERGE_K,
+      gate: { metric: gateMetric, rate: record.definition95?.rate ?? null },
+      ...summarizeMisses(rows, { convergeK: CONVERGE_K }),
+    }
+    writeFileSync(MISSES_FILE, JSON.stringify(misses, null, 2) + '\n')
+    console.log(`  (persisted to ${ACCURACY_FILE}；逐行归因 → ${MISSES_FILE})`)
   } catch (err) {
     console.warn(`  (could not persist accuracy: ${err.message})`)
   }

@@ -1752,6 +1752,10 @@ export function scoreAll(gold, pred, mask, opts = {}) {
   // scoped 口径（B2）：只 AND 掩码里 NL 真正锁定的 token。无掩码 → 退化为 core（向后兼容）。
   const pinned = mask && Array.isArray(mask.pinnedDims) ? mask.pinnedDims : []
   const exactIntentScoped = pinned.length ? pinned.every((t) => scoreDimension(gold, scoredPred, t)) : exactIntentCore
+  // W5 归因：**哪几个** pin 的维度没命中。只有布尔值时，弱维度复盘只能靠人工 rescore
+  // 一遍还要自己重跑判据；逐 token 的失败清单让产物自己带证据（membership / dataOptions
+  // 这类维度才有「为什么没中」的原始数据）。无掩码时为空 —— 与 scoped ≡ core 的语义一致。
+  const scopedMisses = pinned.filter((t) => !scoreDimension(gold, scoredPred, t))
 
   return {
     byCapability,
@@ -1770,6 +1774,8 @@ export function scoreAll(gold, pred, mask, opts = {}) {
     exactIntentCore,
     exactIntentFull,
     exactIntentScoped,
+    // 逐 token 的 scoped 失败清单（W5 归因；空数组 = 全中或无掩码）。
+    scopedMisses,
   }
 }
 

@@ -44,6 +44,16 @@ export const BADGE_FILE = join(ROOT, '__tests__', 'golden', 'last-accuracy-badge
 export const BADGE_SCOPED_FILE = join(ROOT, '__tests__', 'golden', 'last-accuracy-badge-scoped.json')
 
 /**
+ * 逐行失败归因的**旁路**产物（W5）。
+ *
+ * 为什么不塞进 `last-accuracy.json`：主产物是「已发布读数」的契约，几十个守卫按字段
+ * 绑定它；把逐行明细（最坏几百行）混进去，既让每次读数 diff 变成噪声，也让「数字」
+ * 与「为什么」的消费者耦合。旁路文件带**同一份身份块**，`check-eval-freshness` 用它
+ * 证明「这份归因属于当前这次测量」，过期即红。
+ */
+export const MISSES_FILE = join(ROOT, '__tests__', 'golden', 'last-accuracy-misses.json')
+
+/**
  * 「已发布的准确率」字段。`measurement: 'failed'` 的记录**不得**带这些数字 ——
  * 失败的意思是「这次没有测量」，而不是「测出来是 0 分」；把两者混在一起，读者就再也
  * 分不清「模型不会」与「没测到」（2026-10-13/14 两夜的产物正是这个形状）。
