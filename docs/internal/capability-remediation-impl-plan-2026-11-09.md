@@ -160,6 +160,21 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 
 **验收**：`dataOptions >= 0.65`（第一阶段）。
 
+**口径复核（2026-11-10，实施前）**：⚠️ **本项的 44.1% 读错了分母，方案 1/4 条不应按这条数字执行。**
+
+- 44.1%（当前产物 48.2%）是 `byCapability` —— 分母是**所有 gold 声明了选项的 case**，
+  包括 NL 从未陈述选项的那些。已发布产物的门禁口径 `byCapabilityOnPinned.dataOptions`
+  是 **5/5 = 100%**。
+- 在 deepseek-flash dump 上按实例复核（133 个「gold 有选项」的字段）：`stated`（NL 真的
+  锁定 dataOptions）**10/10 通过**；67 个失败**全部落在 `unstated`** ——
+  `missingOptions` 45、只给部分选项 15、标签错 6、字段缺失 1。
+- 也就是说：低分测的是「模型是否复现了 NL 没说的 gold 细节」，不是能力缺口。
+  补「选项教学」few-shot 会让模型学会**编造 NL 没给的枚举**，方向相反；
+  `ratchet 0.65` 会拿一个 completeness 指标当门禁。
+- **保留为观测口径**：`byCapability.dataOptions` 仍有价值（衡量配置完整度），但
+  报告时必须与 `byCapabilityOnPinned` 并列读出。真正可归因的选项缺口需要新语料
+  把选项写进 NL（并 pin `dataOptions:<field>`），而不是改 few-shot。
+
 ---
 
 ## P1-2：dialogs 维度 53.3%
@@ -172,6 +187,18 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 1. 补 5 条 dialog few-shot
 2. `_arg-guard.ts` 对 `formFields`/`formitems` 拼写错误结构化回传
 3. ratchet 加 dialogs 门禁（0.70）
+
+**口径复核（2026-11-10，实施前）**：53.3% 同样是 `byCapability` 的 completeness 口径；
+已发布产物的门禁口径 `byCapabilityOnPinned.dialogs` 是 **8/12 = 66.7%**（dump 复核同值）。
+差距不是「近一半弹窗不会写」，而是 **4 条 NL 明确锁定 dialogs 的 case 未命中**：
+
+- `187-contract-dialog-base-vue3`：`dialogs.add` 缺表单项（gold 锁了 4 个字段）；
+- `188-claim-dialog-base-vue2`：add/edit 的 `formItems` 为空；
+- `189-tablebtns-left-right-vue3` / `191-tablebtns-dialogkey-antdv`：pred 声明了
+  `tableBtns` 却完全没写 `dialogs`（显式模式下不会回填派生弹窗）。
+
+这 4 条是真实能力缺口，可据此做定向 few-shot / prompt 教学；但不要把
+「53.3%」当作教学效果的基线 —— 下一次测量应看 `byCapabilityOnPinned.dialogs`。
 
 ---
 
@@ -575,3 +602,32 @@ core 的零依赖约束。
    英文描述的字段名**逐字保留**（`userName` 不得改成 `user_name`/拼音），中文描述转
    camelCase ASCII（`手机号` → `phone`），且永不放中文或 label 原文。
    （属系统 prompt 指纹变更，`check:eval-freshness` 维持已知红，待一次付费全量测量。）
+
+---
+
+## 附：2026-11-10 尺子补丁（复核期实施）
+
+### R1：en 腿可译文案投影（`+en-text-agnostic-v1`）
+
+见 P0-4 实施记录。同一份 dump：en scoped 24.7% → 36.4%，full 14.6% → 21.7%。
+剩余主因转为 `propSet`（88/198）：en 腿字段身份只能退回 `prop`，而 gold 的 prop 是
+作者命名、NL 不陈述 —— 110 行共 173 个缺失 prop，其中没有一个能靠 camel/snake 归一救回。
+按 AN-01 的设计，`fixedFields` **本就不喂给模型**，所以模型没有任何途径知道作者选的
+prop 名。这是命名彩票，不是理解失败；要真正消掉它需要英文 gold 标签（`labelEn`）或
+独立的英文身份锚点，属语料工程，不在本轮。
+
+### R2：列 / 选项 / 展开区标题的排版归一（`+label-typographic-v1`）
+
+字段身份早已按 `normalizeLabel`（NFKC、去空白/标点、小写）对齐，但列标题、选项标签、
+展开区字段标题仍是原始字面比较 —— `92-sku-price-edit` 的「SKU名称」vs「SKU 名称」
+因此被判负（零语义差异）。现统一到同一把尺子；语义不同的标题仍判负（meta-eval 双向钉住）。
+
+实测（同一份 dump）：zh scoped 84.8% → **85.2%**（189→190 行），columns 28→29；
+en 无变化（其文案已先投影成 gold 的写法）。
+
+### R3：维度报告必须读 `byCapabilityOnPinned`
+
+P1-1 / P1-2 的 44.1% / 53.3% 是 completeness 口径；门禁口径分别是 100%（5/5）与
+66.7%（8/12）。`eval-llm` 的控制台早已并列打印 `all` 与 `pinned (gate)` 两列，
+本方案初稿只引用了前者。后续任何「补 few-shot / 加 ratchet」的决策都必须以
+`byCapabilityOnPinned` 为准，否则会把预算投到对门禁没有杠杆的维度上。

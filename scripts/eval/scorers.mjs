@@ -23,7 +23,7 @@
  * 见 `scripts/eval/align.mjs`。`prop` 降为观测量（`propNameMatch`）。en 腿用
  * `scoreAll(..., { identity: 'prop' })` —— 标签是「中文 gold vs 英文 pred」，不可比。
  */
-import { normalizePredForCompare, propNameMatch } from './align.mjs'
+import { normalizeLabel, normalizePredForCompare, propNameMatch } from './align.mjs'
 
 /** 稳定序列化（键排序）——用于结构深等值比较。undefined 键在两侧都会被 JSON 丢弃，一致。 */
 function canon(v) {
@@ -343,6 +343,10 @@ const projectExpandNode = (g, p) => {
     delete g[k]
     delete p[k]
   }
+  // 展开区字段标题与列标题同规：只归一排版差异（与 projectColumnNode 同一把尺子）。
+  for (const side of [g, p]) {
+    for (const f of side.fields ?? []) if (typeof f?.label === 'string') f.label = normalizeLabel(f.label)
+  }
   dropIfEitherSideMissing(g, p, EXPAND_DECORATION_KEYS)
 }
 
@@ -420,6 +424,10 @@ const projectEditRender = (g, p) => {
 
 const projectColumnNode = (g, p) => {
   if (!g || !p || typeof g !== 'object' || typeof p !== 'object') return
+  // 列标题与字段身份同一把尺子：只归一排版差异（空白/标点/全半角），不做语义归一。
+  // 否则「SKU名称」与「SKU 名称」会被当成两个不同的列（92 曾因此判负）。
+  if (typeof g.label === 'string') g.label = normalizeLabel(g.label)
+  if (typeof p.label === 'string') p.label = normalizeLabel(p.label)
   dropIfEitherSideMissing(g, p, COLUMN_DECORATION_KEYS)
   if (g.editRender && p.editRender) {
     dropIfEitherSideMissing(g.editRender, p.editRender, EDIT_RENDER_DECORATION_KEYS)
@@ -1260,7 +1268,7 @@ function apiParamsEqual(gold, pred) {
  */
 function optionLabelTree(opts) {
   return (opts ?? []).map((o) => [
-    o.label,
+    normalizeLabel(o.label),
     (o.children ?? []).length ? optionLabelTree(o.children) : null,
   ])
 }

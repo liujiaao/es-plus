@@ -1464,6 +1464,27 @@ console.log('meta-eval: AN-01 真空维度 / dataOptions / core 同源')
   }
 }
 
+// 4b) 排版差异归一：列标题 / 选项标签 / 展开区字段标题只比字面排版，不罚空格与全半角。
+console.log('meta-eval: label typographic normalization')
+{
+  const pass = (key, g, p) => CAPABILITY_SCORERS.find((s) => s.key === key).pass(g, p)
+  const spacedCol = clone(base)
+  spacedCol.columns[1].label = '名 称'
+  check(pass('columns', base, spacedCol) === true, 'columns: 「名称」vs「名 称」应判正（纯排版差异）')
+  const spacedOpt = clone(base)
+  spacedOpt.fields.find((f) => f.prop === 'status').dataOptions[0].label = '启用 '
+  check(pass('dataOptions', base, spacedOpt) === true, 'dataOptions: 选项标签尾部空格应判正')
+  const spacedExpand = clone(base)
+  spacedExpand.expandConfig.fields[0].label = '创建 时间'
+  check(pass('expandConfig', base, spacedExpand) === true, 'expandConfig: 字段标题空格应判正')
+  const wrongCol = clone(base)
+  wrongCol.columns[1].label = '其它名称'
+  check(pass('columns', base, wrongCol) === false, 'columns: 语义不同的标题仍应判负')
+  const wrongOpt = clone(base)
+  wrongOpt.fields.find((f) => f.prop === 'status').dataOptions[0].label = '停用'
+  check(pass('dataOptions', base, wrongOpt) === false, 'dataOptions: 语义不同的选项标签仍应判负')
+}
+
 // 5) en 腿：可译文案投影（Ruler +en-text-agnostic-v1）
 //
 // gold 是中文、en 腿的 pred 是英文。翻译不是理解失败 —— 投影把 pred 的文案按结构身份
