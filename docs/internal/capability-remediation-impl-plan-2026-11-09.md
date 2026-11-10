@@ -110,6 +110,40 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 
 **验收**：`byLanguage.en >= 0.40`（第一阶段）。
 
+**当前进度**：⚠️ 方案第 2 条（scorer 对 en 腿改「身份值优先」）已实施；第 1/3/4 条
+（补 en few-shot、prompt 命名约束已由 P2-5 落地、ratchet 英文门禁）未完成。
+验收线 **0.40 未达到**（原因见下：尺子修掉的是「翻译被当理解错误」，剩余主因是
+`propSet` 命名猜测）。
+
+**实施记录（2026-11-10 · 尺子侧）**
+
+1. **投影而非关闭比较**：新增 `scorers.mjs` `projectTranslatableText(gold, pred)` ——
+   en 腿先按**结构身份**（字段 `prop`、选项层级/顺序、列的 `prop`、按钮
+   `actionType/code`、分组 `key`）把 pred 的可译文案（字段/列/按钮/选项/联动提示/
+   分组标题）改写成 gold 的写法，再走既有判据。结构差异（少一个选项、多一列、
+   换 `actionType`）投影救不回，照样判负。
+2. **单一改造点**：`scoreAll` 与 `describeDimMiss` 共用同一投影，保证
+   `want === got ⟺ pass` 的不变量在 en 腿也成立；`scoreOptsForLang('en')` 增加
+   `textAgnostic: true`（`rescore` / `eval-llm` 同源）。zh 腿（门禁语言）不变。
+3. **尺子版本**：`RULER_VERSION` 追加 `+en-text-agnostic-v1`。跨版本数字不可比，
+   与既有约定一致；`check:eval-freshness` 维持已知红（语料与 prompt 指纹本就已变）。
+4. **实测（deepseek-flash dump，198 条 en turn-0，同一份 pred/ gold）**：
+   - en `exactIntentScoped` 24.7% → **36.4%**（49→72 行）
+   - en `exactIntentFull` 14.6% → **21.7%**（29→43 行）
+   - en `exactIntentCore`（= byLanguage.en）23.6% → **26.3%**（52/198）
+   - 分维：dataOptions 4/96→26/96、columns 3/36→19/36、tableBtns 4/15→14/15、
+     expandConfig 5/16→10/16、reactions 3/15→7/15、operationColumn 10/12→11/12
+5. **剩余差距（下一批的真实靶子，不是尺子）**：
+   - `propSet` 88/198（44%）—— en 腿的字段身份退回 `prop`，一行里有一个字段名写法
+     不同就整维判负；这是当前 en 的首要阻塞（单字段 prop 对齐率实为 76.8%）。
+   - `isHidden` 1/24 —— 条件右操作数是「本侧 dataOptions 标签」，翻译后两侧标签不同
+     一映射；属尺子未覆盖段（需按选项 `value`/顺序对齐，另行拍板）。
+   - `dialogs` 2/15、`apiParams` 4/9、`extPoints` 12/26 —— 非文本维度，真实能力缺口。
+6. **守卫**：`check:scorers` 新增英文腿投影的 gold-vs-gold / 结构扰动双向断言
+   （翻译版全维度过；少选项 / 改 actionType / 多一列仍红）；`check:align`、
+   `check:run-metrics`、`check:rescore`、`check:ratchet`、`check:gold-self` 全绿；
+   `check:consistency` 140/141（唯一红仍是 `check:eval-freshness`）。
+
 ---
 
 ## P1-1：dataOptions 维度 44.1%

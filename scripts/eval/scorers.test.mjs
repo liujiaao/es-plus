@@ -1464,6 +1464,77 @@ console.log('meta-eval: AN-01 真空维度 / dataOptions / core 同源')
   }
 }
 
+// 5) en 腿：可译文案投影（Ruler +en-text-agnostic-v1）
+//
+// gold 是中文、en 腿的 pred 是英文。翻译不是理解失败 —— 投影把 pred 的文案按结构身份
+// 改写成 gold 的写法后，同一份「只是翻译了」的配置必须全维度过；而结构差异
+// （少一个选项 / 换 actionType）仍然咬得住。zh 腿不启用投影（文案就是契约本身）。
+console.log('meta-eval: en text-agnostic projection')
+{
+  const EN = { identity: 'prop', textAgnostic: true }
+  const translateOpts = (opts) => {
+    for (const o of opts ?? []) {
+      if (o && typeof o === 'object') {
+        if (o.label !== undefined) o.label = `EN:${o.label}`
+        translateOpts(o.children)
+      }
+    }
+  }
+  const translate = (c) => {
+    const p = clone(c)
+    for (const f of p.fields ?? []) {
+      if (f.label !== undefined) f.label = `EN:${f.label}`
+      translateOpts(f.dataOptions)
+      for (const r of f.reactions ?? []) {
+        if (r.prompt !== undefined) r.prompt = `EN:${r.prompt}`
+        translateOpts(r.fulfill?.dataOptions)
+      }
+    }
+    const translateCol = (col) => {
+      if (col.label !== undefined) col.label = `EN:${col.label}`
+      translateOpts(col.dataOptions)
+      translateOpts(col.editRender?.options)
+      for (const g of col.groups ?? []) translateCol(g)
+    }
+    for (const col of p.columns ?? []) translateCol(col)
+    for (const f of p.expandConfig?.fields ?? []) if (f.label !== undefined) f.label = `EN:${f.label}`
+    for (const b of p.tableBtns ?? []) if (b.name !== undefined) b.name = `EN:${b.name}`
+    for (const b of p.operationColumn?.btns ?? []) if (b.name !== undefined) b.name = `EN:${b.name}`
+    for (const d of Object.values(p.dialogs ?? {})) for (const b of d.configBtn ?? []) if (b.name !== undefined) b.name = `EN:${b.name}`
+    return p
+  }
+
+  const enPred = translate(base)
+  // 对照：zh 口径（不投影）下，同一份「翻译版」必须判负，否则这条测试测不到投影。
+  check(scoreAll(base, enPred).byCapability.dataOptions.pass === false, 'en 对照：zh 口径下翻译后的选项标签应判负')
+  check(scoreAll(base, enPred).byCapability.columns.pass === false, 'en 对照：zh 口径下翻译后的列标签应判负')
+
+  const s = scoreAll(base, enPred, undefined, EN)
+  for (const { key } of CAPABILITY_SCORERS) {
+    if (!s.byCapability[key].applicable) continue
+    check(s.byCapability[key].pass === true, `en 投影：维度 ${key} 应 pass（差异只是翻译）`)
+  }
+  check(s.exactIntentFull === true, 'en 投影：全维度 pass ⟹ exactIntentFull 为 true')
+
+  // 诊断与判定同源：投影后判正时，want 必须等于 got。
+  for (const { key } of CAPABILITY_SCORERS) {
+    if (!s.byCapability[key].applicable) continue
+    const d = describeDimMiss(key, base, enPred, EN)
+    if (d) check(d.want === d.got, `en 投影：${key} 判正时诊断投影必须相同`)
+  }
+
+  // 结构差异不许被投影救回。
+  const fewer = translate(base)
+  fewer.fields.find((f) => f.prop === 'status').dataOptions.pop()
+  check(scoreAll(base, fewer, undefined, EN).byCapability.dataOptions.pass === false, 'en 投影：少一个选项仍判负')
+  const wrongAction = translate(base)
+  wrongAction.tableBtns[1].actionType = 'custom'
+  check(scoreAll(base, wrongAction, undefined, EN).byCapability.tableBtns.pass === false, 'en 投影：actionType 改错仍判负')
+  const extraColumn = translate(base)
+  extraColumn.columns.push({ prop: 'status', label: 'EN:状态' })
+  check(scoreAll(base, extraColumn, undefined, EN).byCapability.columns.pass === false, 'en 投影：多一列仍判负')
+}
+
 if (failures) {
   console.error(`\nmeta-eval FAILED: ${failures} 处断言未过`)
   process.exit(1)

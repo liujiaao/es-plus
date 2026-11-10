@@ -671,6 +671,176 @@ function sharedFields(gold, pred) {
  */
 const isNestedContainer = (f) => Array.isArray(f?.children) && f.children.length > 0
 
+// ── en 腿：可译文本按「结构身份」归一（P0-4 / Ruler：+en-text-agnostic-v1）──
+//
+// gold 语料是中文，en 腿的 pred 是英文 —— `dataOptions.label` / 列 `label` /
+// `tableBtns.name` 这些**必然被翻译**的文案，字面比较测的是「翻译策略」而不是
+// 「懂不懂需求」。实测（2026-11-10，deepseek-flash dump）：en 的 dataOptions
+// 只有 4/96，而同一批行里 prop 对齐率 76.8% —— 失败样本几乎全是
+// gold `[{label:'启用',value:1}]` vs pred `[{label:'enabled',value:1}]`。
+//
+// 做法：不关闭比较，而是把 pred 的文案**按结构身份**改写成 gold 的写法，再走既有
+// 判据。身份键是结构本身 —— 字段 prop、选项层级/顺序、列的 prop、按钮的
+// actionType/code。结构一旦不同（少一个选项、多一列、换 actionType），投影无能为力，
+// 照样判负。这样 en 腿量的是「结构与行为」，文本差异不背锅。
+//
+// zh 腿（门禁语言）**不启用**：那里 gold 与 pred 都是中文，文案就是契约的一部分。
+const TEXT_LABEL_KEYS = ['label', 'labelKey']
+
+/** 选项树按位置对齐后改写文案；层级/顺序/个数不同 = 结构差异，原样留给深等值判负。 */
+function projectOptionLabels(goldOpts, predOpts) {
+  if (!Array.isArray(goldOpts) || !Array.isArray(predOpts) || goldOpts.length !== predOpts.length) return
+  for (let i = 0; i < goldOpts.length; i++) {
+    const g = goldOpts[i]
+    const p = predOpts[i]
+    if (!g || !p || typeof g !== 'object' || typeof p !== 'object') continue
+    for (const k of TEXT_LABEL_KEYS) if (g[k] !== undefined) p[k] = g[k]
+    projectOptionLabels(g.children, p.children)
+  }
+}
+
+/** 字段级文案：label/labelKey、dataOptions、reactions 的提示与联动选项。 */
+function projectFieldText(g, p) {
+  if (!g || !p) return
+  if (g.labelKey !== undefined) p.labelKey = g.labelKey
+  else if (g.label !== undefined) p.label = g.label
+  projectOptionLabels(g.dataOptions, p.dataOptions)
+  if (Array.isArray(g.reactions) && Array.isArray(p.reactions) && g.reactions.length === p.reactions.length) {
+    for (let i = 0; i < g.reactions.length; i++) {
+      const gr = g.reactions[i] ?? {}
+      const pr = p.reactions[i] ?? {}
+      if (gr.prompt !== undefined) pr.prompt = gr.prompt
+      projectOptionLabels(gr.fulfill?.dataOptions, pr.fulfill?.dataOptions)
+    }
+  }
+}
+
+/** 显式列：按 prop 找到 gold 的同一列（含派生列），只改文案与选项标签。 */
+function projectColumnText(gold, pred) {
+  const byProp = new Map()
+  const collect = (cols) => {
+    for (const c of cols ?? []) {
+      if (!c || typeof c !== 'object') continue
+      if (c.prop !== undefined) byProp.set(c.prop, c)
+      if (Array.isArray(c.groups)) collect(c.groups)
+      if (Array.isArray(c.expandConfig?.fields)) collect(c.expandConfig.fields)
+    }
+  }
+  collect(resolveColumns(gold))
+  const walk = (cols, goldCols) => {
+    ;(cols ?? []).forEach((p, i) => {
+      if (!p || typeof p !== 'object') return
+      // 数据列按 prop 认身份；分组表头没有 prop，只能按同一层级的位置对齐
+      // （位置本身是 columns 维度的结构契约，位置变了照样判负）。
+      const g =
+        (p.prop !== undefined ? byProp.get(p.prop) : undefined) ??
+        (Array.isArray(goldCols) && goldCols[i]?.prop === undefined ? goldCols[i] : undefined)
+      if (g) {
+        if (g.labelKey !== undefined) p.labelKey = g.labelKey
+        else if (g.label !== undefined) p.label = g.label
+        projectOptionLabels(g.dataOptions, p.dataOptions)
+        if (g.editRender && p.editRender) projectOptionLabels(g.editRender.options, p.editRender.options)
+      }
+      if (Array.isArray(p.groups)) walk(p.groups, g?.groups)
+    })
+  }
+  // 没有 prop 的分组表头只能按位置对齐。用 gold **原始** columns（存在时）而不是
+  // resolveColumns 的结果：后者会前置注入展开列，位置会整体偏移一格。
+  const goldCols = Array.isArray(gold?.columns) && gold.columns.length ? gold.columns : resolveColumns(gold)
+  walk(pred.columns, goldCols)
+}
+
+/** 顶层展开区：fields 逐位对齐后改 label / 选项标签（title 本就不测量）。 */
+function projectExpandFields(g, p) {
+  if (!g || !p || !Array.isArray(g.fields) || !Array.isArray(p.fields) || g.fields.length !== p.fields.length) return
+  for (let i = 0; i < g.fields.length; i++) {
+    const gf = g.fields[i] ?? {}
+    const pf = p.fields[i] ?? {}
+    if (gf.label !== undefined) pf.label = gf.label
+    projectOptionLabels(gf.dataOptions, pf.dataOptions)
+  }
+}
+
+/**
+ * 按钮文案按行为键对齐：`actionType|code|action` 是行为契约（译不动），name 才是可译文案。
+ * 键完全相同的按钮两两配对；键不同 ⟹ 行为契约已错，投影不动它，交给判定翻红。
+ */
+function projectButtonNames(goldBtns, predBtns) {
+  if (!Array.isArray(goldBtns) || !Array.isArray(predBtns) || goldBtns.length !== predBtns.length) return
+  const keyOf = (b) => `${b?.actionType ?? ''}|${b?.action ?? ''}|${b?.code ?? ''}`
+  const g = [...goldBtns].sort((a, b) => keyOf(a).localeCompare(keyOf(b)))
+  const p = [...predBtns].sort((a, b) => keyOf(a).localeCompare(keyOf(b)))
+  for (let i = 0; i < g.length; i++) {
+    if (g[i]?.name !== undefined && p[i]) p[i].name = g[i].name
+  }
+}
+
+/** 行操作列：gold 显式声明时按位置对齐；gold 省略（组件按 actions 派生中文名）时按 action/type 回填。 */
+function projectOperationColumn(g, p) {
+  const oc = p?.operationColumn
+  if (!oc || oc === false || !Array.isArray(oc.btns)) return
+  const gBtns = Array.isArray(g?.operationColumn?.btns) ? g.operationColumn.btns : null
+  if (gBtns && gBtns.length === oc.btns.length) {
+    for (let i = 0; i < gBtns.length; i++) if (gBtns[i]?.name !== undefined) oc.btns[i].name = gBtns[i].name
+    return
+  }
+  if (!gBtns) {
+    for (const b of oc.btns) {
+      const label = ROW_ACTION_LABEL[b?.action ?? b?.type]
+      if (label) b.name = label
+    }
+  }
+}
+
+/** 分组容器的组名（key 是身份，label/labelKey/description 是可译文案）。 */
+function projectFormLayoutText(g, p) {
+  const gl = g?.formLayout?.layout ?? g?.layout
+  const pl = p?.formLayout?.layout ?? p?.layout
+  if (!gl || !pl) return
+  if (gl.defaultLabel !== undefined) pl.defaultLabel = gl.defaultLabel
+  if (!Array.isArray(gl.groups) || !Array.isArray(pl.groups)) return
+  const byKey = new Map(gl.groups.map((x) => [x?.key, x]))
+  for (const pg of pl.groups) {
+    const gg = byKey.get(pg?.key)
+    if (!gg) continue
+    if (gg.labelKey !== undefined) pg.labelKey = gg.labelKey
+    else if (gg.label !== undefined) pg.label = gg.label
+    if (gg.description !== undefined) pg.description = gg.description
+  }
+}
+
+/** 弹窗底栏按钮：key 与 gold 相同时按位置改文案（`action|type|permissionValue` 是行为契约）。 */
+function projectDialogButtonNames(g, p) {
+  const gd = g?.dialogs ?? {}
+  const pd = p?.dialogs ?? {}
+  for (const k of Object.keys(gd)) {
+    const gb = gd[k]?.configBtn
+    const pb = pd[k]?.configBtn
+    if (!Array.isArray(gb) || !Array.isArray(pb) || gb.length !== pb.length) continue
+    for (let i = 0; i < gb.length; i++) if (gb[i]?.name !== undefined && pb[i]) pb[i].name = gb[i].name
+  }
+}
+
+/**
+ * en 腿的统一投影入口（`scoreAll` / `describeDimMiss` 共用，保证
+ * `want === got ⟺ pass` 的不变量在英文腿也成立）。只改 pred 的可译文案，不动结构。
+ */
+export function projectTranslatableText(gold, pred) {
+  const p = cloneDeep(pred)
+  const goldFields = new Map((gold?.fields ?? []).map((f) => [f.prop, f]))
+  for (const pf of p?.fields ?? []) {
+    const gf = goldFields.get(pf?.prop)
+    if (gf) projectFieldText(gf, pf)
+  }
+  projectColumnText(gold, p)
+  projectExpandFields(gold?.expandConfig, p?.expandConfig)
+  projectButtonNames(gold?.tableBtns, p?.tableBtns)
+  projectOperationColumn(gold, p)
+  projectDialogButtonNames(gold, p)
+  projectFormLayoutText(gold, p)
+  return p
+}
+
 // ── 维度判定（pass: (gold, pred) => boolean）─────────────────────────────────
 
 /**
@@ -980,6 +1150,9 @@ export function describeDimMiss(dim, gold, pred, opts = {}) {
   // 与 scoreAll 同源：先按 label 身份把 pred 的命名空间改写成 gold 的，再投影。
   // 否则 label 身份下 pass 了、日志却打出两边不同的 prop，不变量当场失效。
   pred = normalizePredForCompare(gold, pred, opts).pred
+  // 与 scoreAll 同源：en 腿的可译文案投影也必须在诊断里生效，否则
+  // 「pass 了却打出两边不同的文案」会让 want===got ⟺ pass 的不变量失真。
+  if (opts.textAgnostic) pred = projectTranslatableText(gold, pred)
   if (dim === 'tableBtns') {
     const show = (c) => tableBtnKeyParts(c).join(' · ') || '（无）'
     return { want: show(gold), got: show(pred) }
@@ -1516,18 +1689,21 @@ export function scoreAll(gold, pred, mask, opts = {}) {
   // 单一改造点 —— 所有维度（含 fieldMap/sharedFields/深等值）都经这一份 pred。
   // `opts.identity === 'prop'` 供 en 腿（标签不可比）与历史复算使用。
   const { pred: alignedPred, align } = normalizePredForCompare(gold, pred, opts)
+  // en 腿的第二道身份归一：可译文案按结构身份改写成 gold 的写法（见头注）。
+  // 与 normalizePredForCompare 同一处收口 —— 所有维度都经这一份 pred。
+  const scoredPred = opts.textAgnostic ? projectTranslatableText(gold, alignedPred) : alignedPred
 
   const byCapability = {}
   for (const s of CAPABILITY_SCORERS) {
     const applicable = !!s.applicable(gold)
     byCapability[s.key] = applicable
-      ? { applicable: true, pass: !!s.pass(gold, alignedPred) }
+      ? { applicable: true, pass: !!s.pass(gold, scoredPred) }
       : { applicable: false, pass: null }
   }
 
   // ── 向后兼容的明细分（控制台与历史 record 字段沿用）────────────────────────
   const goldFields = fieldMap(gold)
-  const predFields = fieldMap(alignedPred)
+  const predFields = fieldMap(scoredPred)
   const propF1 = f1(new Set(goldFields.keys()), new Set(predFields.keys()))
 
   // 容器字段不参与 4 属性诊断（不渲染控件、不派生列，formtype 会被 Zod 默认填充成
@@ -1551,11 +1727,11 @@ export function scoreAll(gold, pred, mask, opts = {}) {
   // eval 聚合时只对 numeric 行取均值，并单独报出「属性可测行数」。
   const attrAcc = attrTotal === 0 ? null : attrHits / attrTotal
 
-  const actionsF1 = f1(new Set(gold.actions), new Set(alignedPred.actions))
+  const actionsF1 = f1(new Set(gold.actions), new Set(scoredPred.actions))
 
   // 与 `tableBtns` 维度同源（name|归一化 code|actionType），不再只比 code。
   // 旧口径下「按钮文案/作用写错、code 写对」仍算 core 命中 —— 与维度判定自相矛盾。
-  const tableBtnsMatch = tableBtnsEqual(gold, alignedPred)
+  const tableBtnsMatch = tableBtnsEqual(gold, scoredPred)
 
   // 历史门禁口径（prop + 4 属性 + actions + tableBtns）。attrTotal=0 时属性无可测项，
   // 不能算命中（否则「prop 全错」会被 attrAcc 的真空真放行）。
@@ -1567,7 +1743,7 @@ export function scoreAll(gold, pred, mask, opts = {}) {
 
   // scoped 口径（B2）：只 AND 掩码里 NL 真正锁定的 token。无掩码 → 退化为 core（向后兼容）。
   const pinned = mask && Array.isArray(mask.pinnedDims) ? mask.pinnedDims : []
-  const exactIntentScoped = pinned.length ? pinned.every((t) => scoreDimension(gold, alignedPred, t)) : exactIntentCore
+  const exactIntentScoped = pinned.length ? pinned.every((t) => scoreDimension(gold, scoredPred, t)) : exactIntentCore
 
   return {
     byCapability,

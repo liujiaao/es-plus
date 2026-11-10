@@ -243,9 +243,12 @@ function renameReaction(r, reverse) {
  * 一边走 prop，让「复算与产物对不上」重新长出来。）
  *
  *   zh ⟹ label（门禁语言；NL 写的是中文标签，「命名彩票」不算理解失败）
- *   en ⟹ prop（gold 标签是中文、pred 是英文 ⟹ 结构性不可比；且 en 只观测不门禁）
+ *   en ⟹ prop + textAgnostic（gold 标签是中文、pred 是英文 ⟹ 字面不可比；字段身份退回
+ *        prop，可译文案按结构身份归一到 gold 的写法，见 scorers.mjs
+ *        `projectTranslatableText`。en 只观测不门禁）
  */
-export const scoreOptsForLang = (lang) => (lang === 'en' ? { identity: 'prop' } : {})
+export const scoreOptsForLang = (lang) =>
+  lang === 'en' ? { identity: 'prop', textAgnostic: true } : {}
 
 /**
  * `propNameMatch`（观测量，不进门禁）：gold 字段里，被对齐到的 pred 字段**prop 写法也相同**的占比。
