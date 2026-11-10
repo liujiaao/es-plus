@@ -44,8 +44,14 @@ const BUDGETS = {
   full: {
     // 默认档**刻意**保持完整（AN-26：默认档不改是兼容性决定，翻默认值要等 AN-25 收敛）。
     // 这里只做棘轮：不许在默认档上继续加肥。
-    total: 250,
-    perTool: 85, // 当前最大 generate_crud 80.9 KB，已到本仓 schema 的物理上限附近
+    //
+    // 2026-11-10 由 250 / 85 上调到 275 / 95：W2 把两份手写副本（前门旋钮、以及
+    // `generate_crud_from_config` 的 configShape）都改成从 shared 权威 schema 派生，
+    // 宿主读到的描述随之从手写副本换成 shared 的那一份（合计 +22.9 KB，实测 266.7）。
+    // 这不是泄漏，是**有意**采用：手写副本里有事实性错误（例如称 antdv 的 a-table 支持
+    // 虚拟滚动，实际两端都没有）。换成权威文案等于让教学面与配置判据同源。
+    total: 275,
+    perTool: 95, // 当前最大 generate_crud 89.4 KB（shared 文案更完整）
   },
 }
 

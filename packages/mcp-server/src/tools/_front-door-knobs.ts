@@ -1,241 +1,46 @@
-import { z } from "zod";
+import { StructuredCrudConfigSchema } from "@es-plus/shared";
+import { deriveSchema } from "./_derive.js";
 
 /**
- * 前门（`generate_scene` scene='crud'，兼容入口 `generate_crud`）的「旋钮」显式形状 —— AN-21。
+ * 前门（`generate_scene` scene='crud'，兼容入口 `generate_crud`）的「旋钮」形状 —— AN-21。
  *
- * 为什么仍不直接用 shared 的 Zod 对象：workspace 已统一到单份 zod 4（升级前这里是
- * zod 3，两代 ZodObject 不能跨版本复用），但前门旋钮要与 `generate-from-config.ts`
- * 的同名形状保持「不注入 `.default()`」的独立契约。这里是 shared 权威 schema 的镜像：
- * `scripts/check-tool-shapes.mjs` 会把每一颗旋钮的键树与 shared 运行时 schema 对账，
- * 少一个键 / 多一个键都会红。
+ * ## W2：派生，不再手写镜像
  *
- * 与 `generate-from-config.ts` 里同名形状的**唯一有意差异**：这里**不写 `.default()`**。
- * 前门把旋钮原样转发给 `composeCrudConfig`，若 schema 注入默认值（border/stripe/rowkey…），
- * `withRowkey` 会把「默认的 id」误判成用户显式配置的 rowkey 并产生假冲突告警；
- * 也会让经 MCP 的真实调用与直接驱动 handler 的 eval 看到不同的入参。
+ * 这些形状此前是 **241 行的手写副本**（`TableOptions`、`formLayout`、`operationColumn`、
+ * 三类扩展配置），与 shared 的 `StructuredCrudConfigSchema` 逐键对账（`check-tool-shapes`）
+ * 才能不漂。漂移不是假设：2026-11-10 的对账实测出两处**静默失败**——
  *
- * 全部 `.strict()`：未知旋钮必须在工具层报错，而不是被 Zod 静默 strip（AN-21 验收）。
- * 这是有意的**比 shared 更严**：shared 用默认 strip 是为了兼容历史配置，
- * 而 AI 入口是受约束解码，拼错键应当立刻失败。
+ *   · 副本里 `keyboardConfig` / `mouseConfig` / `validConfig` / `seqConfig` 四个嵌套对象
+ *     **漏了 `.strict()`**，拼错的键会在 args 到达 handler 前被 strip，`_arg-guard` 的
+ *     did-you-mean 闸门因此对这几个键恒空；
+ *   · 副本里 `operationColumn.btns`、`expandConfig.fields`、`mergeConfig.rowsBy` 漏了
+ *     shared 的 `.min(1)`，空数组会被当作合法配置一路传到生成器。
+ *
+ * 现在从 shared 的权威 schema **派生**，键、类型、枚举、`.min()` 与文案只有一个源。
+ * 派生规则见 `_derive.ts`：**剥掉 `.default()`**（否则 `withRowkey` 会把默认的 `id`
+ * 误判成用户显式配置）、**递归 `.strict()`**（未知旋钮必须在工具层报错）、
+ * **保留 `.describe()`**（宿主 LLM 唯一的教学面）。
+ *
+ * 与 shared 的**唯一有意差异**因此只剩「无默认值 + 全层 strict」，两者都由
+ * `check-tool-shapes` 与 `__tests__/_derive.spec.ts` 钉住。
  */
 
-const rowBtnSchema = z
-  .object({
-    name: z.string().min(1),
-    key: z.string().optional(),
-    type: z.string().optional(),
-    icon: z.string().optional(),
-    dialogKey: z.string().optional(),
-    confirm: z.union([z.string(), z.boolean()]).optional(),
-    permissionValue: z.string().optional(),
-  })
-  .strict();
+const crudShape = StructuredCrudConfigSchema.shape;
 
-/** 表格选项（shared `StructuredCrudConfigSchema.shape.tableOptions` 的键集，无默认值）。 */
-export const tableOptionsSchema = z
-  .object({
-    border: z.boolean().optional(),
-    stripe: z.boolean().optional(),
-    rowkey: z.string().optional(),
-    heightType: z
-      .enum(["height", "auto", "maxHeight"])
-      .optional()
-      .describe(
-        "'height' = fixed height (value from `height`, or `tabHeight` if set); 'maxHeight' = capped at `tabHeight`; 'auto' = no container height constraint. Default 'auto'."
-      ),
-    tabHeight: z
-      .union([z.number(), z.string()])
-      .optional()
-      .describe("Height consumed for EVERY heightType: under 'height' it overrides `height`; under 'maxHeight' it is the cap."),
-    height: z
-      .union([z.number(), z.string()])
-      .optional()
-      .describe("Container height used ONLY when heightType is 'height' (ignored for 'auto'/'maxHeight' — use tabHeight there)."),
-    multiSelect: z.boolean().optional(),
-    highlightCurrentRow: z.boolean().optional(),
-    headerCellStyle: z.record(z.string(), z.string()).optional(),
-    virtual: z
-      .boolean()
-      .optional()
-      .describe("Enable virtual scrolling (vue3 el-table-v2; antdv a-table; vue2 degrades with a warning — use engine:'vxe' there)."),
-    engine: z.enum(["default", "virtual", "vxe"]).optional(),
-    rowHeight: z.number().optional(),
-    estimatedRowHeight: z.number().optional(),
-    overscanCount: z.number().int().optional(),
-    rowClassName: z.string().optional(),
-    size: z.enum(["large", "default", "small"]).optional(),
-    showHeader: z.boolean().optional(),
-    emptyText: z.string().optional(),
-    snIndex: z.boolean().optional(),
-    leftText: z.string().optional(),
-    cachePageSelection: z.boolean().optional(),
-    refetchKeepPage: z.boolean().optional(),
-    localPagination: z.boolean().optional(),
-    // 与 shared 的 StructuredCrudConfigSchema 同形（各持一份契约，不共享对象）：
-    // union 而不是嵌套 .object()，两种形态都能过前门，不会把改键形态静默剥掉。
-    sortParam: z
-      .union([
-        z.boolean(),
-        z
-          .object({ field: z.string().optional(), order: z.string().optional() })
-          .strict(),
-      ])
-      .optional(),
-    defaultSort: z
-      .object({ prop: z.string(), order: z.enum(["ascending", "descending"]) })
-      .strict()
-      .optional(),
-    editConfig: z
-      .object({
-        trigger: z.enum(["click", "dblclick", "manual"]).optional(),
-        mode: z.enum(["cell", "row"]).optional(),
-        showStatus: z.boolean().optional(),
-        showUpdateStatus: z.boolean().optional(),
-        showInsertStatus: z.boolean().optional(),
-        autoClear: z.boolean().optional(),
-        enabled: z.boolean().optional(),
-      })
-      .strict()
-      .optional()
-      .describe("vxe inline editing (requires engine:'vxe' and a column-level `editRender`)."),
-    configTableOut: z
-      .object({
-        total: z.string().optional(),
-        tableData: z.string().optional(),
-        pageSize: z.string().optional(),
-        current: z.string().optional(),
-      })
-      .strict()
-      .optional()
-      .describe("Map the LIST response onto table semantics when the backend shape differs from { rows, records, pageSize, pageNo }."),
-    treeConfig: z
-      .object({
-        transform: z.boolean().optional(),
-        rowField: z.string().optional(),
-        parentField: z.string().optional(),
-        childrenField: z.string().optional(),
-        children: z.string().optional(),
-        mapChildren: z.string().optional(),
-        expandAll: z.boolean().optional(),
-        lazy: z.boolean().optional(),
-      })
-      .strict()
-      .optional()
-      .describe("vxe-only rich tree config (distinct from the top-level cross-renderer `treeConfig`)."),
-    expandConfig: z
-      .object({
-        expandAll: z.boolean().optional(),
-        accordion: z.boolean().optional(),
-        lazy: z.boolean().optional(),
-      })
-      .strict()
-      .optional()
-      .describe("vxe-only row-expand switch (distinct from the top-level declarative `expandConfig`)."),
-    // vxe 一等公民（JSON 安全子集）：运行时只在 engine:'vxe' 生效。
-    showFooter: z.boolean().optional(),
-    footerData: z.array(z.array(z.unknown())).optional(),
-    exportConfig: z.union([z.boolean(), z.record(z.string(), z.unknown())]).optional(),
-    toolbarConfig: z.union([z.boolean(), z.record(z.string(), z.unknown())]).optional(),
-    columnConfig: z.record(z.string(), z.unknown()).optional(),
-    keepSource: z.boolean().optional(),
-    keyboardConfig: z
-      .object({
-        isArrow: z.boolean().optional(),
-        isTab: z.boolean().optional(),
-        isEnter: z.boolean().optional(),
-        isEdit: z.boolean().optional(),
-        isDel: z.boolean().optional(),
-        enterToTab: z.boolean().optional(),
-      })
-      .optional(),
-    mouseConfig: z.object({ selected: z.boolean().optional() }).optional(),
-    validConfig: z
-      .object({
-        autoPos: z.boolean().optional(),
-        message: z.enum(['default', 'tooltip', 'modal', 'none']).optional(),
-        msgMode: z.enum(['single', 'full']).optional(),
-      })
-      .optional(),
-    seqConfig: z.object({ startIndex: z.number().int().optional() }).optional(),
-    printConfig: z.union([z.boolean(), z.record(z.string(), z.unknown())]).optional(),
-  })
-  .strict();
+/** 表格选项（shared `StructuredCrudConfigSchema.shape.tableOptions`，剥默认值 + 递归 strict）。 */
+export const tableOptionsSchema = deriveSchema(crudShape.tableOptions, { extras: "strict" });
 
-/** 查询表单布局 —— labelWidth / minFoldRows，外加分组容器（P1-3）；列数由字段级 querySpan/formSpan 决定。 */
-export const formLayoutSchema = z
-  .object({
-    labelWidth: z.union([z.string(), z.number()]).optional(),
-    minFoldRows: z.number().int().optional(),
-    layout: z
-      .object({
-        type: z.enum(["tabs", "steps", "collapse"]).describe("tabs = panes, steps = one group at a time (built-in prev/next), collapse = panels."),
-        groups: z
-          .array(
-            z
-              .object({
-                key: z.string().min(1),
-                label: z.string().optional(),
-                labelKey: z.string().optional(),
-                description: z.string().optional(),
-              })
-              .strict()
-          )
-          .optional()
-          .describe("Declared groups in display order; undeclared groups are appended by first field appearance."),
-        ungrouped: z
-          .enum(["default", "first", "hidden"])
-          .optional()
-          .describe("Fields without `group`: 'default' = trailing bucket, 'first' = merge into the first group, 'hidden' = drop."),
-        defaultLabel: z.string().optional(),
-      })
-      .strict()
-      .optional()
-      .describe("Group containers for the QUERY form; fields reference them via their `group` key."),
-  })
-  .strict();
+/** 查询表单布局 —— labelWidth / minFoldRows，外加分组容器（P1-3）；列数由字段级 span 决定。 */
+export const formLayoutSchema = deriveSchema(crudShape.formLayout, { extras: "strict" });
 
 /** 操作列（`false` = 隐藏）。 */
-export const operationColumnSchema = z.union([
-  z.literal(false),
-  z
-    .object({
-      label: z.string().optional(),
-      width: z.union([z.number(), z.string()]).optional(),
-      fixed: z.union([z.boolean(), z.literal("left"), z.literal("right")]).optional(),
-      btns: z.array(rowBtnSchema).min(1),
-    })
-    .strict(),
-]);
+export const operationColumnSchema = deriveSchema(crudShape.operationColumn, { extras: "strict" });
 
 /** 声明式行展开内容（只读字段表；与 tableOptions.expandConfig 不同层）。 */
-export const expandConfigSchema = z
-  .object({
-    title: z.string().optional(),
-    fields: z
-      .array(
-        z
-          .object({
-            prop: z.string().min(1),
-            label: z.string().optional(),
-            labelKey: z.string().optional(),
-          })
-          .strict()
-      )
-      .min(1),
-  })
-  .strict();
+export const expandConfigSchema = deriveSchema(crudShape.expandConfig, { extras: "strict" });
 
-/** 跨端树表窄子集（嵌套 children 数组）。 */
-export const treeConfigSchema = z
-  .object({
-    childrenField: z.string().optional(),
-    expandAll: z.boolean().optional(),
-  })
-  .strict();
+/** 跨端树表窄子集（嵌套 children 数组）—— 注意与 `tableOptions.treeConfig` 不同层。 */
+export const treeConfigSchema = deriveSchema(crudShape.treeConfig, { extras: "strict" });
 
 /** 跨端行合并窄子集。 */
-export const mergeConfigSchema = z
-  .object({
-    rowsBy: z.array(z.string().min(1)).min(1),
-  })
-  .strict();
+export const mergeConfigSchema = deriveSchema(crudShape.mergeConfig, { extras: "strict" });

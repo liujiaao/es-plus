@@ -10,14 +10,16 @@
 | 批次 | 内容 | 状态 | 出口标准 | 判定 |
 |---|---|---|---|---|
 | **A** | W1 标准 + W2 1 小时 spike + `tools/list` 快照 | ✅ 完成 | 冻结产物重算，中文腿不变、英文腿可解释 | zh 未变、en 可逐维解释；spike 与快照今日落盘 |
-| **B** | W2 单源派生 + W3 工具收缩 | ◐ 部分（W3 ✅ / W2 ✗） | 守卫净减 ≥2,000 行；`tools/list` <40 KB | front-door 已降到 **21.1 KB / 12 工具**（<40 KB 达成）；W2 的 790 行镜像未动，故「净减 ≥2,000 行」未达成 |
+| **B** | W2 单源派生 + W3 工具收缩 | ◐ 部分（W3 ✅ / W2 主体 ✅，片段镜像待办） | 守卫净减 ≥2,000 行；`tools/list` <40 KB | front-door **21.1 KB / 12 工具**（<40 KB 达成）；W2 已退役旋钮 + configShape 两份镜像（净 **−396 行**，含新增派生层与单测）；「净减 ≥2,000 行」按实测**不可达**，`_fragment-shapes.ts`（549 行）仍待办 |
 | **C** | W4 回读闭环 + W5 弱维度 | ✗ 未开始（W5 半套） | 往返测试绿；membership/dataOptions 有归因数据 | 无 `read_page`/`__esPlusSource`；产物无逐行 misses |
 | **D** | W6 legacy 退役 | ◐ 部分 | 无 importer；资源文案不再失实 | 文案已实（a5554f3）；importer 仍有 6 处 |
 
 A 批的「W1 标准」早在 `86316bf`（`+en-text-agnostic-v1`）与 `fc59d13`（`+label-typographic-v1`）
 落地；本日补的是 A 批剩下的两件：**W2 1 小时 spike** 与 **`tools/list` 快照**。
-B 批当日完成的是 **W3 工具收缩**（前门 16 → 12 工具、171.1 → 21.1 KB）与预算守卫；
-**W2 单源派生未动**，B 批的「净减 ≥2,000 行」仍未达成（见 §二 W2 与 §四）。
+B 批当日完成的是 **W3 工具收缩**（前门 16 → 12 工具、171.1 → 21.1 KB）、预算守卫，
+以及 **W2 单源派生的主体**（前门旋钮 + `generate_crud_from_config` 的 `configShape`）。
+「净减 ≥2,000 行」实测**不可达**：全部手写镜像合计只有约 1,140 行候选，减去派生层与单测
+后净减约 400 行（见 §二 W2 与 §四）。
 
 ## 二、逐项核对（源码证据）
 
@@ -44,18 +46,66 @@ B 批当日完成的是 **W3 工具收缩**（前门 16 → 12 工具、171.1 �
   —— en 腿字段身份只能退回 `prop`，一行里一个字段名写法不同就整维判负。下一批该打命名与
   few-shot，而不是继续放宽 scorer。
 
-### W2 · 契约单一真源 —— ✗ 未开始（spike 已完成）
+### W2 · 契约单一真源 —— ◐ 主体完成（2026-11-10，片段镜像待办）
 
-- 手写镜像仍在：`packages/mcp-server/src/tools/_front-door-knobs.ts`（**241 行**）、
-  `_fragment-shapes.ts`（**549 行**）、`generate-from-config.ts` 的 `configShape`。
-- 源码自己写明这是「deliberately, separately worded」的临时状态：
-  `generate-from-config.ts:543`「the copy could be replaced by the shared schema's `.shape`
-  — it stays … until that refactor is measured against the eval corpus」。
-- zod 已统一到 4.6.7（shared 与 mcp 均 `^4.4.3`），**版本前提已具备**。
-- spike 结论见 §三.2：SDK 接受 shared 的 ZodObject，但直接 `.pick()` 不是 drop-in。
-- 附带修正：`check-tool-shapes.mjs` 与 `scripts/lib/front-door.mjs` 的头注仍写着
-  「zod 3 与 zod 4 两代不能复用」，已改为当前事实（统一在 v4；镜像暂留的真实原因是
-  `.default()` 注入、strip-vs-strict 与 profile 相关描述）。
+**已退役的两份镜像**（与 shared `StructuredCrudConfigSchema` 单源）：
+
+| 文件 | 之前 | 之后 | 做法 |
+|---|---|---|---|
+| `src/tools/_front-door-knobs.ts` | 241 行手写副本 | **48 行**（6 个 `deriveSchema(...)`） | 逐颗旋钮从 `StructuredCrudConfigSchema.shape.<knob>` 派生 |
+| `src/tools/generate-from-config.ts` | 330 行 `configShape` 字面量 + 318 行字段词汇表 | **7 行**（`const configShape = StructuredCrudConfigSchema.shape;`） | 整份 shape 直接复用；死词汇表随 configShape 一起删除 |
+
+新增派生层 `src/tools/_derive.ts`（204 行，含契约注释）与 `__tests__/_derive.spec.ts`
+（15 例），把 spike 暴露的三个阻塞逐条解决：
+
+1. **去默认值** —— `.default()` 解包丢弃，但**保留「输入可省略」**（补 `.optional()`）。
+   spike 实测的 `withRowkey` 误判（默认 `rowkey:'id'` 当成显式配置）由此消失。
+2. **未知键** —— 递归 `.strict()`（前门旋钮）或 `.passthrough()`（片段口径）；拼错的键
+   必须在工具层报错，不能静默 strip（`_arg-guard` 的 did-you-mean 闸门依赖它）。
+   备份策略 `inherit` 留给 `validate_config` 那条只判不改的路径。
+3. **描述** —— `.describe()` 在 zod 4 里挂在实例 registry 上，重建会丢；派生对每个重建
+   结果显式重新 `describe()`。**教学面与配置判据自此同源**。
+
+派生并非只是「少几百行」：对账实测出镜像里两处**静默失败**并已消除 ——
+
+- `keyboardConfig` / `mouseConfig` / `validConfig` / `seqConfig` 四个嵌套对象漏了
+  `.strict()`，拼错的子键在 args 到达 handler 前被 strip；
+- `operationColumn.btns` / `expandConfig.fields` / `mergeConfig.rowsBy` 漏了 shared 的
+  `.min(1)`，空数组被当作合法配置一路传到生成器。
+
+**守卫从「对账」改为「反向断言」**（这是本次最容易被忽略的一处）：
+
+- `scripts/lib/entry-keys.mjs` 新增 `DERIVED_CONFIG_SHAPE_MARKER`；切片器见到标记就复用
+  shared 的顶层键块，见不到才回退到字面量切片。
+- `check-schema-contract` 新增 `assertConfigShapeIsDerived()`：不再查「副本是否同步」，
+  而是查**副本不存在**（标记在、字面量不在）。原因是切片选择器一旦失配，
+  `configShapeKeys` 会变空集，所有差集断言都会看起来成立 —— 这正是本仓
+  「证据正则型守卫的锚点过期」那一类假绿。
+- `readDialogContract` 的 `mcpDialogKeys` 同源（W2 后 mcp 的 `dialogs` 就是 shared 的
+  `DialogConfigSchema`），但比较保留，用以兜住「派生被改成部分拼装」。
+
+**代价与预算**：
+
+- full 档 `tools/list` 243.8 → **266.7 KB**（`generate_crud_from_config` 84.3 KB）。
+  增长全部来自把 shared 的权威文案搬上教学面 —— 手写副本里有事实性错误，例如称
+  antdv 的 `a-table` 支持虚拟滚动（实际两端都没有）。`check:surface-budget` 的 full
+  总量预算由 260 上调到 275，理由写在脚本注释里（棘轮允许有据上调）。
+- front-door 档不变（**21.1 KB / 12 工具**）：前门旋钮的文案本来就与 shared 同源。
+- `check:consistency` 142/143，唯一红的是 `check:eval-freshness`（语料哈希与 prompt
+  指纹都变了 —— 派生的描述进了 prompt 源）。**这是预期**：已发布数字必须由一次新的
+  完整测量替换，本批不买这次 token。
+
+**未做（下一批）**：
+
+- `_fragment-shapes.ts`（**549 行**）。它不是 drop-in：片段 surface 刻意**去掉**
+  `inQuery/inTable/inForm` 成员键（由 `composeCrudConfig` 派生），且全层
+  `.passthrough()`，`deriveSchema` 只能做「剥默认值 + 收紧」，做不了「裁剪 + 换措辞」。
+  正确做法是先在 shared 把 `SurfaceField` 提升为 Zod schema（目前只有 TS interface），
+  再让片段形状从它派生。
+- 其余零散镜像（`_fragment-shapes.ts` 之外）经核对均为**有意差异**（片段独有键、profile
+  相关文案），不属可退役集合。
+- 「净减 ≥2,000 行」按实测不可达：全部候选约 1,140 行，退役两份镜像净减 396 行
+  （含派生层与单测）。该数字应从出口标准中删去，或改为「镜像清零」。
 
 ### W3 · 收工具面 —— ✅ 完成（2026-11-10）
 
@@ -65,7 +115,8 @@ B 批当日完成的是 **W3 工具收缩**（前门 16 → 12 工具、171.1 �
 |---|---|---|---|---|
 | front-door（收缩前） | 16 | 171.1 KB | 14.0 KB | 157.1 KB |
 | **front-door（收缩后）** | **12** | **21.1 KB** | 8.9 KB | 12.2 KB |
-| full（未变） | 19 | 243.8 KB | 16.2 KB | 227.6 KB |
+| full（W3 时未变） | 19 | 243.8 KB | 16.2 KB | 227.6 KB |
+| full（W2 落地后） | 19 | **266.7 KB** | 16.2 KB | 250.5 KB |
 
 收缩前各工具对 front-door 体积的贡献：
 
@@ -97,7 +148,8 @@ B 批当日完成的是 **W3 工具收缩**（前门 16 → 12 工具、171.1 �
 **新增守卫**：
 
 - `scripts/check-surface-budget.mjs`（`check:surface-budget`）：读快照做预算棘轮 ——
-  front-door 总量 40 KB / 单工具 10 KB，full 总量 250 KB / 单工具 85 KB，并断言
+  front-door 总量 40 KB / 单工具 10 KB，full 总量 275 KB / 单工具 95 KB（W2 由 250/85
+  有据上调，理由见 W2 节），并断言
   front-door 至少比 full 小 4 倍（防止重量级工具漏回前门）。
 - `tools:list:check` 首次入闸，排在预算守卫之前：先证明快照与源码一致，预算才量的不是陈旧产物。
 - `check-tool-surface` 的 `FRONT_DOOR_HIDDEN` 扩到 7，并对每个隐藏工具做反向断言。
@@ -194,7 +246,7 @@ tools/list」。它钉住的是**能力前提**：`registerTool({ inputSchema: S
 
 | 批次 | 现在就能做 | 必须先解决 |
 |---|---|---|
-| B | ✅ W3 已落地（前门 12 工具 / 21.1 KB，`check:surface-budget` 入闸）；W2 的默认值/strict/描述三件事仍未动，故「守卫净减 ≥2,000 行」未达成 | W2 三件事 + `_front-door-knobs.ts`（241 行）/ `_fragment-shapes.ts`（549 行）/ `configShape` 的镜像退役 |
+| B | ✅ W3 已落地（前门 12 工具 / 21.1 KB，`check:surface-budget` 入闸）；✅ W2 主体：旋钮 + `configShape` 已单源派生（净 −396 行，`_derive.ts` 15 例钉住剥默认/收紧/保文案） | 「净减 ≥2,000 行」实为不可达，应改判据；`_fragment-shapes.ts`（549 行）需先把 shared 的 `SurfaceField` 提升为 Zod schema；`check:eval-freshness` 需要一次付费全量测量（语料哈希与 prompt 指纹均已变） |
 | C | `misses[]` 落 artifact（`scoreAll` 已有 `attrMisses`，只是没写出去）；往返测试骨架 | `__esPlusSource` 的发射位置与 `lossy[]` 契约；生成 → 回读 → 再生成的字节级断言 |
 | D | 拆 `generateScaffold` / `generateAppEntry` 的独立批次 | 逐消费方改指（CLI create / MCP examples 资源 / docs 回退 / demo） |
 

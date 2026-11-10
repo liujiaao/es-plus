@@ -206,8 +206,18 @@ export function keysInBlock(src, startMarker, closeLine, indent, label) {
   return block === null ? null : topLevelKeys(block, indent)
 }
 
-/** mcp 内联 AI Zod 的 `dialogs` 记录块起点（`z.record(z.string(), z.object({ … }))`，成员缩进 8）。 */
-const MCP_DIALOGS_MARKER = '  dialogs: z\n    .record(\n      z.string(),\n      z.object({'
+/**
+ * W2 单源派生标记：`generate_crud_from_config` 的入参形状**不再手写副本**，直接复用
+ * shared 权威 schema 的形状（`const configShape = StructuredCrudConfigSchema.shape;`）。
+ *
+ * 守卫为什么必须认这个标记：此前的副本是 330 行字面量 + 540 行字段词汇表，靠
+ * `check-schema-contract` 按源码正则逐项对账才不散架；切片选择器一旦失配，守卫会
+ * **静默放行**（`configShapeKeys` 为空，所有差集断言看起来都成立）。故：
+ *   · 标记存在 → `configShape` 的顶层键集**就是** shared 那份，直接复用同一切片；
+ *   · 标记不存在 → 仍按字面量切片（保留回滚能力），两者都没有则返回 null 报红；
+ *   · 手写副本被写回来 → `check-schema-contract` 显式断言报红（W2 的棘轮）。
+ */
+export const DERIVED_CONFIG_SHAPE_MARKER = 'const configShape = StructuredCrudConfigSchema.shape;'
 
 /**
  * `DIALOG_KEY_UNREACHABLE` —— 运行时 `CrudDialogConfig` 消费、但 AI 面（两处 AI Zod 的
@@ -410,13 +420,16 @@ export function readReachability() {
     '  }).optional(),',
     'structured-config.schema.ts pagination'
   )
-  // AI-32①：mcp 内联副本的顶层键（`configShape`，直接作为 `server.tool` 的 raw shape）。
-  const configShapeBlock = sliceBlock(
-    fromCfgSrc,
-    'const configShape = {',
-    '} as const;',
-    'generate-from-config.ts configShape'
-  )
+  // AI-32① → W2：mcp 的 `configShape` 现由 shared 权威 schema 派生（单源），顶层键集
+  // 与 `schemaBlock` 是同一份；字面量写法保留兜底，供回滚或过渡期使用。
+  const configShapeBlock = fromCfgSrc.includes(DERIVED_CONFIG_SHAPE_MARKER)
+    ? schemaBlock
+    : sliceBlock(
+        fromCfgSrc,
+        'const configShape = {',
+        '} as const;',
+        'generate-from-config.ts configShape'
+      )
   // AI-32②：下潜 `dialogs` —— 与 AI-26 的 `aiDialogKeys` 共用同一 reader，避免两处各切一份。
   const dialogBlock = sliceBlock(
     schemaSrc,
@@ -563,7 +576,8 @@ export function readDialogContract() {
     runtimeDialogEndOnly[e] = perEnd[e].filter((k) => !runtimeDialogKeys.includes(k))
   }
 
-  // (b) AI 面：两处手写副本各自取键（守卫断言两副本逐键一致 —— 漂移即静默剥离）。
+  // (b) AI 面：shared 是权威；mcp 侧 W2 起从它派生（同一份 shape），故取同一切片。
+  //     若有人把字面量副本写回来，`check-schema-contract` 的派生断言会先报红。
   const sharedDialogKeys = keysInBlock(
     schemaSrc,
     'const DialogConfigSchema = z.object({',
@@ -571,7 +585,15 @@ export function readDialogContract() {
     2,
     'shared DialogConfigSchema'
   )
-  const mcpDialogKeys = keysInBlock(fromCfgSrc, MCP_DIALOGS_MARKER, '      })', 8, 'mcp 内联 dialogs')
+  const mcpDialogKeys = fromCfgSrc.includes(DERIVED_CONFIG_SHAPE_MARKER)
+    ? sharedDialogKeys
+    : keysInBlock(
+        fromCfgSrc,
+        '  dialogs: z\n    .record(\n      z.string(),\n      z.object({',
+        '      })',
+        8,
+        'mcp 内联 dialogs'
+      )
   if (sharedDialogKeys === null || mcpDialogKeys === null) return null
 
   // (c) 生成器发射：schema 分支逐键 `dialogSchema.KEY = …`（SFC 分支只发注释、不发键）。

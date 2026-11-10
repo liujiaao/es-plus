@@ -14,9 +14,10 @@
  *     防止「补 required」这种听起来是加固、实际把合法配置判红的改动。
  *  4. dialog 契约守卫轴（AI-26）：运行时 `CrudDialogConfig`（三端手写副本）× AI 契约
  *     （两处手写 Zod 副本）× 生成器实际发射 —— 两条此前无人守望的差集。
- *  5. 契约双份全等 + MCP resource 第三份对齐（AI-32）：mcp 内联 `configShape` 与 shared
- *     权威 schema 的顶层键集必须**全等**（此前只按枚举清单逐项断，加非清单键两守卫全绿）；
- *     `crud-page-schema.ts` 内嵌的 `CrudDialogConfig` 第三份必须与运行时契约同步。
+ *  5. 契约单源 + MCP resource 第三份对齐（AI-32 → W2）：mcp 的 `configShape` **不再有
+ *     第二份副本**，而是从 shared 权威 schema 派生（`StructuredCrudConfigSchema.shape`）；
+ *     本守卫反向断言「副本不存在 + 顶层键集仍全等」，`crud-page-schema.ts` 内嵌的
+ *     `CrudDialogConfig` 第三份必须与运行时契约同步。
  *
  * 用法：node scripts/check-schema-contract.mjs
  * 退出码：0 = 同步；1 = 发现漂移。
@@ -33,6 +34,7 @@ import {
   readDialogOptionsJsonKeys,
   readCoreDialogOptionsKeys,
   sliceBlock,
+  DERIVED_CONFIG_SHAPE_MARKER,
   DIALOG_KEY_UNREACHABLE,
   DIALOG_OPTIONS_JSON_ONLY,
 } from './lib/entry-keys.mjs'
@@ -416,14 +418,16 @@ function checkPermissiveSchemas() {
 //  - target 枚举漏加渲染目标 → 合法请求被 Zod 拒绝（曾漏 antdv）；
 //  - tableOptions 漏加契约字段 → 用户传入的字段被 Zod 静默 strip、无法传导到生成物
 //    （曾漏 tabHeight）。
-// mcp-server 在 generate-from-config.ts 里内联了一份 StructuredCrudConfig 的
-// zod 副本；它与 shared（zod4）的权威 schema 无法安全共享对象（版本不兼容），因此二者
-// 极易漂移（antdv 就曾只加到内联副本、漏掉权威 schema）。本守卫对“权威 schema”与
-// “mcp 内联副本”两处同时做单源文本巡检（与 checkFormTypeEnum 解析 core/constants.ts
-// 的做法一致），不引入构建依赖。
+// mcp-server 曾在这里内联一份 StructuredCrudConfig 的 zod 副本（330 行字面量 + 540 行
+// 字段词汇表），与 shared 权威 schema 只能靠本守卫按源码正则逐项对账。W2（2026-11-10）
+// 把那份副本换成单源派生（`const configShape = StructuredCrudConfigSchema.shape;`）：
+// 副本不存在，就没有「两边同改」这回事，下面这套逐键断言只需对 **shared 一次**跑。
+//
+// 但方向必须反过来守：不是查副本是否同步，而是查副本**不存在**（见
+// `assertConfigShapeIsDerived`）。手写副本是本守卫链最脆的一环 —— 切片选择器一旦
+// 失配，`configShapeKeys` 变空集，所有差集断言都会看起来成立。
 const STRUCTURED_CONFIG_SOURCES = [
   { file: 'packages/shared/src/structured-config.schema.ts', label: 'shared 权威 Zod' },
-  { file: 'packages/mcp-server/src/tools/generate-from-config.ts', label: 'mcp 内联 Zod 副本' },
 ]
 // tableOptions 里必须覆盖 JSON 单源 table-options 中声明的高度/虚拟滚动契约字段，
 // 否则会被 Zod strip、用户设置无法生效。只校验 JSON 确实声明的字段，使守卫随单源
@@ -574,8 +578,36 @@ function parseExprOps(src) {
     .filter(Boolean)
 }
 
-function checkStructuredConfigZod() {
+/**
+ * W2 棘轮：mcp 侧**不得**再出现 StructuredCrudConfig 的手写 Zod 副本。
+ *
+ * 断言方向与以往相反 —— 以往是「查副本是否与 shared 同步」，现在是「查副本不存在」。
+ * 因为副本本身就是漂移源：它曾与 shared 各持一份、只能靠正则对账，任何一次漏键都是
+ * **静默 strip**（宿主 LLM 写了、生成器收不到、零告警）。单源之后这类缺陷在结构上
+ * 不存在，代价只是这道守卫必须防止有人把副本写回来。
+ *
+ * 若确需回滚（例如 zod 版本重新分叉），请在同一 PR 里恢复本文件的逐键断言并说明理由 ——
+ * 不要只把字面量加回去，那会让守卫继续按「标记存在」的假设静默放行。
+ */
+function assertConfigShapeIsDerived() {
+  const src = stripComments(read('packages/mcp-server/src/tools/generate-from-config.ts'))
   let ok = true
+  if (!src.includes(DERIVED_CONFIG_SHAPE_MARKER)) {
+    ok = fail(
+      `generate-from-config.ts 的 configShape 不再从 shared 派生（缺 ${JSON.stringify(DERIVED_CONFIG_SHAPE_MARKER)}）—— ` +
+        '单源是 W2 的棘轮：第二份副本会静默漂移，请不要把它写回来（确需回滚请同批恢复本守卫的逐键断言并说明理由）'
+    )
+  }
+  if (/const\s+configShape\s*=\s*\{/.test(src)) {
+    ok = fail(
+      'generate-from-config.ts 又出现了手写 configShape 字面量 —— shared 权威 schema 才是单源（W2）'
+    )
+  }
+  return ok
+}
+
+function checkStructuredConfigZod() {
+  let ok = assertConfigShapeIsDerived()
   const jsonTO = readSchema('table-options.schema.json').properties ?? {}
   const coreExprOps = parseExprOps(stripComments(read('packages/core/src/expr.ts')))
   if (!coreExprOps) {
@@ -847,7 +879,7 @@ function checkStructuredConfigZod() {
     }
   }
 
-  if (ok) console.log(`✅ 结构化配置 Zod 与 JSON 单源同步（${STRUCTURED_CONFIG_SOURCES.length} 处 schema × target 枚举 + tableOptions 契约字段 + tableBtns/toolbarBtns 定位归一化 + isHidden 表达式白名单）`)
+  if (ok) console.log(`✅ 结构化配置 Zod 与 JSON 单源同步（${STRUCTURED_CONFIG_SOURCES.length} 处权威 schema × target 枚举 + tableOptions 契约字段 + tableBtns/toolbarBtns 定位归一化 + isHidden 表达式白名单；mcp 为单源派生、无副本）`)
   return ok
 }
 
@@ -880,12 +912,13 @@ function checkDialogContract() {
   const d = readDialogContract()
   if (d === null) return false // 定位失败原因已由 lib 打印
 
-  // 两处手写 AI Zod 副本必须逐键一致（漂移 = 一侧放行、另一侧静默剥离）。
+  // AI 面：shared 是权威；mcp 侧 W2 起与它同源（同一份 shape 切片）。此处比较保留，
+  // 因为它同时兜住「派生被换成部分拼装」（如 `{ ...shape, foo }`）导致的分叉。
   const sorted = (xs) => [...xs].sort().join(',')
   if (sorted(d.sharedDialogKeys) !== sorted(d.mcpDialogKeys)) {
     ok = fail(
-      `dialog 契约的两处 AI Zod 副本已分叉：\n    shared: [${d.sharedDialogKeys.join(', ')}]\n    mcp   : [${d.mcpDialogKeys.join(', ')}]\n` +
-        '    两份都是手工维护的独立契约（各持一份，不共享对象），必须同改'
+      `dialog 契约的 AI 面已分叉：\n    shared: [${d.sharedDialogKeys.join(', ')}]\n    mcp   : [${d.mcpDialogKeys.join(', ')}]\n` +
+        '    mcp 应直接从 shared 派生（W2）；出现分叉说明有人改成了部分拼装'
     )
   }
   // 三端 `CrudDialogConfig` 是同一契约的手写副本：任一端独有键即为漂移。
@@ -995,7 +1028,7 @@ function checkDialogContract() {
 
   if (ok) {
     console.log(
-      `✅ dialog 契约三面一致（运行时 ${d.runtimeDialogKeys.length} 键 / AI ${d.sharedDialogKeys.length} 键 ×2 副本 / ` +
+      `✅ dialog 契约三面一致（运行时 ${d.runtimeDialogKeys.length} 键 / AI ${d.sharedDialogKeys.length} 键（mcp 同源） / ` +
         `生成器发射 ${d.generatorDialogKeys.length} 键 / 未达登记 ${Object.keys(DIALOG_KEY_UNREACHABLE).length} 行；` +
         `legacy JSON ${jsonKeys.length} 键 ⊆ core ${coreKeys.length} 键 ∪ 裁决 ${Object.keys(DIALOG_OPTIONS_JSON_ONLY).length} 行）`
     )
@@ -1003,11 +1036,11 @@ function checkDialogContract() {
   return ok
 }
 
-// ── 3c. 契约双份全等 + MCP resource 第三份对齐（AI-32）──────
-// ① shared 权威 zod4 `StructuredCrudConfigSchema`（20 顶层键）与 mcp 内联副本
-//    `configShape`（20 键）此前只按**枚举清单逐项断** —— 往任一处加非清单键（或改
-//    `dialogs`/`operationColumn`/`pagination`/`formLayout` 形状）两守卫全绿而镜像已分叉，
-//    且 mcp 侧 `z.object` 无 passthrough → 静默 strip。
+// ── 3c. 契约单源 + MCP resource 第三份对齐（AI-32 → W2）──────
+// ① shared 权威 zod4 `StructuredCrudConfigSchema`（20 顶层键）与 mcp 的 `configShape`
+//    此前是**两份手写契约**，只按枚举清单逐项断 —— 往任一处加非清单键（或改
+//    `dialogs`/`operationColumn`/`pagination`/`formLayout` 形状）两守卫全绿而镜像已分叉。
+//    W2 起 mcp 直接复用 shared 的 shape，本轴转为「副本不存在 + 键集仍全等」。
 // ③ MCP resource `crud-page-schema.ts` 内嵌的 `CrudDialogConfig` 是**第三份**（手写），
 //    曾漂移成 `onCancel`（运行时 `onClose`）、`render` 三参（运行时二参）、缺 5 键 ——
 //    教给宿主 LLM 的接口与运行时契约不符。
@@ -1016,18 +1049,20 @@ function checkContractParity() {
   const reach = readReachability()
   if (reach === null) return false
 
-  // ① 顶层键集全等（不只「清单里的键存在」）。
+  // ① 顶层键集全等。W2 起 mcp 由 shared 派生，这条在实现上恒成立 —— 保留它是为了
+  // 兜住「部分拼装」式的退化（`{ ...StructuredCrudConfigSchema.shape, extra }`），
+  // 也为了让守卫的报告在回滚期仍然可读。
   const onlyShared = reach.schemaKeys.filter((k) => !reach.configShapeKeys.includes(k))
   const onlyMcp = reach.configShapeKeys.filter((k) => !reach.schemaKeys.includes(k))
   if (onlyShared.length || onlyMcp.length) {
     ok = fail(
-      'shared 权威 Zod 与 mcp 内联 configShape 的顶层键集已分叉：' +
+      'shared 权威 Zod 与 mcp configShape 的顶层键集已分叉：' +
         (onlyShared.length ? `仅 shared 有 [${onlyShared.join(', ')}]；` : '') +
         (onlyMcp.length ? `仅 mcp 有 [${onlyMcp.join(', ')}]；` : '') +
-        'mcp 侧 z.object 无 passthrough，只加在一侧的键经那条路径会被静默 strip'
+        'mcp 应整体复用 shared 的 shape（W2 单源），不要部分拼装'
     )
   } else {
-    console.log(`✅ shared 权威 Zod 与 mcp 内联 configShape 顶层键全等（各 ${reach.schemaKeys.length} 键）`)
+    console.log(`✅ shared 权威 Zod 与 mcp configShape 顶层键全等（各 ${reach.schemaKeys.length} 键，单源派生）`)
   }
 
   // ③ MCP resource 运行时镜像。
