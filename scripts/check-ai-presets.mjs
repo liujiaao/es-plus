@@ -60,7 +60,7 @@ function subsetMismatch(actual, expected) {
   return misses
 }
 
-const { generateCrudSchema, generateCrudPage, generateCrudConfig } = await import(
+const { generateCrudSchema, generateCrudConfig } = await import(
   new URL('../packages/shared/build/index.js', import.meta.url).href
 )
 
@@ -187,20 +187,9 @@ for (const { label, text } of DEAD_BUTTON_PROMPTS) {
   for (const target of ['vue3', 'vue2', 'antdv']) {
     const sym = MSG_SYMBOL[target]
 
-    // 路径 A：整页代码（generateCrudPage → crud-engine.generateCode 的 queryBtns click）
-    // 用上线函数而不是裸 `generateCode`：目标库改名（ElMessage→Message/message）只发生在这层。
-    const pageCode = generateCrudPage(text, target).code
-    for (const action of ['导出', '导入']) {
-      if (pageCode.includes(`TODO: 调用${action}接口`)) {
-        failures.push(`合成提示词[${label}]/${target}：generateCrudPage 仍产出死按钮「TODO: 调用${action}接口」`)
-      }
-    }
-    if (!pageCode.includes(`${sym}.warning(`)) {
-      failures.push(`合成提示词[${label}]/${target}：generateCrudPage 里没有可见的「尚未实现」提示（期望 ${sym}.warning）`)
-    }
-    if (!pageCode.includes(`from '${MSG_PACKAGE[target]}'`) || !pageCode.includes(sym)) {
-      failures.push(`合成提示词[${label}]/${target}：queryBtns 的提示引用了 ${sym}，但产物没从 ${MSG_PACKAGE[target]} 导入它`)
-    }
+    // 路径 A（整页代码 generateCrudPage）随 W6 一起退役：那条 legacy 正则引擎已删除，
+    // 首页 demo 现在只经 `generateCrudConfig` 取结构（上方断言），产物形状由包装 SFC
+    // （路径 B，generateCrudSchema）代表 —— 它仍是 CLI/MCP 可用的离线路径。
 
     // 路径 B：包装 SFC（generateCrudSchema，handleBtnClick）
     const sfc = generateCrudSchema(text, target).wrapperCode

@@ -359,7 +359,7 @@ Most component libraries' "AI friendliness" is just talk — "our API names are 
 
 > **Architecture note (important)**: ES-Plus's MCP Server **does not call an LLM itself**. It is a **tool provider** — it exposes schemas, conventions, and few-shot examples to the **host LLM (Claude Code / Cursor, etc.)**, which does the actual semantic reasoning (natural language → structured config); ES-Plus then **deterministically compiles** that result into runnable code across all three renderers. "AI-native," precisely speaking, means "**AI reasoning + protocol constraints + deterministic compilation + CI compile guarantee**" — not "the component library writes code itself."
 
-1. **The MCP server** exposes 19 tools, 9 resource families and 3 prompts (setting `ESPLUS_MCP_PROFILE=front-door` contracts that to 12 — hiding the compat entry, the three single-fragment tools and the three advanced/legacy tools, taking the host's per-turn `tools/list` from ~244 KB down to ~21 KB); the AI reads them over the protocol
+1. **The MCP server** exposes 18 tools, 9 resource families and 3 prompts (setting `ESPLUS_MCP_PROFILE=front-door` contracts that to 12 — hiding the compat entry, the three single-fragment tools and the two advanced/legacy tools, taking the host's per-turn `tools/list` from ~339 KB down to ~21 KB); the AI reads them over the protocol
 2. **Configs are constrained by zod schemas**; AI-generated output is validated immediately and the AI retries on failure
 3. **The CI matrix** runs vue3 × vue2 × schema mode × sfc mode on every push, executing `vite build` to prove AI-generated code **actually compiles**
 
@@ -616,7 +616,7 @@ The classic large-company arc: hand-write everything early, hit the pain wall, t
 
 This section is what sets ES-Plus apart from **every other** admin component library.
 
-### 7.1 The 19 MCP Server Tools
+### 7.1 The 18 MCP Server Tools
 
 See [packages/mcp-server/src/tools/index.ts](../packages/mcp-server/src/tools/index.ts):
 
@@ -628,7 +628,7 @@ See [packages/mcp-server/src/tools/index.ts](../packages/mcp-server/src/tools/in
 | `generate_crud` | **Compat entry**: fill the `surfaces` intent table (any subset of query / table / form / dialog) → composed and compiled; byte-identical to `scene: 'crud'` | Stable alias for the main path; semantic mapping is done by the **host LLM**, routing and compilation by deterministic code |
 | `generate_form` / `generate_table` / `generate_dialog` | Single-surface fragments: standalone es-form / es-table / useDialog | When you want exactly one component, or a fragment beside non-es-plus components |
 | `generate_crud_from_config` | **ADVANCED**: full `StructuredCrudConfig` → runnable code (use when you already hold a typed config) | The codegen step in a Schema-first flow; natural-language requests go through the front door |
-| `generate_crud_page` / `generate_crud_schema` | **LEGACY FALLBACK**: natural language → full .vue / CrudPageSchema | ⚠️ **No-LLM fallback**: local regex / keyword parsing (`crud-engine.ts`), limited coverage — only for hosts that can't reason |
+| `generate_crud_schema` | **LEGACY FALLBACK**: natural language → CrudPageSchema | ⚠️ **No-LLM fallback**: local regex / keyword parsing (`schema-generator.ts`), limited coverage — only for hosts that can't reason |
 | `validate_config` | zod-validates a config | Bad AI output is caught and retried instantly |
 | `refine_config` | One corrective pass over a pinned config, echoing the diff | Convergence loop: deterministic validate + diff, no model round-trip |
 | `list_form_types` | Returns the 16 formtypes + descriptions | AI no longer guesses which control names are valid |

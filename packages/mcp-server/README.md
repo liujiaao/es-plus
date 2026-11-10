@@ -255,7 +255,7 @@ mcp-server-es-plus --help        # 用法说明
 表格显示姓名、手机号、邮箱、状态、创建时间，支持新增编辑删除
 ```
 
-AI 会自动调用 MCP Server 的 `generate_crud`（前门）工具。你只填 `surfaces` 意图表（query / table / form / dialog 各放哪些字段、要哪些弹窗），路由与三端编译由确定性代码完成，产物包含：
+AI 会自动调用 MCP Server 的 `generate_scene`（前门）工具。你只填 `surfaces` 意图表（query / table / form / dialog 各放哪些字段、要哪些弹窗），路由与三端编译由确定性代码完成，产物包含：
 
 - 查询表单（字段类型按语义映射到 Input / Select / DatePicker 等）
 - 数据表格（含状态列渲染、操作按钮）
@@ -269,11 +269,11 @@ AI 会自动调用 MCP Server 的 `generate_crud`（前门）工具。你只填 
 
 ## 工具 (Tools)
 
-MCP Server 默认（`full` profile）暴露 **19 个工具**，AI 编码工具会根据你的描述自动选择调用。
+MCP Server 默认（`full` profile）暴露 **18 个工具**，AI 编码工具会根据你的描述自动选择调用。
 
-> **生成路径优先级**：`generate_scene` 是**前门 / 场景路由器**（先声明要建什么：crud / table / form / dialog，再填该场景的意图表；产物与对应旧工具逐字节相同）。`generate_composition` 是**组合页**（把多个独立片段装成一张能跑的 `Page.vue`，接线由运行时契约确定，也接受显式 `wires`）。`generate_crud` 是 `scene='crud'` 的**兼容入口（adapter）**，产物逐字节相同，保留旧工具名。`generate_crud_from_config` 是 **ADVANCED**（已持有类型化配置时直通，与前者共用同一生成器）。`generate_crud_page` / `generate_crud_schema` 是 **LEGACY FALLBACK**（无 LLM 的正则兜底，准确率受关键词表覆盖度限制）。
+> **生成路径优先级**：`generate_scene` 是**前门 / 场景路由器**（先声明要建什么：crud / table / form / dialog，再填该场景的意图表；产物与对应旧工具逐字节相同）。`generate_composition` 是**组合页**（把多个独立片段装成一张能跑的 `Page.vue`，接线由运行时契约确定，也接受显式 `wires`）。`generate_crud` 是 `scene='crud'` 的**兼容入口（adapter）**，产物逐字节相同，保留旧工具名。`generate_crud_from_config` 是 **ADVANCED**（已持有类型化配置时直通，与前者共用同一生成器）。`generate_crud_schema` 是 **LEGACY FALLBACK**（无 LLM 的正则兜底，准确率受关键词表覆盖度限制）。
 >
-> 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 7 个重量级/兼容/legacy 入口（`generate_crud`、`generate_form` / `generate_table` / `generate_dialog`、1 个 ADVANCED 与 2 个 LEGACY），只留场景路由器、组合页与确定性支撑工具（共 12 个）。隐藏标准不是「旧不旧」，而是 **`generate_scene` 能否逐字节复现**：四个 scene 复用同一组发射器（`check-scene-parity` 守卫）。效果是宿主每轮的 `tools/list` 从 ~244 KB 降到 ~21 KB（`check:surface-budget` 守卫）。
+> 设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 6 个重量级/兼容/legacy 入口（`generate_crud`、`generate_form` / `generate_table` / `generate_dialog`、1 个 ADVANCED 与 1 个 LEGACY），只留场景路由器、组合页与确定性支撑工具（共 12 个）。隐藏标准不是「旧不旧」，而是 **`generate_scene` 能否逐字节复现**：四个 scene 复用同一组发射器（`check-scene-parity` 守卫）。效果是宿主每轮的 `tools/list` 从 ~339 KB 降到 ~21 KB（`check:surface-budget` 守卫）。
 
 ### generate_scene（前门 / 场景路由器 / SCENE ROUTER）
 
@@ -307,14 +307,13 @@ MCP Server 默认（`full` profile）暴露 **19 个工具**，AI 编码工具�
   它按**本配置**逐项判定 required（没有 `permissionValue` 就不要求 `permission`），并附一份可直接复制的入口样板。
   清单来自 `packages/shared/src/preflight.ts`，与 `scaffold_page` 是**同一个** builder。
 
-### generate_crud_page（兜底 / no-LLM fallback）
+### generate_crud_schema（兜底 / 输出 CrudPageSchema）
 
-从自然语言生成 CRUD 页面（.vue SFC）。**它用正则/关键词解析，不做真正推理**——仅用于快速原型，或你无法草拟结构化配置时。日常请优先 `generate_crud`（前门）。
+从自然语言生成 **`CrudPageSchema` JSON + 最小包装 SFC**（`<es-crud-page>` 形态）。**它用正则/关键词解析，不做真正推理**——仅用于快速原型、无 LLM 宿主，或你无法草拟结构化配置时。日常请优先 `generate_scene`（前门）—— 两者共用同一套确定性生成器。
 
 | 参数 | 类型 | 说明 |
 |------|------|------|
 | `description` | string | 页面功能描述（中文或英文） |
-| `mode` | `'schema' \| 'sfc'`（可选） | `schema`（默认）= CrudPageSchema + 包装 SFC；`sfc` = 完整 SFC |
 | `target` | `'vue3' \| 'vue2' \| 'antdv'`（可选） | 渲染目标，未传则自动检测 |
 
 **描述技巧**：
@@ -333,7 +332,7 @@ MCP Server 默认（`full` profile）暴露 **19 个工具**，AI 编码工具�
 "操作日志查询，查询关键词、级别、日期范围，表格显示时间、级别、操作人、内容，只查看不编辑"
 ```
 
-**关键词兜底映射**（仅 `generate_crud_page` 的启发式；首选路径靠语义推断而非此表）：
+**关键词兜底映射**（仅 `generate_crud_schema` 的启发式；首选路径靠语义推断而非此表）：
 
 | 字段关键词 | 自动映射为 |
 |-----------|-----------|
@@ -350,10 +349,6 @@ MCP Server 默认（`full` profile）暴露 **19 个工具**，AI 编码工具�
 | 进度、区间、范围 | Slider 滑块 |
 | 穿梭、分配 | Transfer 穿梭框 |
 | 其他 | Input 输入框 |
-
-### generate_crud_schema（兜底 / 输出 CrudPageSchema）
-
-与 `generate_crud_page` 同属正则/关键词引擎，但产物是 **`CrudPageSchema` JSON + 最小包装 SFC**（`<es-crud-page>` 形态），参数同为 `description` + 可选 `target`。日常请优先 `generate_crud`（前门）—— 两者共用同一套确定性生成器。
 
 ### validate_config
 
@@ -495,7 +490,7 @@ AI 工具可通过 MCP 资源协议读取 es-plus 的 Schema 定义和类型信�
 |--------|------|------|
 | `crud-page` | `description` | 生成完整 CRUD 页面的系统提示 |
 | `form-config` | `description` | 仅生成表单配置 JSON 的系统提示 |
-| `spec-to-surfaces` | `spec`, `target?`, `mode?` | 把文本 PRD / 线框转写稿转成 `generate_crud` 的 surfaces 意图表（第一英里） |
+| `spec-to-surfaces` | `spec`, `target?`, `mode?` | 把文本 PRD / 线框转写稿转成 `generate_scene`（`scene='crud'`）的 surfaces 意图表（第一英里） |
 
 ---
 

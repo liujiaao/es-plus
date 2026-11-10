@@ -15,10 +15,8 @@ export {
 } from '../../../packages/shared/src/crud-engine'
 
 export {
-  generateCrudPage,
   generateScaffold,
-  type GenerateResult,
-} from '../../../packages/shared/src/code-generator'
+} from '../../../packages/shared/src/scaffold-generator'
 
 export {
   generateCrudSchema,
@@ -27,7 +25,6 @@ export {
 
 export {
   FORM_TYPES,
-  PRESET_EXAMPLES,
   COMPONENT_LIST,
   type ComponentName,
 } from '../../../packages/shared/src/constants'

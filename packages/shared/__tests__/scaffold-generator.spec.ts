@@ -8,7 +8,7 @@
 //     vue2 `Vue.use(ESPlus, …)`），且带上 permission / t / httpRequest 三个跨文件前提项。
 
 import { describe, it, expect } from 'vitest'
-import { generateScaffold, generateAppEntry } from '../src/code-generator.js'
+import { generateScaffold, generateAppEntry } from '../src/scaffold-generator.js'
 
 const TARGETS = ['vue3', 'vue2', 'antdv'] as const
 

@@ -14,7 +14,7 @@ import {
   type PreflightReport,
 } from '../src/preflight'
 import { doctorPage, formatDoctor, probePluginOptions, stripJsComments } from '../src/doctor'
-import { generateAppEntry } from '../src/code-generator'
+import { generateAppEntry } from '../src/scaffold-generator'
 import { generateFromConfig } from '../src/structured-generator'
 
 function byId(r: PreflightReport, id: PreflightId) {

@@ -250,7 +250,7 @@ mcp-server-es-plus --help        # 用法说明
 
 ## MCP Tools（可调用工具）
 
-配置完成后，AI 工具会自动发现并使用以下 **19 个工具**（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 7 个重量级/兼容/legacy 入口，只留场景路由器、组合页与确定性支撑工具）：
+配置完成后，AI 工具会自动发现并使用以下 **18 个工具**（默认 `full` profile；设 `ESPLUS_MCP_PROFILE=front-door` 时隐藏 6 个重量级/兼容/legacy 入口，只留场景路由器、组合页与确定性支撑工具）：
 
 | 工具 | 定位 | front-door |
 |------|------|:----------:|
@@ -271,7 +271,6 @@ mcp-server-es-plus --help        # 用法说明
 | `scaffold_page` | 最小页面脚手架 | ✅ |
 | `doctor_page` | 静态检查宿主入口是否满足 preflight 清单 | ✅ |
 | `generate_crud_from_config` | **ADVANCED**：已持有类型化配置时的直通生成 | ⛔ |
-| `generate_crud_page` | **LEGACY FALLBACK**：正则/关键词解析（无 LLM 兜底） | ⛔ |
 | `generate_crud_schema` | **LEGACY FALLBACK**：正则 → CrudPageSchema + 包装 SFC | ⛔ |
 
 > profile 是**工具面**的开关，不是能力差异：被隐藏的兼容入口与三个单面片段，产物都能由 `generate_scene` 的对应 `scene` 逐字节复现（同一组发射器，`check-scene-parity` 断言）；高级/legacy 三个则只在 `full` 档可见。隐藏它们是为了让宿主在前门与旧入口之间没有选择歧义，同时把每轮必读的 `tools/list` 从约 171 KB 压到约 21 KB。提示词、resources 与工具描述会按同一份 profile 同步调整。
@@ -328,9 +327,9 @@ mcp-server-es-plus --help        # 用法说明
 
 **功能**：从**结构化配置**生成**生产级** CRUD 页面代码（零 TODO、零占位符）
 
-这是**高级路径**：当你已经持有一份类型化配置（持久化、做过于 diff、或刚经 `refine_config` 修订）时直接使用。**自然语言请求请走 `generate_crud`（前门）** —— 它把「填整份配置」压缩成「填 `surfaces`」，路由由确定性代码完成。
+这是**高级路径**：当你已经持有一份类型化配置（持久化、做过于 diff、或刚经 `refine_config` 修订）时直接使用。**自然语言请求请走 `generate_scene`（前门）** —— 它把「填整份配置」压缩成「填 `surfaces`」，路由由确定性代码完成。
 
-与 `generate_crud_page`（正则关键词兜底）不同，此工具的入参是一套**类型化字段**（不是一坨 JSON 字符串）——由你（AI 客户端）按字段**语义**逐项填空。字段的 `.describe()` 语义指引与枚举合法值都内嵌在工具的 JSON schema 里，直接约束你的输出。
+与 `generate_crud_schema`（正则关键词兜底）不同，此工具的入参是一套**类型化字段**（不是一坨 JSON 字符串）——由你（AI 客户端）按字段**语义**逐项填空。字段的 `.describe()` 语义指引与枚举合法值都内嵌在工具的 JSON schema 里，直接约束你的输出。
 
 > **推理在你这边**：读需求 → 填 `name`（PascalCase）/ `apiUrl`（真实地址）/ `fields[]`（`prop`/`label`/`formtype` + `inQuery`/`inTable`/`inForm`）/ `actions[]`。schema 无法表达的业务逻辑（自定义校验、跨字段计算、副作用）**不要静默丢弃**，而是落成带标记的扩展点（`formatter`/`render` 串），并在返回的 `warnings` 里显式列出。调用前先读 `esplus://conventions`、`esplus://examples/nl-to-config`、`esplus://types`，草拟后对照原始需求自审一遍再调用。
 
@@ -485,51 +484,12 @@ AI：[读取 esplus://conventions 获取规范]
 
 ---
 
-### generate_crud_page（LEGACY FALLBACK / no-LLM 兜底）
-
-**功能**：从自然语言描述生成完整的 `.vue` CRUD 页面——**基于正则/关键词解析**，准确率受关键词覆盖度限制。
-
-> **优先用 `generate_crud`（前门）；已持有配置时用 `generate_crud_from_config`（ADVANCED）**。此工具不借助你的语义推理，纯靠内置关键词表匹配字段类型，仅适合快速原型、离线/无 LLM 宿主，或你确实无法草拟结构化配置时的兜底。它同样支持 `mode`（schema/sfc）与 `target`（vue3/vue2/antdv）。
-
-**输入参数**：
-
-| 参数 | 类型 | 必填 | 说明 |
-|------|------|------|------|
-| description | string | ✅ | 页面需求的自然语言描述（支持中文/英文） |
-| mode | `schema`\|`sfc` | 否 | `schema`（默认）= `CrudPageSchema` JSON + 包装 SFC；`sfc` = 完整 SFC |
-| target | `vue3`\|`vue2`\|`antdv` | 否 | 默认 `vue3` |
-
-**输出**（`mode=sfc`）：完整的 Vue SFC 代码，包含：
-- `<template>` — EsTable + EsForm 组合
-- `<script setup>` — 响应式状态、配置对象、useDialog 弹窗逻辑
-
-**示例对话**：
-
-```
-用户：帮我生成一个用户管理页面，查询条件有姓名、手机号、状态，
-     表格显示姓名、手机号、邮箱、状态、创建时间，支持新增编辑删除
-
-AI：[调用 generate_crud_page] 生成包含查询表单、数据表格、操作列和弹窗表单的完整代码
-```
-
-**支持的描述格式**：
-
-```
-# 格式一：明确区分查询和表格字段
-"查询条件有 A、B，表格显示 A、B、C、D，支持新增编辑删除"
-
-# 格式二：仅列出字段（自动同时用于查询和表格）
-"用户管理：姓名、手机号、邮箱、状态"
-
-# 格式三：指定具体操作
-"订单列表，支持查看详情和导出"
-```
 
 ### generate_crud_schema（LEGACY FALLBACK / 输出 CrudPageSchema）
 
-**功能**：与 `generate_crud_page` 同属正则/关键词引擎，但产物是 **`CrudPageSchema` JSON + 最小包装 SFC**（`<es-crud-page>` 形态），直接可被 `EsCrudPage` 消费。
+**功能**：正则/关键词解析自然语言，产物是 **`CrudPageSchema` JSON + 最小包装 SFC**（`<es-crud-page>` 形态），直接可被 `EsCrudPage` 消费。
 
-> **优先用 `generate_crud`（前门）**。两者共用同一套确定性生成器，前门多了 `surfaces` 路由与片段分派；此工具只为「快速原型 / 无 LLM 宿主 / 明确要 schema 形态」保留。支持 `target: vue3 | vue2 | antdv`（schema JSON 与 target 无关，只有包装 SFC 语法不同）。
+> **优先用 `generate_scene`（前门）**。两者共用同一套确定性生成器，前门多了 `surfaces` 路由与片段分派；此工具只为「快速原型 / 无 LLM 宿主 / 明确要 schema 形态」保留。支持 `target: vue3 | vue2 | antdv`（schema JSON 与 target 无关，只有包装 SFC 语法不同）。
 
 **输入参数**：
 
@@ -711,7 +671,7 @@ AI 工具可以主动读取以下资源来获取上下文信息（共 **9 类**�
      - 操作：新增、编辑、删除
 ```
 
-AI 调用 `generate_crud`（前门）：把需求填成 `surfaces` 意图表 → 确定性路由到 golden 覆盖的生成器，产出：
+AI 调用 `generate_scene`（前门）：把需求填成 `surfaces` 意图表 → 确定性路由到 golden 覆盖的生成器，产出：
 - 查询表单（3 个字段 + 查询/重置/新增按钮）
 - 数据表格（5 列 + 操作列）
 - 弹窗（新增/编辑表单；声明式配置，无需手写 useDialog 胶水）
@@ -802,11 +762,11 @@ AI：[读取 esplus://schemas/form-item 了解字段结构]
 └────────────────────────────────────────────────────┘
 ```
 
-## 自然语言解析规则（仅限 generate_crud_page 兜底）
+## 自然语言解析规则（仅限 generate_crud_schema 兜底）
 
-> 以下关键词表**只**用于 `generate_crud_page` 的正则启发式解析。`generate_crud`（前门）与 `generate_crud_from_config`（ADVANCED）都不走这些表——路由或字段语义由确定性代码/宿主推理决定，不受关键词覆盖度限制。
+> 以下关键词表**只**用于 `generate_crud_schema` 的正则启发式解析。`generate_scene`（前门）与 `generate_crud_from_config`（ADVANCED）都不走这些表——路由或字段语义由确定性代码/宿主推理决定，不受关键词覆盖度限制。
 
-`generate_crud_page` 工具使用基于规则的 NLP 引擎，支持以下模式：
+`generate_crud_schema` 工具使用基于规则的 NLP 引擎，支持以下模式：
 
 ### 字段类型自动推断
 
@@ -877,4 +837,4 @@ MCP Server 生成的是标准 @es-plus/vue3 配置代码。如果需要调整风
 | 1.1.0 | 新增 `generate_crud_from_config` 工具，支持多弹窗配置生成 |
 | 1.0.0 | 初始发布：5 Tools + 8 Resources + 2 Prompts |
 
-> 想看某一版**准确的**工具/资源清单，以运行时为准：`validate_config` 之类的工具名可直接在客户端工具面板查看，或用 `check:tool-surface` 的源码断言（`full` 19 / `front-door` 12）。
+> 想看某一版**准确的**工具/资源清单，以运行时为准：`validate_config` 之类的工具名可直接在客户端工具面板查看，或用 `check:tool-surface` 的源码断言（`full` 18 / `front-door` 12）。

@@ -275,7 +275,7 @@ For large datasets, use server-side pagination with \`apiParams\` +
 ## When to Use
 This server runs \`ESPLUS_MCP_PROFILE=front-door\`: \`generate_crud\`,
 \`generate_form\`, \`generate_table\`, \`generate_dialog\`,
-\`generate_crud_from_config\`, \`generate_crud_page\` and \`generate_crud_schema\`
+\`generate_crud_from_config\` and \`generate_crud_schema\`
 are NOT registered.
 - \`generate_scene\` (scene='crud'): fill its \`surfaces\` intent table
   (query / table / form / dialog) — the routing builds this StructuredCrudConfig
@@ -287,8 +287,8 @@ are NOT registered.
       : `# Structured Config Tool (generate_crud_from_config)
 
 ## When to Use
-Use \`generate_crud_from_config\` instead of \`generate_crud_page\` when you need production-ready code.
-- \`generate_crud_page\`: Quick prototyping from natural language (has TODOs, placeholder data)
+Use \`generate_crud_from_config\` (or \`generate_scene\` scene='crud') when you need production-ready code.
+- \`generate_crud_schema\`: Quick prototyping from natural language (has TODOs, placeholder data)
 - \`generate_crud_from_config\`: Production code from structured JSON (zero TODOs, real API URLs)`;
   return `# ${v.esPlusPkg} Code Generation Conventions (target=${target})
 

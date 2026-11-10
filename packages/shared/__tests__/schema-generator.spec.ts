@@ -1,10 +1,28 @@
 import { describe, it, expect } from 'vitest'
 import { generateCrudSchema } from '../src/schema-generator.js'
-import { PRESET_EXAMPLES } from '../src/constants.js'
 import { VALID_FORM_TYPES, VALID_CRUD_ACTIONS } from '../src/contract.js'
 
+/**
+ * 离线 schema 生成器的语料（W6）。
+ *
+ * 这 8 条原本是 `shared` 公开导出的 `PRESET_EXAMPLES`，被 CLI 预设选择器、MCP 示例
+ * 资源、站点首页 demo 与本测试共用。那三处都已各自就近持有自己的列表，公共导出随之
+ * 删除；本测试只需要「形状覆盖不同」的输入，故就地内联 —— 字面量与快照绑定，
+ * 改动等于重建全部 16 条快照，不要顺手改文案。
+ */
+const LEGACY_PRESETS = [
+  { label: '用户管理', prompt: '用户管理页面，查询条件有姓名、手机号、状态，表格显示姓名、手机号、邮箱、状态、创建时间，支持新增编辑删除' },
+  { label: '订单列表', prompt: '订单列表，查询订单号、客户名称、日期范围、状态，表格显示订单号、客户、金额、状态、创建时间，支持查看详情和删除' },
+  { label: '商品管理', prompt: '商品管理，查询商品名称、分类、状态，表格显示名称、分类、价格、库存、状态，支持新增编辑删除' },
+  { label: '日志查询', prompt: '操作日志查询，查询关键词、级别、日期范围，表格显示时间、级别、操作人、内容，只查看不编辑' },
+  { label: '角色权限', prompt: '角色管理页面，查询角色名称、状态，表格显示角色名称、描述、状态、创建时间，支持新增编辑删除' },
+  { label: '员工花名册', prompt: '员工管理，查询姓名、部门、职位，表格显示姓名、性别、年龄、部门、职位、手机号、状态，支持新增编辑' },
+  { label: '文章管理', prompt: '文章管理，查询标题、分类、状态，表格显示标题、分类、创建人、创建时间、状态，支持新增编辑删除' },
+  { label: '系统配置', prompt: '系统配置管理，查询名称、类型，表格显示名称、编号、类型、描述、状态，支持新增编辑删除导出' },
+] as const
+
 describe('generateCrudSchema — snapshot tests', () => {
-  for (const example of PRESET_EXAMPLES) {
+  for (const example of LEGACY_PRESETS) {
     it(`generates stable schema for: ${example.label}`, () => {
       const result = generateCrudSchema(example.prompt)
       expect(result.schema).toMatchSnapshot()
@@ -18,7 +36,7 @@ describe('generateCrudSchema — snapshot tests', () => {
 })
 
 describe('generateCrudSchema — schema structure', () => {
-  for (const example of PRESET_EXAMPLES) {
+  for (const example of LEGACY_PRESETS) {
     it(`${example.label}: has required columns array`, () => {
       const result = generateCrudSchema(example.prompt)
       expect(result.schema).toHaveProperty('columns')
@@ -85,7 +103,7 @@ describe('generateCrudSchema — capability fidelity', () => {
 
 describe('generateCrudSchema — wrapper SFC', () => {
   it('has valid SFC structure', () => {
-    const result = generateCrudSchema(PRESET_EXAMPLES[0].prompt)
+    const result = generateCrudSchema(LEGACY_PRESETS[0].prompt)
     expect(result.wrapperCode).toContain('<template>')
     expect(result.wrapperCode).toContain('<es-crud-page')
     expect(result.wrapperCode).toContain('</template>')
@@ -94,7 +112,7 @@ describe('generateCrudSchema — wrapper SFC', () => {
   })
 
   it('includes fetchData function', () => {
-    const result = generateCrudSchema(PRESET_EXAMPLES[0].prompt)
+    const result = generateCrudSchema(LEGACY_PRESETS[0].prompt)
     expect(result.wrapperCode).toContain('async function fetchData')
   })
 

@@ -12,7 +12,7 @@
 | **A** | W1 标准 + W2 1 小时 spike + `tools/list` 快照 | ✅ 完成 | 冻结产物重算，中文腿不变、英文腿可解释 | zh 未变、en 可逐维解释；spike 与快照今日落盘 |
 | **B** | W2 单源派生 + W3 工具收缩 | ✅ 完成 | 守卫净减 ≥2,000 行；`tools/list` <40 KB | front-door **21.1 KB / 12 工具**（<40 KB 达成）；W2 三份镜像全部清零（旋钮 + configShape + 片段形状），**净 −667 行**；「净减 ≥2,000 行」按实测**不可达**（候选总量 ~1,140 行），出口标准已改判为「镜像清零」 |
 | **C** | W4 回读闭环 + W5 弱维度 | ◐ W5 ✅ / W4 ✗ | 往返测试绿；membership/dataOptions 有归因数据 | W5 已落盘逐行归因（旁路 + 零 API 复算，membership/dataOptions 均有通道级归因）；W4 仍无 `read_page`/`__esPlusSource`/`lossy[]` |
-| **D** | W6 legacy 退役 | ◐ 部分 | 无 importer；资源文案不再失实 | 文案已实（a5554f3）；importer 仍有 6 处 |
+| **D** | W6 legacy 退役 | ✅ 完成 | 无 importer；资源文案不再失实 | `generateCrudPage` / `PRESET_EXAMPLES` / MCP `generate_crud_page` 删除，全仓零代码 importer；`esplus://examples` 改走前门 `emitSceneArtifact`，文案与产物同源 |
 
 A 批的「W1 标准」早在 `86316bf`（`+en-text-agnostic-v1`）与 `fc59d13`（`+label-typographic-v1`）
 落地；本日补的是 A 批剩下的两件：**W2 1 小时 spike** 与 **`tools/list` 快照**。
@@ -232,16 +232,29 @@ B 批当日完成的是 **W3 工具收缩**（前门 16 → 12 工具、171.1 �
 - **未做（刻意）**：不把归因写进 `last-accuracy.json`；不做时间型新鲜度判据
   （一次测量内 `measuredAt` 允许缺省，同一性比时间更难撒谎）。
 
-### W6 · legacy 退役 —— ◐ 部分
+### W6 · legacy 退役 —— ✅ 完成（2026-11-10）
 
-- 资源文案已不再失实（`a5554f3`，`resources/examples.ts:27`）。
-- importer 仍在（`generateCrudPage` / `PRESET_EXAMPLES`）：
-  `packages/cli/src/commands/create.ts:317`、`packages/mcp-server/src/resources/examples.ts:9`、
-  `packages/mcp-server/src/tools/generate-crud-page.ts:35`、`packages/shared/src/index.ts:2`、
-  `packages/shared/src/code-generator.ts:28`、`packages/shared/src/constants.ts:25`，
-  另有 `packages/shared/__tests__/code-generator*.spec.ts` 两套快照。
-- 前置不变：先把 `generateScaffold` / `generateAppEntry` 从 `code-generator.ts` 拆出去
-  （`scaffold_page` 与 CLI `scaffold` 依赖它们，不是 crud-engine 的依赖），再逐消费方改指。
+**出口标准「无 importer；资源文案不再失实」已达成**。退役的是 `generateCrudPage`
+（legacy 正则引擎 → 整页 SFC）整条腿，不是「再标一次 legacy」。
+
+- **shared 面**：`generateCrudPage` / `GenerateResult` / `PRESET_EXAMPLES` 三个公开导出删除；
+  `generateScaffold` / `generateAppEntry` 先拆到 `scaffold-generator.ts`（`scaffold_page`
+  与 CLI `scaffold` 继续依赖，它们不是 crud-engine 的依赖），再删引擎本体与两套快照。
+- **MCP 面**：`generate_crud_page` 注册与工具文件删除（它只剩 schema 分支有独立价值，
+  而前门可逐字节复现）；full 19 → **18**、front-door 13 → **12**，隐藏集 7 → 6。
+- **CLI 面**：`create` 的 sfc 离线 NL 路径改为**可执行的报错**（给出 `--ai` /
+  `--from-config` / `--mode schema` 三条出路），交互式预设搬到
+  `packages/cli/src/commands/preset-examples.ts`（本地 8 条，不再对外导出）。
+- **资源文案已实**（这才是出口标准的第二半）：`esplus://examples` 改走
+  `emitSceneArtifact({ scene: 'crud', intent })` —— 与宿主调前门完全同一条
+  `composeCrudConfig → generateFromConfig` 链，不再是「另一个引擎的产物」。
+- **零 importer 证据**：全仓 `generateCrudPage` / `registerGenerateCrudPage` /
+  `PRESET_EXAMPLES` 只剩注释里的历史说明（CLI 本地同名常量除外），无代码引用。
+- **守卫与文档同批收口**：`check:tool-surface` 的层级/隐藏数文案、`tools-list.snapshot.json`
+  （full 18 / 339.4 KB，front-door 12 / 21.1 KB）、`check:doc-drift`、
+  `check:surface-budget`、`check:ai-presets` 全绿；`docs/why-es-plus` 镜像与
+  `docs:check` 逐字节一致；`AI-NATIVE-ARCHITECTURE.md` 的入口表/总览矩阵/已知边界
+  改为 18 工具并注明 `generate_crud_page` 已删。
 
 ## 三、A 批本次落地
 

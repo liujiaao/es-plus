@@ -66,7 +66,7 @@ In `/tmp/test-vue3/`, open Claude Code and prompt:
 - [ ] AI reads `package.json` first
 - [ ] AI calls `detect_project_target` with the package.json content
 - [ ] Returned target is `vue3` with `confidence: 'high'`
-- [ ] AI calls `generate_crud_schema` or `generate_crud_page` with `target: 'vue3'`
+- [ ] AI calls `generate_scene` (`scene: 'crud'`, `target: 'vue3'`) — `generate_crud` 是同一路径的兼容入口
 - [ ] (Optional) AI reads `esplus://conventions` (defaults to vue3)
 - [ ] Generated SFC uses `<script setup>` + `@es-plus/vue3` + `v-model:*`
 

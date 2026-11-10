@@ -8,7 +8,7 @@ import { buildInstructions } from "../src/instructions.js";
  * AN-26 —— profile 与「提示词/资源」同源。
  *
  * `ESPLUS_MCP_PROFILE=front-door` 下 `generate_crud_from_config` /
- * `generate_crud_page` / `generate_crud_schema` 不注册。若 prompts/resources 仍写
+ * `generate_crud_schema` 不注册。若 prompts/resources 仍写
  * 「去调那个工具」，宿主照着执行只会拿到 tool not found —— 工具面与引导面互相打脸，
  * 且**没有任何运行时错误**提示这是一处契约分叉。本文件钉住两条腿：
  *   1. front-door 引导里不得再出现「调用被隐藏工具」的指令；
@@ -64,7 +64,6 @@ const HIDDEN = [
   "generate_table",
   "generate_dialog",
   "generate_crud_from_config",
-  "generate_crud_page",
   "generate_crud_schema",
 ];
 
@@ -92,7 +91,7 @@ describe("conventions 资源", () => {
   it("full：Structured-Config 一节的标题仍是 generate_crud_from_config", async () => {
     const text = await resourceText("full", "esplus://conventions");
     expect(text).toContain("# Structured Config Tool (generate_crud_from_config)");
-    expect(text).toContain("Use `generate_crud_from_config` instead of `generate_crud_page`");
+    expect(text).toContain("Use `generate_crud_from_config` (or `generate_scene` scene='crud') when you need production-ready code.");
   });
 
   it("front-door：标题/去处改为 generate_crud，并说明校验工具仍可用", async () => {
@@ -110,19 +109,22 @@ describe("conventions 资源", () => {
 });
 
 describe("examples 资源", () => {
-  it("full：engine 说明指向 generate_crud_page", async () => {
-    const text = await resourceText("full", "esplus://examples");
-    expect(text).toContain("the same engine the `generate_crud_page` tool calls");
+  // W6：四个 `esplus://examples*` 资源改由结构化生成器产出（composeCrudConfig →
+  // generateFromConfig），两种 profile 看到同一份、与前门 `generate_scene` 同形的产物。
+  it("两种档位都如实说明产物来自结构化生成器（与前门同一链路）", async () => {
+    for (const profile of ["full", "front-door"] as const) {
+      const text = await resourceText(profile, "esplus://examples");
+      expect(text, profile).toContain("the same `composeCrudConfig → generateFromConfig` chain");
+      expect(text, profile).toContain("esplus://examples/surfaces");
+      // 回归：不得再声称来自 legacy 正则引擎，也不得指路到已删除的工具
+      expect(text, profile).not.toContain("legacy regex engine");
+      expect(text, profile).not.toContain("generate_crud_page");
+    }
   });
 
-  it("front-door：如实说明产物来自 legacy 引擎，并指向 structured 前门的形状资源", async () => {
+  it("不含被隐藏的工具名（front-door 引导面自洽）", async () => {
     const text = await resourceText("front-door", "esplus://examples");
-    expect(text).toContain("legacy regex engine");
-    expect(text).toContain("`generate_scene` (scene='crud')");
-    expect(text).toContain("esplus://examples/surfaces");
-    // 回归：不得再声称与前门是同一引擎，也不得引导到隐藏工具
-    expect(text).not.toContain("the same engine `generate_crud`");
-    expect(text).not.toContain("the `generate_crud_page` tool calls");
+    for (const hidden of HIDDEN) expect(text).not.toContain(hidden);
   });
 });
 
@@ -222,7 +224,7 @@ describe("工具描述（tools/list 的第一句）", () => {
   it("full：支撑工具的指路保持原样（默认档行为不变）", () => {
     expect(full.refine_config.desc).toContain("generate_crud_from_config");
     expect(full.ingest_schema.desc).toContain("generate_crud_from_config");
-    expect(full.detect_project_target.desc).toContain("generate_crud_page");
+    expect(full.detect_project_target.desc).toContain("generate_crud_schema");
     expect(paramDesc(full.validate_config, "type")).toContain("the input of generate_crud_from_config");
     // 前门自己的描述不再把「高级路径」当作参照（键集语义改指配置块，两种档位同一句）
     expect(full.generate_crud.desc).not.toContain("generate_crud_from_config");

@@ -1,7 +1,7 @@
 export { generateCrudConfig, generateCode, type GeneratedConfig } from './crud-engine.js'
-export { generateCrudPage, generateScaffold, generateAppEntry, type GenerateResult } from './code-generator.js'
+export { generateScaffold, generateAppEntry } from './scaffold-generator.js'
 export { generateCrudSchema, type CrudSchemaResult } from './schema-generator.js'
-export { FORM_TYPES, PRESET_EXAMPLES, COMPONENT_LIST, type ComponentName } from './constants.js'
+export { FORM_TYPES, COMPONENT_LIST, type ComponentName } from './constants.js'
 export { createSchemaValidator, validateConfig, listAvailableSchemas, type ValidationResult } from './schema-validator.js'
 export { generateFromConfig, type StructuredCrudConfig, type StructuredGenerateResult } from './structured-generator.js'
 // 预览边界（事实声明）：配置里声明了、但实时预览画不出来 / 需宿主补一步的特性。

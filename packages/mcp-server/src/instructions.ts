@@ -15,7 +15,7 @@ export function buildInstructions(profile: ToolProfile = "full"): string {
   // ① 工具清单：只列**已注册**的生成入口。
   const codeGenTools = fd
     ? "generate_scene / generate_composition / scaffold_page / get_component_api"
-    : "generate_scene / generate_composition / generate_crud /\ngenerate_crud_from_config / generate_form / generate_table /\ngenerate_dialog / generate_crud_page / generate_crud_schema /\nscaffold_page / get_component_api";
+    : "generate_scene / generate_composition / generate_crud /\ngenerate_crud_from_config / generate_form / generate_table /\ngenerate_dialog / generate_crud_schema /\nscaffold_page / get_component_api";
 
   // ② 「高级路径仍可用」那一段：front-door 档下必须换成事实陈述。
   const advancedNote = fd
@@ -30,8 +30,8 @@ they just don't emit code.)`
     : `(\`generate_crud_from_config\` remains available if you want to hand-author a full
 typed \`StructuredCrudConfig\` directly — \`generate_scene\` (scene='crud') and
 \`generate_crud\` are thinner intent layers over the same deterministic
-generator. \`generate_crud_page\` uses a regex NL parser and is only a no-LLM
-fallback for hosts that can't reason.)`;
+generator. \`generate_crud_schema\` is a regex NL fallback for hosts that can't
+reason; it is NOT the production path.)`;
 
   // ③ 第四步的调用指代（注意结尾不带 `**`：模板里统一收口，否则会出现 `****`）。
   const step4Call = fd
@@ -46,8 +46,7 @@ fallback for hosts that can't reason.)`;
 This server runs with \`ESPLUS_MCP_PROFILE=front-door\`: \`generate_crud\`
 (the compat adapter), \`generate_form\` / \`generate_table\` / \`generate_dialog\`
 (the per-surface entries), \`generate_crud_from_config\` (advanced, hand-authored
-config) and \`generate_crud_page\` / \`generate_crud_schema\` (legacy regex
-fallbacks) are NOT registered. Use \`generate_scene\` for every generation
+config) and \`generate_crud_schema\` (legacy regex fallback) are NOT registered. Use \`generate_scene\` for every generation
 request — \`scene: 'crud'\` for list/table pages, \`table\` / \`form\` / \`dialog\`
 for one standalone component; each scene emits exactly the artefact its old
 per-tool entry did (same shapes, same emitters, byte-identical output).

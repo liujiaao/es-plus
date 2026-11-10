@@ -3,7 +3,8 @@ import prompts from "prompts";
 import pc from "picocolors";
 import { readFileSync, existsSync } from "node:fs";
 import { dirname, resolve } from "node:path";
-import { generateCrudPage, generateCrudSchema, generateFromConfig, PRESET_EXAMPLES, repairConfig, validateAndRepair } from '@es-plus/shared';
+import { generateCrudSchema, generateFromConfig, repairConfig, validateAndRepair } from '@es-plus/shared';
+import { PRESET_EXAMPLES } from './preset-examples.js';
 import { nlToConfig, AiUnavailableError } from '../ai/nl-to-config.js';
 import { toPascalCase, toKebabCase, normalizeTarget, esPlusPkgFor, isValidTarget, isSafePathSegment, isPathInside, CLI_TARGETS } from '../utils/strings.js';
 import { confirmOverwrite, writeGeneratedFiles } from '../utils/fs.js';
@@ -79,10 +80,10 @@ export const createCommand = new Command("create")
   .argument("[name]", "page name (kebab-case, e.g. user-management)")
   .option("-o, --output <path>", "output path — a FILE for --mode sfc, a DIRECTORY for --mode schema (defaults: src/views/<PascalName>.vue / src/views/<name>/)")
   .option("-d, --description <desc>", "skip interactive prompt, use this description directly")
-  .option("-m, --mode <mode>", "output mode: schema (default) or sfc")
+  .option("-m, --mode <mode>", "output mode: schema (default, offline generator available) or sfc (requires --ai or --from-config)")
   .option("-c, --from-config <path>", "generate from a structured JSON config file (production mode)")
-  .option("--ai", "use an LLM (Anthropic) to reason NL→config; auto-enabled when ANTHROPIC_API_KEY is set. Use --no-ai to force the built-in generator")
-  .option("--no-ai", "force the built-in (regex) generator even when ANTHROPIC_API_KEY is set")
+  .option("--ai", "use an LLM (Anthropic) to reason NL→config; auto-enabled when ANTHROPIC_API_KEY is set. Use --no-ai to skip the LLM")
+  .option("--no-ai", "skip the LLM and use the built-in generator (schema mode only — sfc has no offline generator)")
   .option("-t, --target <target>", "target framework: vue3 (default, @es-plus/vue3 + Element Plus), vue2 (@es-plus/vue2 + Element UI), or antdv (@es-plus/adapter-antdv + Ant Design Vue)")
   .option("-f, --force", "overwrite existing output files without prompting")
   .option(
@@ -230,7 +231,8 @@ export const createCommand = new Command("create")
 
     // Opt-in LLM path: reason NL→StructuredCrudConfig, then reuse the deterministic
     // generator (compile-guaranteed, identical output to --from-config).
-    // Enabled by --ai, or automatically when ANTHROPIC_API_KEY is present; --no-ai forces regex.
+    // Enabled by --ai, or automatically when ANTHROPIC_API_KEY is present; --no-ai skips the LLM
+    // (only schema mode has an offline generator left — see the mode === "sfc" branch).
     const wantAi = options.ai !== false && (options.ai === true || !!process.env.ANTHROPIC_API_KEY);
     if (wantAi) {
       let aiConfig: any;
@@ -293,34 +295,19 @@ export const createCommand = new Command("create")
     }
 
     if (mode === "sfc") {
-      const defaultOutput = resolve(process.cwd(), `src/views/${pascalName}.vue`);
-      let outputPath = options.output;
-
-      if (!outputPath) {
-        const { path } = await prompts({
-          type: "text",
-          name: "path",
-          message: "输出路径",
-          initial: defaultOutput,
-        });
-        if (!path) {
-          console.log(pc.yellow("已取消"));
-          return;
-        }
-        outputPath = path;
-      }
-
-      outputPath = resolve(process.cwd(), outputPath!);
-
-      console.log(pc.cyan(`\n⏳ 正在生成 (SFC 模式, target=${cliTarget})...`));
-
-      const result = generateCrudPage(description!, cliTarget);
-
-      if (!(await confirmOverwrite([outputPath], !!options.force))) return;
-      writeGeneratedFiles([{ path: outputPath, content: result.code }], dirname(outputPath));
-
-      console.log(pc.green(`\n✔ 已生成: ${outputPath}`));
-      console.log(pc.dim(result.summary));
+      // W6：SFC 模式的**离线自然语言**路径随 legacy 正则引擎（generateCrudPage）一起
+      // 退役。它不是可替代的小分支：那条引擎基于关键词匹配拼 SFC，与结构化生成器的
+      // 产物形状从未对齐，却是唯一「不上模型也能出 SFC」的入口。
+      //
+      // 不再静默降级：以前这里在 LLM 不可用时悄悄用正则引擎生成一整页，用户以为拿到
+      // 的是 AI 产物。现在把三条真正可用的路摆出来，并以非零码退出。
+      console.log(pc.red(`\n✗ SFC 模式不再支持离线自然语言生成（legacy 正则引擎已退役）`));
+      console.log(pc.dim(`   任选其一：`));
+      console.log(pc.dim(`     --ai                 用 LLM 把描述推成 StructuredCrudConfig，再走确定性生成器`));
+      console.log(pc.dim(`     --from-config <file> 直接给结构化配置（生产模式，产物与 CI 完全一致）`));
+      console.log(pc.dim(`     --mode schema        离线 schema 生成器仍在（输出 schema.ts + 包装 SFC）`));
+      process.exitCode = 1;
+      return;
     } else {
       const defaultDir = resolve(process.cwd(), `src/views/${name}`);
       let outputDir = options.output;

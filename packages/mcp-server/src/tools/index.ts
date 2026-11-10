@@ -1,5 +1,4 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { registerGenerateCrudPage } from "./generate-crud-page.js";
 import { registerGenerateCrudSchema } from "./generate-crud-schema.js";
 import { registerValidateConfig } from "./validate-config.js";
 import { registerListFormTypes } from "./list-form-types.js";
@@ -33,11 +32,15 @@ import { withArgGuard } from "./_arg-guard.js";
  *     `generate_composition`（片段装页）、`validate_config`、`ingest_schema`、
  *     `refine_config`、`list_form_types`、`get_component_api`、`scaffold_page`、
  *     `doctor_page`、`detect_project_target`、`validate_intent`、`coverage_report`；
- *   · 隐藏 7 个：`generate_crud`（兼容 adapter —— `generate_scene` 的 scene='crud'
+ *   · 隐藏 6 个：`generate_crud`（兼容 adapter —— `generate_scene` 的 scene='crud'
  *     逐字节相同）、`generate_form` / `generate_table` / `generate_dialog`
  *     （单面片段 —— `generate_scene` 的 scene='form'|'table'|'dialog' 逐字节相同，
  *     由 `check-scene-parity` 证明）、`generate_crud_from_config`（hand-authored
- *     高级路径）、`generate_crud_page` / `generate_crud_schema`（regex legacy）。
+ *     高级路径）、`generate_crud_schema`（regex legacy）。
+ *
+ * W6（2026-11-10）：`generate_crud_page` 已删除 —— 它的 sfc 分支是 legacy 正则
+ * 整页引擎（shared `generateCrudPage`）的最后一个消费者，schema 分支与
+ * `generate_crud_schema` 完全重复。
  *
  * 为什么连兼容入口与片段工具一起藏：它们各自编码了一整套 JSON Schema
  * （2026-11-10 实测 `generate_crud` 80.9 KB、片段三件 68.9 KB），宿主每轮都要读；
@@ -69,9 +72,8 @@ export function registerTools(server: McpServer, profile: ToolProfile = resolveT
     registerGenerateForm(server);
     registerGenerateTable(server);
     registerGenerateDialog(server);
-    // LEGACY FALLBACK — regex/keyword parsers kept for quick prototypes; the
-    // descriptions say so and point at the front door / advanced path.
-    registerGenerateCrudPage(server);
+    // LEGACY FALLBACK — regex/keyword parser kept for quick prototypes; the
+    // description says so and points at the front door / advanced path.
     registerGenerateCrudSchema(server);
     // ADVANCED — hand-authored StructuredCrudConfig for hosts that already hold
     // a typed config. Same deterministic generator as the front door.

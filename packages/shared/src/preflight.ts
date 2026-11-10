@@ -25,7 +25,7 @@
  * 就没有门可拒），没有 `labelKey` 就不需要 `t`。`formatPreflight` 会把不需要的项也列出来，
  * 并写明「不需要」的依据 —— 否则读者无法区分「忘了配」与「本来就不用配」。
  */
-import { generateAppEntry } from './code-generator.js'
+import { generateAppEntry } from './scaffold-generator.js'
 import { DEFAULT_TARGET, getEsPlusPackageName, type TargetFramework } from './target.js'
 
 export type PreflightId =

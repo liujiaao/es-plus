@@ -13,13 +13,13 @@
  *   1. **唯一前门**：只有 `generate_scene` 的描述带 `FRONT DOOR` 标签
  *      （registry 的 canonical entry 是真源；`generate_crud` 是兼容 adapter）；
  *   2. **层级标签**：`generate_crud_from_config` = ADVANCED，
- *      `generate_crud_page` / `generate_crud_schema` = LEGACY FALLBACK；
- *   3. **profile 开关**：`ESPLUS_MCP_PROFILE=front-door` 隐藏 7 个重量级/兼容/legacy
+ *      `generate_crud_schema` = LEGACY FALLBACK（`generate_crud_page` 于 W6 删除）；
+ *   3. **profile 开关**：`ESPLUS_MCP_PROFILE=front-door` 隐藏 6 个重量级/兼容/legacy
  *      入口，只留场景路由器、组合页与确定性支撑工具；未设置/未知值 = full。
  *      隐藏标准不是「旧不旧」，而是「`generate_scene` 能否逐字节复现」：四个 scene
  *      复用同一组发射器，`check-scene-parity` 证明产物相同。
  *   4. **引导面同源**：front-door 下没有任何已注册工具的描述（或 initialize 的
- *      instructions）还教宿主「去调」被隐藏的工具 —— 工具表少七个、文案却不改，
+ *      instructions）还教宿主「去调」被隐藏的工具 —— 工具表少六个、文案却不改，
  *      宿主只会拿到 tool not found，且链路上没有任何运行时错误提示这是契约分叉。
  *      full 档反向断言指路**仍存在**，否则该循环会空转（把描述整体删掉也能通过）。
  *
@@ -47,7 +47,6 @@ const FULL_TOOLS = [
   'generate_form',
   'generate_table',
   'generate_dialog',
-  'generate_crud_page',
   'generate_crud_schema',
   'generate_crud_from_config',
   'validate_config',
@@ -61,14 +60,13 @@ const FULL_TOOLS = [
   'doctor_page',
 ]
 
-/** `front-door` 相对 `full` 隐藏的 7 个工具（2026-11-10 W3：前门收缩到场景路由器）。 */
+/** `front-door` 相对 `full` 隐藏的 6 个工具（2026-11-10 W3：前门收缩到场景路由器）。 */
 const FRONT_DOOR_HIDDEN = [
   'generate_crud',
   'generate_form',
   'generate_table',
   'generate_dialog',
   'generate_crud_from_config',
-  'generate_crud_page',
   'generate_crud_schema',
 ]
 
@@ -160,7 +158,7 @@ try {
   if (!/^ADVANCED\b/.test(byName.get('generate_crud_from_config') ?? '')) {
     fail('generate_crud_from_config 的描述应以 ADVANCED 开头')
   }
-  for (const name of ['generate_crud_page', 'generate_crud_schema']) {
+  for (const name of ['generate_crud_schema']) {
     if (!/^LEGACY FALLBACK\b/.test(byName.get(name) ?? '')) {
       fail(`${name} 的描述应以 LEGACY FALLBACK 开头`)
     }
@@ -181,7 +179,7 @@ try {
   }
 
   // 6. 引导面与工具面同源：front-door 下**不得有任何已注册工具描述**把宿主指向被隐藏的
-  //    工具。工具表少三个、描述却教宿主「去调它」，宿主只会拿到 tool not found，而整条
+  //    工具。工具表少六个、描述却教宿主「去调它」，宿主只会拿到 tool not found，而整条
   //    链路上没有任何运行时错误提示这是契约分叉（与 prompts/resources 的 B2 同一类缺陷）。
   for (const t of frontDoor) {
     for (const hidden of FRONT_DOOR_HIDDEN) {
@@ -194,7 +192,7 @@ try {
   //    也能「通过」）。
   for (const name of ['refine_config', 'ingest_schema', 'detect_project_target']) {
     const desc = byName.get(name) ?? ''
-    if (!/(generate_crud_from_config|generate_crud_page)/.test(desc)) {
+    if (!/generate_crud_from_config/.test(desc)) {
       fail(`full 档 ${name} 的描述丢失了「下一步交给哪个生成工具」的指路`)
     }
   }
@@ -337,7 +335,7 @@ try {
 
   if (!failures.length) {
     console.log(
-      `✅ 工具面收敛：唯一 FRONT DOOR（generate_scene）；ADVANCED 1 / LEGACY 2；` +
+      `✅ 工具面收敛：唯一 FRONT DOOR（generate_scene）；ADVANCED 1 / LEGACY 1；` +
         `full ${fullNames.length} 个工具，front-door ${fdNames.length} 个（隐藏 ${FRONT_DOOR_HIDDEN.length} 个）`,
     )
   }

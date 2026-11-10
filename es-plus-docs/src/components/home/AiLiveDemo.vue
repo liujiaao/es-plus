@@ -156,12 +156,20 @@ import { ref, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
 import { MagicStick, InfoFilled } from '@element-plus/icons-vue'
-import { generateCrudConfig, generateCode, PRESET_EXAMPLES } from '@es-plus/shared'
+import { generateCrudConfig, generateCode } from '@es-plus/shared'
 
 const { t } = useI18n()
 const router = useRouter()
 
-const presets = PRESET_EXAMPLES.slice(0, 4)
+// 首页离线 demo 的四个快捷描述（W6：原来是 shared 的 `PRESET_EXAMPLES.slice(0,4)`）。
+// 这份列表只服务这一个组件 —— 它喂的是 legacy `generateCrudConfig`（纯前端、无模型），
+// 与 CLI/MCP 的预设不是同一件事，故就近放置，不再经公共包导出。
+const presets = [
+  { label: '用户管理', prompt: '用户管理页面，查询条件有姓名、手机号、状态，表格显示姓名、手机号、邮箱、状态、创建时间，支持新增编辑删除' },
+  { label: '订单列表', prompt: '订单列表，查询订单号、客户名称、日期范围、状态，表格显示订单号、客户、金额、状态、创建时间，支持查看详情和删除' },
+  { label: '商品管理', prompt: '商品管理，查询商品名称、分类、状态，表格显示名称、分类、价格、库存、状态，支持新增编辑删除' },
+  { label: '日志查询', prompt: '操作日志查询，查询关键词、级别、日期范围，表格显示时间、级别、操作人、内容，只查看不编辑' },
+]
 const prompt = ref(presets[0].prompt)
 const currentPreset = ref(presets[0].label)
 const config = ref(null)

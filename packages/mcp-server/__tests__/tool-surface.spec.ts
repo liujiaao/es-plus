@@ -16,7 +16,6 @@ const FULL_TOOLS = [
   "generate_form",
   "generate_table",
   "generate_dialog",
-  "generate_crud_page",
   "generate_crud_schema",
   "generate_crud_from_config",
   "validate_config",
@@ -45,7 +44,7 @@ describe("registerTools — full profile", () => {
   const tools = capture("full");
   const names = tools.map((t) => t.name);
 
-  it("注册全部 19 个工具且无重复", () => {
+  it("注册全部 18 个工具且无重复", () => {
     expect(names).toEqual(FULL_TOOLS);
     expect(new Set(names).size).toBe(names.length);
   });
@@ -58,19 +57,17 @@ describe("registerTools — full profile", () => {
   it("高级/legacy 工具的描述带层级标签", () => {
     const byName = new Map(tools.map((t) => [t.name, t.description]));
     expect(byName.get("generate_crud_from_config")).toMatch(/^ADVANCED\b/);
-    expect(byName.get("generate_crud_page")).toMatch(/^LEGACY FALLBACK\b/);
     expect(byName.get("generate_crud_schema")).toMatch(/^LEGACY FALLBACK\b/);
   });
 });
 
-/** front-door 相对 full 隐藏的 7 个入口（2026-11-10 W3：场景路由器收缩）。 */
+/** front-door 相对 full 隐藏的 6 个入口（2026-11-10 W3：场景路由器收缩）。 */
 const FRONT_DOOR_HIDDEN = [
   "generate_crud",
   "generate_form",
   "generate_table",
   "generate_dialog",
   "generate_crud_from_config",
-  "generate_crud_page",
   "generate_crud_schema",
 ];
 
@@ -78,7 +75,7 @@ describe("registerTools — front-door profile", () => {
   const tools = capture("front-door");
   const names = tools.map((t) => t.name);
 
-  it("隐藏兼容 adapter、三个单面片段与 1 高级 + 2 legacy", () => {
+  it("隐藏兼容 adapter、三个单面片段与 1 高级 + 1 legacy", () => {
     for (const hidden of FRONT_DOOR_HIDDEN) {
       expect(names).not.toContain(hidden);
     }

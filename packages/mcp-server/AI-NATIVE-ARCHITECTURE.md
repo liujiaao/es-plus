@@ -73,7 +73,7 @@ MCP server **不调用模型、不写文件、不持有会话**。所有“理�
                                 │ MCP (stdio)
 ┌───────────────────────────────▼─────────────────────────────────────┐
 │ packages/mcp-server（无状态、无模型、纯函数）                         │
-│  · tools    19 个（full）/ 12 个（front-door）                       │
+│  · tools    18 个（full）/ 12 个（front-door）                       │
 │  · resources 9 族（conventions / types / examples / nl-to-config /   │
 │              surfaces / crud-page-schema / schemas /                │
 │              design-extraction / capabilities）                     │
@@ -152,7 +152,7 @@ surfaces
 | 入口 | 链路 | 状态 |
 |---|---|---|
 | 配置直通 | `generate_crud_from_config(config)` → `validateAndRepair` → `generateFromConfig` | **主生成路径（高级）** |
-| 旧 NL | `generate_crud_page` / `generate_crud_schema` → `crud-engine` regex → 生成 | **legacy fallback** |
+| 旧 NL | `generate_crud_schema` → `crud-engine` regex → 生成 | **legacy fallback**（sfc 腿随 `generate_crud_page` 于 W6 删除） |
 | 精修 | `refine_config(previous, revised)` → 校验 + `diffConfig` | 确定性，无模型 |
 | 摄取 | `ingest_schema(text, kind)` → `ingestSchema` → `composeCrudConfig` 草稿 | 只做类型→formtype |
 | 单组件 | `generate_table` / `generate_dialog` → `fragment-generator` | 显式单组件请求 |
@@ -172,7 +172,7 @@ surfaces
 
 ---
 
-## 4. 工具手册（full 19 / front-door 12）
+## 4. 工具手册（full 18 / front-door 12）
 
 ### 4.0 工具面 profile（AN-26）
 
@@ -180,13 +180,13 @@ surfaces
 
 | profile | 注册数 | 隐藏 |
 |---|---|---|
-| `full`（**默认**） | 19 | — |
-| `front-door` | 12 | `generate_crud`（兼容入口）、`generate_form` / `generate_table` / `generate_dialog`（单面片段）、`generate_crud_from_config`（ADVANCED）、`generate_crud_page` / `generate_crud_schema`（LEGACY FALLBACK） |
+| `full`（**默认**） | 18 | — |
+| `front-door` | 12 | `generate_crud`（兼容入口）、`generate_form` / `generate_table` / `generate_dialog`（单面片段）、`generate_crud_from_config`（ADVANCED）、`generate_crud_schema`（LEGACY FALLBACK） |
 
 - 隐藏标准不是「旧不旧」，而是 **`generate_scene` 能否逐字节复现**：四个 scene 复用同一组
-  发射器，`check:scene-parity` 证明产物相同。被隐藏的 7 个工具的名称因此**不进入** front-door
+  发射器，`check:scene-parity` 证明产物相同。被隐藏的 6 个工具的名称因此**不进入** front-door
   的任何描述/提示词/资源（`check:tool-surface` 反向断言），宿主不会拿到 tool not found。
-  收益是宿主每轮 `tools/list` 从 ~244 KB 降到 ~21 KB（`check:surface-budget` 守卫，预算 40 KB）。
+  收益是宿主每轮 `tools/list` 从 ~339 KB 降到 ~21 KB（`check:surface-budget` 守卫，预算 40 KB）。
 - 默认 `full` 是**刻意**的：§9.4 的废弃流程要求开关「默认关闭」，且存量宿主与本站文档仍在
   调 `generate_crud_from_config`；改默认会让它们在同一个小版本里静默失败。待 AN-25 收敛完成
   后再翻转默认值。
@@ -195,7 +195,7 @@ surfaces
 - 守卫 `check:tool-surface`：唯一 `FRONT DOOR` 措辞、两档工具集合精确互补、解析器大小写/空白
   归一。`__tests__/tool-surface.spec.ts` 在进程内做同一组断言，防止守卫与测试分叉。
 - 守卫 `check:surface-budget`：读 `tools-list.snapshot.json` 的预算棘轮（front-door 总量 40 KB /
-  单工具 10 KB，full 总量 250 KB / 单工具 85 KB）；`tools:list:check` 先证明快照与源码一致。
+  单工具 10 KB，full 总量 345 KB / 单工具 135 KB）；`tools:list:check` 先证明快照与源码一致。
 
 ### 4.1 总览矩阵
 
@@ -210,16 +210,15 @@ surfaces
 | 7 | `generate_dialog` | 片段 | ✅ | composable / `<es-dialog>` SFC | 否 | 稳定 |
 | 8 | `generate_crud_from_config` | 生成 | ✅ | 代码 + warnings | 否 | **ADVANCED**（已持有类型化配置） |
 | 9 | `generate_crud_schema` | legacy | ✅ | schema + wrapper | 否 | **LEGACY FALLBACK** |
-| 10 | `generate_crud_page` | legacy | ✅ | schema/SFC | 否 | **LEGACY FALLBACK** |
-| 11 | `validate_config` | 校验 | ✅ | errors / suggestions | 否 | 稳定 |
-| 12 | `refine_config` | 精修 | ✅ | diff / errors | 否 | 稳定 |
-| 13 | `ingest_schema` | 摄取 | ✅ | 草稿 config | 否 | 稳定 |
-| 14 | `get_component_api` | 参考 | ✅ | API 文档 | 否 | 稳定 |
-| 15 | `list_form_types` | 参考 | ✅ | formtype 列表 | 否 | 稳定 |
-| 16 | `scaffold_page` | 工程 | ✅ | 页面骨架 + 入口装配 | 否 | 稳定 |
-| 17 | `doctor_page` | 工程 | ✅ | 入口体检报告 | 否 | 稳定 |
-| 18 | `validate_intent` | 抽取校验 | ✅ | 能力报告 + 逐字段 issue | 否 | 稳定（P13） |
-| 19 | `coverage_report` | 覆盖率分级 | ✅ | 逐页 L1/L2/L3 | 否 | 稳定（P13） |
+| 10 | `validate_config` | 校验 | ✅ | errors / suggestions | 否 | 稳定 |
+| 11 | `refine_config` | 精修 | ✅ | diff / errors | 否 | 稳定 |
+| 12 | `ingest_schema` | 摄取 | ✅ | 草稿 config | 否 | 稳定 |
+| 13 | `get_component_api` | 参考 | ✅ | API 文档 | 否 | 稳定 |
+| 14 | `list_form_types` | 参考 | ✅ | formtype 列表 | 否 | 稳定 |
+| 15 | `scaffold_page` | 工程 | ✅ | 页面骨架 + 入口装配 | 否 | 稳定 |
+| 16 | `doctor_page` | 工程 | ✅ | 入口体检报告 | 否 | 稳定 |
+| 17 | `validate_intent` | 抽取校验 | ✅ | 能力报告 + 逐字段 issue | 否 | 稳定（P13） |
+| 18 | `coverage_report` | 覆盖率分级 | ✅ | 逐页 L1/L2/L3 | 否 | 稳定（P13） |
 
 > 只有**带场景产物的三个工具** —— `generate_scene`、`generate_crud`（compat adapter）、
 > `generate_composition` —— 在客户端支持 MCP 结构化输出时，会把产物信封挂到
@@ -349,13 +348,7 @@ surfaces
 - **内部**：`generateCrudSchema`（regex 解析）。
 - **状态**：legacy fallback；自然语言请用 `generate_crud`。`front-door` profile 下不注册。
 
-#### 8) `generate_crud_page`（LEGACY FALLBACK）
-
-- **定位**：旧 NL → 页面入口，schema/sfc 两种模式。
-- **内部**：schema 模式 `generateCrudSchema`；sfc 模式 `generateCrudPage`。
-- **状态**：legacy fallback；描述中已标注“准确率受关键词覆盖限制”。`front-door` profile 下不注册。
-
-#### 9) `validate_config`
+#### 8) `validate_config`
 
 - **定位**：统一校验入口，按 `type` 分派。
 - **输入**：`config`（对象或 JSON 字符串）+ `type`。
@@ -367,7 +360,7 @@ surfaces
 - **已知边界**：未知键在 Zod strip 之前由 `collectUnknownKeys` 报告（含 did-you-mean），`x-*` 放行。
 - **维护注意**：三类片段配置的判据必须与工具入参同源；不得新增第三份字段清单。
 
-#### 10) `refine_config`
+#### 9) `refine_config`
 
 - **定位**：多轮精修的一轮：校验 `revised` + 回显 `previous → revised` 的 diff。
 - **输入**：`previous?`、`revised`（JSON 字符串）。
@@ -375,7 +368,7 @@ surfaces
 - **关键约束**：**不调用模型**；纠正是宿主做的。无服务端 pin。
 - **维护注意**：diff 的维度必须覆盖字段增删、formtype、成员关系、layout、actions、dialogs。
 
-#### 11) `ingest_schema`
+#### 10) `ingest_schema`
 
 - **定位**：把既有 schema 预填成草稿 config，供宿主补全后送 `generate_crud_from_config`。
 - **输入**：`text`、`kind`（`openapi` / `jsonSchema` / `sample-json` / `ts-interface` / `sql-ddl`）、`name?`、`apiUrl?`。
@@ -389,20 +382,20 @@ surfaces
 - **已知边界**：只做「类型→formtype」这条轴；查询面取舍、按钮、弹窗仍由宿主补全。嵌套对象 / 无枚举数组 /
   未知命名类型一律 Input 兜底并告警（不静默吞字段）。OpenAPI YAML 不支持。
 
-#### 12) `get_component_api`
+#### 11) `get_component_api`
 
 - **定位**：六组件 API 文档（EsForm / EsTable / EsDialog / EsCrudPage / SvgIcon / useDialog），按三端分版。
 - **输入**：`component`、`target`。
 - **内部**：静态文档生成器。
 - **维护注意**：组件 API 变更必须同步此工具；`check:api` 守卫 exposed API。
 
-#### 13) `list_form_types`
+#### 12) `list_form_types`
 
 - **定位**：列出全部 `formtype` + 描述 + 示例。
 - **内部**：读 shared 的 `FORM_TYPES`。
 - **维护注意**：新增 formtype 必须同步三端字段解析器与评分器。
 
-#### 14) `scaffold_page`
+#### 13) `scaffold_page`
 
 - **定位**：空页面脚手架 + 应用入口装配样板。
 - **输入**：`name`（kebab-case）、`features`（query/table/dialog）、`target`。
@@ -410,7 +403,7 @@ surfaces
 - **关键**：入口装配 `app.use(ESPlus, { permission, t, httpRequest })` 是 `permissionValue` / i18n `labelKey` / 远程 `apiParams` 生效的前提。
 - **维护注意**：三端入口样板必须与运行时配置项同步；`check:scaffold` 守卫。
 
-#### 15) `doctor_page`
+#### 14) `doctor_page`
 
 - **定位**：检查宿主**已有**入口装配是否满足 preflight 清单 —— 「你现在这份缺了什么」，
   与 `scaffold_page` 的「该长什么样」互补，两者共用 `buildPreflight` 的 required 判定。
@@ -622,7 +615,7 @@ __tests__/golden/cases/
 3. **无会话**：pin 由宿主持有；不要引入服务端配置存储。
 4. **禁止静默丢弃**：任何无法表达的键必须告警或报错，并保留扩展点标记。
 5. **禁止第二份字段清单**：schema、tool shape、validator 必须同源或由守卫对账。
-6. **legacy 工具不删但降级**：`generate_crud_schema`/`generate_crud_page` 仅作 fallback。
+6. **legacy 工具只降级不新增**：`generate_crud_schema` 仅作 fallback；`generate_crud_page` 已于 W6 删除（它的 sfc 腿是不可维护的正则引擎，产物可由前门逐字节复现）。
 7. **未知键策略**：`validate_config` / 前门在 Zod strip **之前**用 `collectUnknownKeys` 报告未知键（含 did-you-mean），`x-*` 放行；生成器内部的别名归一化只做有据可查的搬迁（`normalize-config.ts`）。
 
 ---
@@ -686,7 +679,7 @@ __tests__/golden/cases/
 | 路径 | 职责 |
 |---|---|
 | `src/index.ts` | server 创建、instructions |
-| `src/tools/index.ts` | 19 工具注册（full；front-door 12） |
+| `src/tools/index.ts` | 18 工具注册（full；front-door 12） |
 | `src/tools/generate-crud.ts` | 前门 + surfaces 形状 |
 | `src/tools/generate-from-config.ts` | 配置直通 + 语义告警 |
 | `src/tools/_fragment-shapes.ts` | 片段/前门字段形状 |
