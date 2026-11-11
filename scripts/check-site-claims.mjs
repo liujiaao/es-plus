@@ -842,6 +842,134 @@ function checkAccuracyClaims() {
   }
 }
 
+// ── 9. 发布读数的三元组（R9 / D6）──────────────────────────
+// 任何**对外**的准确率百分比都必须能自证「这是哪一把尺子、哪一版语料、哪次测量」：
+//   · `rulerVersion` / `corpusHash` / `measuredAt（或 commit）` 三元组；
+//   · 本守卫按计划 §R9 的判据，只要求百分比附近 120 字符内出现 `commit` 或 `corpusHash`
+//     （`rulerVersion` 与 `measuredAt` 在 artifact 里有，正文可只引用最短的标识）。
+//
+// 同时守 R2/D6 的口径：`completeness`（分母 = 全部 heldout 行）与 `gated`
+//   （分母 = NL 真正锁定的行）是两个不可相减的数 —— 引用 `completeness` 必须同句给出
+//   分母口径（heldout / 留出 / 全量 / NL-stated / pinned / 分母）。
+//
+// **什么不算「发布读数」**（避免把无关百分比拖进来）：
+//   · 没有准确率语境的行（降幅、控件数量、行数都不是准确率）；
+//   · 目标 / 承诺（`≥95%`、门禁目标、gate target）——目标是常量，不是测量；
+//   · 近似值（`~40%`、`约` + 数字）—— 那是行业先验量级，不是本仓库的读数；
+//   · changelog（历史记录，数字属于当时那一次，不该被要求随当前 artifact 改）。
+const ACCURACY_CONTEXT_RE = /(准确率|可用率|精确率|accuracy|definition95|completeness|zero-edit|一次答对|heldout|留出集|收敛率|成功率)/i
+const ACCURACY_TARGET_RE = /(≥\s*95|门禁目标|目标\s*[≥>=]|gate target|target is|承诺|promise)/i
+const ACCURACY_DENOMINATOR_RE = /(分母|denominator|heldout|留出|全量|all cases|nl-stated|pinned)/i
+const ACCURACY_IDENTITY_RE = /(corpusHash|commit)/i
+const PCT_ANY_RE = /\d+(?:\.\d+)?\s*%/
+const PCT_ALL_RE = /\d+(?:\.\d+)?\s*%/g
+
+/** 数字前紧邻的是近似标记（`~` / `≈` / `约` / `about`）？ */
+function isApproximate(text, index) {
+  const before = text.slice(Math.max(0, index - 12), index)
+  return /[~≈约]\s*$/.test(before) || /\b(?:about|roughly|approximately|approx\.?)\s*$/i.test(before)
+}
+
+/**
+ * 一行文本里的三处判据（纯函数，供自检直接打穿）。
+ * 返回 `{ line, kind, detail }[]`。`text` 是整份文档（用于取 120 字符窗口）。
+ */
+export function accuracyIdentityViolations(text, file = '<memory>') {
+  const violations = []
+  const lines = text.split(/\r?\n/)
+  // 每行的绝对起点（`text.indexOf(line)` 在重复行上会取第一处，窗口就取错了）。
+  const lineStart = []
+  let offset = 0
+  for (const line of lines) {
+    lineStart.push(offset)
+    offset += line.length + 1 // \n
+  }
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i]
+    if (!line || !PCT_ANY_RE.test(line)) continue
+    // 语境窗口：本行 ±1 行（Markdown 表格/换行常把口径说明放在相邻行）。
+    const window = [lines[i - 1] ?? '', line, lines[i + 1] ?? ''].join('\n')
+    if (!ACCURACY_CONTEXT_RE.test(window)) continue
+    if (ACCURACY_TARGET_RE.test(window)) continue
+    // 逐个百分比判：近似的跳过；其余要求身份标识在 120 字符内。
+    for (const m of line.matchAll(PCT_ALL_RE)) {
+      if (isApproximate(line, m.index)) continue
+      const at = lineStart[i] + m.index
+      const near = text.slice(Math.max(0, at - 120), at + 120)
+      if (!ACCURACY_IDENTITY_RE.test(near)) {
+        violations.push({
+          file,
+          line: i + 1,
+          kind: 'missing-identity',
+          detail:
+            `发布读数 ${m[0]} 附近 120 字符内没有 corpusHash / commit —— ` +
+            '读者无法判断这是哪一版语料、哪一次测量',
+        })
+      }
+      const completenessCited = /completeness/i.test(window)
+      if (completenessCited && !ACCURACY_DENOMINATOR_RE.test(window)) {
+        violations.push({
+          file,
+          line: i + 1,
+          kind: 'missing-denominator',
+          detail: '引用 completeness 必须同句说明分母口径（全部 heldout 行 vs NL 真正锁定的行）',
+        })
+      }
+    }
+  }
+  return violations
+}
+
+/** 自检：检测器必须能抓住每一种漏标，且不误伤目标/近似值。 */
+const ACCURACY_IDENTITY_SELF_TEST = [
+  ['合格：带 corpusHash', '一次答对 88.7%（corpusHash b2470774…）。', false],
+  ['合格：带 commit', '准确率 95.1%（commit cf8901b）。', false],
+  ['合格：门禁目标', '门禁目标 ≥95%，当前实测见徽章。', false],
+  ['合格：近似值', '业界 AI 代码可用率 ~40%。', false],
+  ['合格：与准确率无关的百分比', '模板+胶水降幅 76.5%。', false],
+  ['合格：completeness 带分母', 'completeness（分母 = 全部 heldout 行）66.5%，corpusHash b2470774。', false],
+  ['应红：读数无标识', '我们的一次答对率是 88.7%。', true],
+  ['应红：completeness 无分母', 'completeness 是 66.5%（corpusHash b2470774）。', true],
+]
+
+function checkAccuracyNumberIdentity() {
+  const files = [
+    'README.md',
+    'README.en.md',
+    'docs/why-es-plus.md',
+    'docs/why-es-plus.en.md',
+    ...readdirSync(join(ROOT, 'es-plus-docs', 'src', 'docs'))
+      .filter((f) => f.endsWith('.md') && f !== 'changelog.md')
+      .sort()
+      .map((f) => `es-plus-docs/src/docs/${f}`),
+  ]
+  for (const [label, sample, shouldFail] of ACCURACY_IDENTITY_SELF_TEST) {
+    const got = accuracyIdentityViolations(sample).length > 0
+    if (got !== shouldFail) {
+      fail(`R9 自检失败「${label}」：检测器${got ? '误报' : '漏报'}了 —— 判据本身不可信`)
+    }
+  }
+  let published = 0
+  for (const file of files) {
+    const src = read(file)
+    if (!src) continue
+    const violations = accuracyIdentityViolations(src, file)
+    // 只有真的含准确率语境的百分比才算「发布读数」，用于报告分母是否为空。
+    published += src
+      .split(/\r?\n/)
+      .filter((line) => PCT_ANY_RE.test(line) && ACCURACY_CONTEXT_RE.test(line) && !ACCURACY_TARGET_RE.test(line))
+      .length
+    for (const v of violations) fail(`${v.file}:${v.line} ${v.detail}`)
+  }
+  if (!failed) {
+    console.log(
+      `✅ 发布读数三元组：${files.length} 份对外文档里准确率语境百分比 ${
+        published === 0 ? '0 处（正文按设计指向徽章，检测器自检 8 条）' : `${published} 行，全部带 corpusHash/commit`
+      }`
+    )
+  }
+}
+
 // ── 8. CLI 文档里的生成物规模 ────────────────────────────
 // cli.md 曾写「包装 SFC（~30 行）」。实测 generateCrudSchema 的三端包装 SFC 分别是
 // 43 / 49 / 45 非空行（三字段页面），旧数字既不准也无来源。这里登记旧值防止回退；
@@ -916,6 +1044,7 @@ checkPhilosophyDocClaims()
 checkAccuracyClaims()
 checkCliDocFigure()
 checkVersionFootnotes()
+checkAccuracyNumberIdentity()
 
 if (failed) {
   console.error('\n站点数字声明与实测事实不符 —— 改文案或重新运行对应生成脚本。')
