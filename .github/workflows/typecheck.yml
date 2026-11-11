@@ -127,8 +127,11 @@ jobs:
       # check:scorers 跑 scripts/eval/scorers.test.mjs，它 import
       # StructuredCrudConfigSchema from '@es-plus/shared'（解析到 build/index.js），
       # 故必须先 tsc 出 shared build/（与 golden job 同理）。
-      - name: Build @es-plus/shared
-        run: npm run build --workspace @es-plus/shared
+      # check:generated-typecheck（D9 零模型类型探针）还要三个渲染包的 dist/index.d.ts
+      # 才能在临时工程里解析 `@es-plus/<target>` —— 缺 dist 它会**报错**（不是跳过），
+      # 所以这里直接构建整组组件包（build:components 已含 shared）。
+      - name: Build component packages (consistency guards resolve their dist)
+        run: npm run build:components
       # check:distribution 的**运行时**判据只验证磁盘上已有的 build（产物不入库）：
       #   无 bin 的库包真 import 一次；带 bin 的包真以 `node <entry> --help` 启动一次。
       # 不先构建这三个带 bin 的包，这两条判据在 CI 里会静默跳过 —— 本地因为 build/

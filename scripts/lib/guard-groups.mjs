@@ -113,6 +113,9 @@ export const GUARD_GROUPS = Object.freeze([
       'check:doc-drift',
       'check:render-plan',
       'check:threeway',
+      // 零模型类型探针：生成器产物过 vue-tsc。需要 packages/*/dist（CI 的 consistency
+      // job 因此在跑本步之前 build:components），与同组的产物类守卫相邻。
+      'check:generated-typecheck',
       'check:table-internal-keys',
       'check:crud-actions',
       'check:button-surface',

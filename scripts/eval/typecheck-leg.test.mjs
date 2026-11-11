@@ -83,10 +83,23 @@ function check(cond, msg) {
   check(s.modelFailureTypecheck === 1, `「类型对但语义 miss」应单列（期望 1，实得 ${s.modelFailureTypecheck}）`)
   check(s.failureSamples.length === 1 && s.failureSamples[0].includes('page.vue:2:1'), `失败样本必须带位置：${JSON.stringify(s.failureSamples)}`)
   check(summarizeTypecheck([]).rate === null, '空行集：rate 必须是 null（不能是 0 或 1）')
+  check(summarizeTypecheck(rows, () => true).notMeasured === 2, `「没测到」必须单列（期望 2，实得 ${summarizeTypecheck(rows, () => true).notMeasured}）`)
   check(
     summarizeTypecheck([{ id: 'x', typechecks: true, diagnostics: [], error: null }]).modelFailureTypecheck === 0,
     '默认 passes95 全 true：不制造「语义 miss」告警'
   )
+  // 全都没有产物 ⟹ 不是「类型全对」，是没测到。必须抛，不能返回 { checked: 0, rate: null } 让下游读成通过。
+  let zeroThrow = ''
+  try {
+    runTypecheck({
+      cwd: ROOT,
+      cases: [{ id: 'x', target: 'vue3', error: '生成器抛错' }, { id: 'y', target: 'vue2', error: '生成器抛错' }],
+      dir: join(ROOT, 'node_modules', '.esplus-typecheck-zero'),
+    })
+  } catch (e) {
+    zeroThrow = e instanceof Error ? e.message : String(e)
+  }
+  check(zeroThrow.includes('没有可检查的产物'), `零可检查产物必须抛错，实得：${zeroThrow || '(没抛)'}`)
 }
 
 // ── 4) 纯函数：按 target 抽样 ───────────────────────
