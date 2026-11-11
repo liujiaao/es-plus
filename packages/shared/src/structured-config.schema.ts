@@ -307,7 +307,7 @@ const FieldConfigBaseSchema = z.object({
     'Extension point: a JS arrow-function source string for read-only cell formatting, e.g. "(row) => row.amount.toFixed(2)". Use this to express display logic the schema can\'t otherwise capture.'
   ),
   render: z.string().optional().describe(
-    "Extension point: a render-function source string for a custom TABLE CELL, e.g. \"(_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.statusLabel)\" — honored on the table face (wired to a scoped slot in the wrapper SFC). A FORM-control render cannot be inlined (form items are serialized as JSON data in both modes), so it is preserved as a marked TODO(es-plus) marker in the generated SFC — NOT silently delivered; prefer the declarative form capabilities (formItemOptions/attrs/dataOptions/reactions) when a field needs custom FORM behaviour. Emit this (rather than dropping the requirement) when business logic exceeds the declarative schema."
+    "Extension point: a render-function source string for a custom TABLE CELL, e.g. \"(_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.statusLabel)\" — honored on the table face (wired to a scoped slot in the wrapper SFC). A FORM-control render cannot be inlined (form items are serialized as JSON data in both modes), so it is preserved as a marked TODO(es-plus) marker in the generated SFC — NOT silently delivered; prefer the declarative form capabilities (rules/attrs/dataOptions/reactions) when a field needs custom FORM behaviour. Emit this (rather than dropping the requirement) when business logic exceeds the declarative schema."
   ),
   permissionValue: z
     .string()
@@ -319,7 +319,7 @@ const FieldConfigBaseSchema = z.object({
     "Conditional visibility for this field, expressed as PLAIN JSON DATA — never a JS function string (functions cannot be inlined into a schema-mode pageSchema). Semantics: the field is HIDDEN when the condition HOLDS (`{ field: 'payType', op: 'eq', value: 'cash' }` = hidden while payType is cash). An ARRAY of conditions is AND (hidden only when all hold) and may mix the two forms. TWO forms, never mixed within one node: (1) legacy condition `{ field, op, value }` whose `op` is one of eq | ne | in | nIn | empty | notEmpty | truthy | falsy (default eq) — preferred for simple comparisons; (2) a JSON expression (JSONLogic-shaped) when a plain condition can't express it — e.g. OR, ordering, or nesting: `{ or: [ { '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] } ] }`. Expression ops (closed set): var == != > >= < <= in nin empty notEmpty truthy falsy and or not if. An expression op inside a legacy `{field, op, value}` node is INVALID (runtime warns and treats the field as visible) — use form (2) for `>`, `!=`, etc. Applies to the query/filter form and to add/edit dialog forms (its `inQuery`/`inForm` placement) — NOT to the table column (`inTable`). Evaluated live against the form model by the three renderers."
   ),
   reactions: z.array(ReactionSchema).optional().describe(
-    "Field-level linkage / computed rules (AI-07) — PLAIN JSON, never JS callbacks. Use when THIS field's options/required/disabled/value depend on ANOTHER field. Each rule `{ dependencies?, when?, fulfill }`: `dependencies` lists the model paths that retrigger it (REQUIRED for fulfill.value); `when` gates the rule; `fulfill` supplies `dataOptions` (literal array), `required`/`disabled` (boolean expressions) and/or `value` (this field's new value, written back). `when`/`required`/`disabled`/`value` are JSONLogic EXPRESSION NODES only (e.g. `{ '==': [{ var: 'country' }, 'us'] }`) — never the `{ field, op, value }` legacy condition form and never a bare boolean. Example: `city` options follow `province` → one rule per province with `when: { '==': [{ var: 'province' }, 'zj'] }` and `fulfill.dataOptions: [{label:'杭州',value:'hz'}]`. Applies to the query/filter form and add/edit dialog forms — NOT to the table column."
+    "Field-level linkage / computed rules (AI-07) — PLAIN JSON, never JS callbacks. Use when THIS field's options/required/disabled/value depend on ANOTHER field. Each rule `{ dependencies?, when?, fulfill }`: `dependencies` lists the model paths that retrigger it (REQUIRED for fulfill.value); `when` gates the rule; `fulfill` supplies `dataOptions` (literal array), `required`/`disabled` (boolean expressions) and/or `value` (this field's new value, written back). `when`/`required`/`disabled`/`value` are JSONLogic EXPRESSION NODES only (e.g. `{ '==': [{ var: 'country' }, 'us'] }`) — never the `{ field, op, value }` legacy condition form and never a bare boolean. Example: `city` options follow `province` → one rule per province with `when: { '==': [{ var: 'province' }, 'zj'] }` and `fulfill.dataOptions: [{label:'杭州',value:'hz'}]`. Applies to the query/filter form and add/edit dialog forms — NOT to the table column. HARD RULE: branching on a dropdown LABEL ('跨境结算') requires that field's `dataOptions` and comparing the VALUE ('cross') — rows carry codes, not labels; `validate_config` warns (non-blocking)."
   ),
 })
 
@@ -436,7 +436,12 @@ const ColumnSchema: z.ZodType<any> = z.lazy(() =>
           .array(z.object({ label: z.string(), value: z.union([z.string(), z.number(), z.boolean()]) }))
           .optional()
           .describe("Option list for a '$select' editor (label/value pairs)."),
-        props: z.record(z.string(), z.unknown()).optional().describe('Props forwarded to the editor component.'),
+        props: z
+          .record(z.string(), z.unknown())
+          .optional()
+          .describe(
+            "Props forwarded to the editor. `$input` vocabulary: `type` = text|number|integer|float|date|week|month|year; `digits` = decimals (only the 'float' branch reads it); `min`/`max`; `placeholder`. '保留两位小数' ⟹ `{type:'float',digits:2}`; `precision` is NOT a prop and is inert; there is NO `required` validation (a hint can live in `placeholder`)."
+          ),
         autofocus: z.union([z.string(), z.boolean()]).optional(),
         defaultValue: z.unknown().optional(),
       })

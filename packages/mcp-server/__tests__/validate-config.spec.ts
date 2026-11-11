@@ -318,6 +318,33 @@ describe("validate_config — 工具返回的 isError", () => {
     expect(res.content[0].text).toContain("valid");
   });
 
+  it("合法但 reactions 拿中文标签当分支依据 → 仍然 valid，正文带非阻断告警", async () => {
+    const config = {
+      ...validConfig(),
+      fields: [
+        { prop: "settleType", label: "结算方式", formtype: "Select", inQuery: false },
+        {
+          prop: "currency",
+          label: "结算币种",
+          formtype: "Select",
+          inQuery: false,
+          reactions: [
+            {
+              dependencies: ["settleType"],
+              fulfill: { value: { if: [{ "==": [{ var: "settleType" }, "跨境结算"] }, "USD", "CNY"] } },
+            },
+          ],
+        },
+      ],
+    };
+    const res = await handler()({ config: JSON.stringify(config), type: STRUCTURED_CRUD_TYPE });
+    // 软告警不改变判定：宿主看到的仍是成功结果，但正文不能只剩一句「✓ 有效」。
+    expect(res.isError).toBeFalsy();
+    expect(res.content[0].text).toContain("valid");
+    expect(res.content[0].text).toContain("Warnings");
+    expect(res.content[0].text).toContain("跨境结算");
+  });
+
   it("坏 JSON → isError: true", async () => {
     const res = await handler()({ config: "{ nope", type: STRUCTURED_CRUD_TYPE });
     expect(res.isError).toBe(true);

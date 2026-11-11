@@ -101,3 +101,109 @@ describe('zodIssuesToResult — 建议渲染分支', () => {
     expect(zodIssuesToResult([])).toEqual({ valid: false, errors: [], suggestions: [] })
   })
 })
+
+// D3（127/132）：reactions 拿中文标签当分支依据、却没有同值 dataOptions。
+// 这是「配置合法但运行时永不触发」的软缺陷 —— 只告警，不改变 valid。
+describe('codeTableWarnings — reactions 的码表身份', () => {
+  const withReaction = (when: unknown, withOptions: boolean) => ({
+    name: 'SettleManage',
+    apiUrl: '/api/settlements',
+    fields: [
+      {
+        prop: 'settleType',
+        label: '结算方式',
+        formtype: 'Select',
+        ...(withOptions
+          ? { dataOptions: [{ label: '境内结算', value: 'domestic' }, { label: '跨境结算', value: 'cross' }] }
+          : {}),
+        inQuery: false,
+      },
+      {
+        prop: 'currency',
+        label: '结算币种',
+        formtype: 'Select',
+        inQuery: false,
+        reactions: [{ dependencies: ['settleType'], when, fulfill: { value: { if: [when, 'USD', 'CNY'] } } }],
+      },
+    ],
+    actions: ['add', 'edit'],
+  })
+
+  it('比较中文标签且无 dataOptions → 告警点名该字面量与修法（仍 valid）', () => {
+    const r = validateAndRepair(withReaction({ '==': [{ var: 'settleType' }, '跨境结算'] }, false))
+    expect(r.valid).toBe(true)
+    expect(r.warnings?.length).toBe(1)
+    expect(r.warnings![0]).toContain('跨境结算')
+    expect(r.warnings![0]).toContain('dataOptions')
+  })
+
+  it('同配置但按码表比较（value）→ 无告警', () => {
+    const r = validateAndRepair(withReaction({ '==': [{ var: 'settleType' }, 'cross'] }, true))
+    expect(r.valid).toBe(true)
+    expect(r.warnings).toEqual([])
+  })
+
+  it('字面量等于某个 dataOptions 的 label → 不告警（可能是合法的标签常量）', () => {
+    const r = validateAndRepair(withReaction({ '==': [{ var: 'settleType' }, '跨境结算'] }, true))
+    expect(r.warnings).toEqual([])
+  })
+
+  it('条件只写在 value.if[0]（无 when）也告警 —— Excel 式写法同样常见', () => {
+    const config = {
+      name: 'SettleManage',
+      apiUrl: '/api/settlements',
+      fields: [
+        { prop: 'settleType', label: '结算方式', formtype: 'Select', inQuery: false },
+        {
+          prop: 'currency',
+          label: '结算币种',
+          formtype: 'Select',
+          inQuery: false,
+          reactions: [
+            {
+              dependencies: ['settleType'],
+              fulfill: { value: { if: [{ '==': [{ var: 'settleType' }, '跨境结算'] }, 'USD', 'CNY'] } },
+            },
+          ],
+        },
+      ],
+      actions: ['add', 'edit'],
+    }
+    const r = validateAndRepair(config)
+    expect(r.valid).toBe(true)
+    expect(r.warnings?.join('\n')).toContain('跨境结算')
+  })
+
+  it('中文只出现在结果槽（value.if 的 then/else）→ 不告警', () => {
+    // 边界：`fulfill.value` 里的中文可能是合法目标值（命中后自动填成某状态），不能误伤。
+    const config = {
+      name: 'SettleManage',
+      apiUrl: '/api/settlements',
+      fields: [
+        {
+          prop: 'settleType',
+          label: '结算方式',
+          formtype: 'Select',
+          dataOptions: [{ label: '境内结算', value: 'domestic' }, { label: '跨境结算', value: 'cross' }],
+          inQuery: false,
+        },
+        {
+          prop: 'statusLabel',
+          label: '状态说明',
+          formtype: 'Input',
+          inQuery: false,
+          reactions: [
+            {
+              dependencies: ['settleType'],
+              fulfill: { value: { if: [{ '==': [{ var: 'settleType' }, 'cross'] }, '跨境业务', '境内业务'] } },
+            },
+          ],
+        },
+      ],
+      actions: ['add', 'edit'],
+    }
+    const r = validateAndRepair(config)
+    expect(r.valid).toBe(true)
+    expect(r.warnings).toEqual([])
+  })
+})

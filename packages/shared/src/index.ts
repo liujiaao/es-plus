@@ -120,6 +120,7 @@ export {
 // 生产安全网(C2·A3):确定性前门校验 —— 权威 Zod 判定 + 结构化错误/建议(只判不改、无模型)
 export {
   validateAndRepair,
+  codeTableWarnings,
   formatIssuePath,
   zodIssuesToResult,
   type ZodIssueLike,

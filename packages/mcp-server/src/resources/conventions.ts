@@ -317,6 +317,18 @@ configTableOut (API response field mapping):
 ${Object.entries(DEFAULT_CONFIG_TABLE_OUT)
   .map(([k, v]) => `  - ${k}: "${v}"`)
   .join("\n")}
+Each value is the FLAT response key for that slot; slots are fixed semantics —
+\`tableData\` = row array, \`total\` = total row COUNT, \`pageSize\` = rows per page,
+\`current\` = page NUMBER. Map by meaning: a backend paging field \`pageIndex\` →
+\`{ current: "pageIndex" }\`; a response \`{ data, perPage }\` →
+\`{ tableData: "data", pageSize: "perPage" }\` (perPage is the page size, NOT the
+total). Declare only the keys that differ; never a deep path, never a callback.
+
+Column-header filters (\`columns[].filters\` — cell-level, LOCAL filtering; distinct
+from \`inQuery\` which is the form above the table): the options are PLAIN JSON
+\`{ text, value }\`; \`filterMultiple: false\` = single-select (default true = multi);
+\`filterMode: "includes"\` = text-contains (default \`"equals"\` = exact match);
+\`autoFilters: true\` derives the options from the column's \`dataOptions\`.
 
 ## Virtual Scrolling (10k+ rows)
 ${target === "vue3"
@@ -335,24 +347,16 @@ tableOptions: {
 - Performance: O(1) selection via Set-based tracking, no per-row iteration
 - Supports: render, scopedSlots, ellipsis, formatter, btns, fixed, sortable`
     : isAntdv
-    ? `Virtual scrolling IS supported — but through Ant Design Vue, not el-table-v2.
-\`virtual: true\` (or \`engine: 'virtual'\`) is forwarded to \`<a-table :virtual>\`,
-which is ADV 4's own virtual scroll (pair it with \`scroll: { y }\` for the
-container height):
-\`\`\`typescript
-tableOptions: {
-  virtual: true,           // → <a-table :virtual="true">
-  height: 500,             // → scroll.y, the viewport the virtualizer measures
-  rowkey: 'id',
-}
-\`\`\`
-- \`el-table-v2\` itself does NOT exist here — do not expect el-table-v2-specific
-  options (\`rowHeight\` / \`estimatedRowHeight\` / \`overscanCount\`) to take effect;
-  they are Element Plus renderer internals and are ignored on antdv
-- \`engine: 'vxe'\` is the other option: it switches to vxe-table, which brings its
-  own virtual scroll and inline editing
-- For 10k+ rows prefer server-side pagination via \`apiParams\` + \`configTableOut\`
-  unless the user explicitly asks for virtual scrolling`
+    ? `Virtual scrolling is NOT implemented on this target.
+\`a-table\` has no virtual table, so \`virtual: true\` (or \`engine: 'virtual'\`) is
+**not** forwarded: the adapter logs a console warning and falls back to the
+default engine, rendering every row. Do not emit \`virtual\` here expecting a
+performance win.
+- \`el-table-v2\` does not exist here — \`rowHeight\` / \`estimatedRowHeight\` /
+  \`overscanCount\` are Element Plus renderer internals and are ignored on antdv
+- For large data use \`engine: 'vxe'\`: it switches to vxe-table, which brings
+  its own virtual scroll and inline editing
+- Otherwise prefer server-side pagination via \`apiParams\` + \`configTableOut\``
     : v2VirtualSection}
 
 ## Global Config Pattern
@@ -459,6 +463,11 @@ JSON. The contract is **mark, never drop**:
   and the add/edit dialog forms — **NOT** the table column. DISTINCT from
   \`isHidden\`: use \`isHidden\` when the field merely appears/disappears, and
   \`reactions\` when its options / required / disabled / value must change.
+  HARD RULE: if a condition branches on a dropdown's LABEL (the user's wording,
+  e.g. \`'跨境结算'\`), you MUST also declare \`dataOptions\` on that field (labels
+  verbatim, \`value\` = a stable code you choose) and compare the VALUE
+  (\`'cross'\`) — row data stores code values, so a Chinese-label comparison never
+  fires against a real backend. \`validate_config\` reports it as a warning.
 - **\`columns\`** (top-level — **not** an extension point: it's PLAIN JSON DATA): the
   explicit table-column array, an escape hatch over the \`fields\`-derived columns for
   things the flat field list can't express — **multi-level group headers** (\`{ label,
@@ -492,7 +501,11 @@ JSON. The contract is **mark, never drop**:
   / mode:'cell'); \`editRender\` marks ONE column editable and picks its editor
   (\`{ name: '$input' | '$select' | '$textarea' | '$date', type?: 'default' | 'visible',
   options?: [{label,value}], props?, autofocus?, defaultValue? }\` — \`$select\` wants
-  \`options\`). ALL THREE are required together: a column WITHOUT \`editRender\` is never
+  \`options\`). NUMERIC editors: \`props.type\` is 'number' (plain), 'float' + \`digits\`
+  (decimal places — only the float branch reads \`digits\`; \`precision\` is NOT a \`$input\`
+  prop) or 'integer'; \`min\`/\`max\`/\`placeholder\` also pass through, and a "required hint"
+  can only live in \`placeholder\` (\`$input\` has NO \`required\` validation — the attribute is
+  forwarded but inert at runtime). ALL THREE are required together: a column WITHOUT \`editRender\` is never
   editable (so \`editConfig\` alone is a no-op), and both are silently IGNORED unless the
   engine is vxe (the generator warns). Declare the editable columns via the top-level
   \`columns\` array — it REPLACES the derived columns, so every table-visible field must

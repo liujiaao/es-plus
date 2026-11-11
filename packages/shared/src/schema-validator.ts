@@ -19,6 +19,15 @@ export interface ValidationResult {
    * `additionalProperties` 自己的语义）。缺省 = 未做未知键检查。
    */
   unknownKeys?: UnknownKeyFinding[]
+  /**
+   * D3（127/132）：**非阻断**的确定性告警（不改变 `valid`）。
+   *
+   * 首个使用者是「reactions 拿中文标签当分支依据、却没有同值 dataOptions」——
+   * 配置能生成、能编译，但在真实后端的码值下条件永不成立。写成 warning 而不是 error，
+   * 是因为条件里出现中文字面量也可能是合法的；只有找不到同值 label 时才提示。
+   * 缺省 = 未做该项检查。
+   */
+  warnings?: string[]
 }
 
 export function createSchemaValidator(schemasDir?: string) {

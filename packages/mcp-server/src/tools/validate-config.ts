@@ -179,11 +179,20 @@ export function registerValidateConfig(server: McpServer, profile: ToolProfile =
         const result = validatePayload(parsed, type);
 
         if (result.valid) {
+          // D3（127/132）：软告警不改变 valid —— 必须在这里显式打印，否则「✓ 有效」
+          // 会把「条件永远不成立」这类真实缺陷盖住。
+          const warnBlock = (result.warnings ?? []).length
+            ? [
+                "",
+                "Warnings (non-blocking — the config validates but may misbehave at runtime):",
+                ...result.warnings!.map((w) => `  ⚠ ${w}`),
+              ].join("\n")
+            : "";
           return {
             content: [
               {
                 type: "text",
-                text: "✓ Configuration is valid!",
+                text: "✓ Configuration is valid!" + warnBlock,
               },
             ],
           };
@@ -195,6 +204,9 @@ export function registerValidateConfig(server: McpServer, profile: ToolProfile =
           "",
           result.suggestions.length > 0 ? "Suggestions:" : "",
           ...result.suggestions.map((s) => `  → ${s}`),
+          ...(result.warnings ?? []).length
+            ? ["", "Warnings (non-blocking):", ...result.warnings!.map((w) => `  ⚠ ${w}`)]
+            : [],
         ]
           .filter(Boolean)
           .join("\n");
