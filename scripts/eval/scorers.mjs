@@ -1899,12 +1899,44 @@ export function meets95Definition(row, k) {
 
 /**
  * 「95% 定义」聚合（只观测、不门禁）：rows 按 meets95Definition 判，返回占比 + 旁证计数。
+ *
+ * R1/D5：两条完成腿**分列**报告（门禁仍只看合数）——
+ *   · `zeroEdit`：turn-0 就命中（无收敛语料的行 = exactIntentScoped；有收敛语料的行 = firstTurn 0）；
+ *   · `convergenceOnly`：只有第二腿（1..K 轮）救回来的行。
+ * 两个数相加 = `pass`。读者据此能分清「模型一次答对的能力」与「收敛兜底」。
+ * `meanTurns` 只对**有收敛语料**的行取均值（firstTurn=null 的行是「没测到收敛」，
+ * 算进均值会把「没收敛」记成 0 轮）；与 `convergence.meanTurnsToConverge` 同源口径。
+ *
  * @param {Array<{ exactIntentScoped?: boolean, convergence?: { firstTurn: number|null } | null }>} rows
  * @param {number} k
  */
 export function summarize95(rows, k) {
   const total = Array.isArray(rows) ? rows.length : 0
-  if (!total) return { rate: null, pass: 0, total: 0 }
-  const pass = rows.filter((r) => meets95Definition(r, k)).length
-  return { rate: pass / total, pass, total }
+  if (!total) return { rate: null, pass: 0, total: 0, zeroEdit: { pass: 0, total: 0 }, convergenceOnly: { pass: 0, total: 0 }, meanTurns: null }
+  let pass = 0
+  let zeroEditPass = 0
+  let convergenceOnlyPass = 0
+  let turnsSum = 0
+  let turnsN = 0
+  for (const r of rows) {
+    const ok = meets95Definition(r, k)
+    if (ok) pass++
+    const hasConv = !!(r && r.convergence)
+    const ft = hasConv ? r.convergence.firstTurn : null
+    const isZeroEdit = ok && (!hasConv || ft === 0)
+    if (isZeroEdit) zeroEditPass++
+    else if (ok) convergenceOnlyPass++
+    if (hasConv && typeof ft === 'number') {
+      turnsSum += ft
+      turnsN++
+    }
+  }
+  return {
+    rate: pass / total,
+    pass,
+    total,
+    zeroEdit: { pass: zeroEditPass, total },
+    convergenceOnly: { pass: convergenceOnlyPass, total },
+    meanTurns: turnsN ? Number((turnsSum / turnsN).toFixed(2)) : null,
+  }
 }

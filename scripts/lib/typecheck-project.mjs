@@ -306,6 +306,10 @@ export function summarizeTypecheck(rows, passes95 = () => true) {
     checked: checked.length,
     ok: okRows.length,
     rate: checked.length ? okRows.length / checked.length : null,
+    // R4/L8：覆盖率与 rate 并列。rate 的分母是**真被检查**的行；没有覆盖率，
+    // 「难的行被跳过」就会伪装成「类型全对」。分母 = 本次交给类型腿的全部用例。
+    sampled: all.length,
+    coverage: all.length ? Number((checked.length / all.length).toFixed(4)) : null,
     failure: failRows.length,
     modelFailureTypecheck: okRows.filter((r) => !passes95(r)).length,
     failureSamples: failRows.slice(0, 5).map((r) => {

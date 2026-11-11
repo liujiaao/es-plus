@@ -1266,6 +1266,9 @@ async function main() {
           checked: stats.checked,
           ok: stats.ok,
           rate: stats.rate === null ? null : Number(stats.rate.toFixed(4)),
+          // R4/L8：覆盖率必须与 rate 并列公布 —— 只看到「100%」时，分母可能只是几条。
+          coverage: stats.coverage === null ? null : Number(stats.coverage.toFixed(4)),
+          notMeasured: stats.notMeasured,
           failure: stats.failure,
           modelFailureTypecheck: stats.modelFailureTypecheck,
           notRun: stats.notRun,
@@ -1700,6 +1703,13 @@ async function main() {
       `  95%-definition (${src}): ${(def95.rate * 100).toFixed(1)}%   (target >= ${(TARGET_ACCURACY * 100).toFixed(0)}%, GATED)  ` +
         `(scoped zero-edit ∨ ≤${CONVERGE_K}-turn converge; ${def95.pass}/${def95.total})`
     )
+    // R1/D5：两条腿分列 —— 读者必须能看出「一次答对」与「收敛兜底」各占多少。
+    const legPct = (n) => `${((n / def95.total) * 100).toFixed(1)}%`
+    console.log(
+      `    of which: zero-edit ${legPct(def95.zeroEdit.pass)} (${def95.zeroEdit.pass}/${def95.total})` +
+        ` · convergence-only ${legPct(def95.convergenceOnly.pass)} (${def95.convergenceOnly.pass}/${def95.total})` +
+        ` · meanTurns ${def95.meanTurns === null ? 'n/a' : def95.meanTurns}`
+    )
   }
   if (byLanguage.en !== null) {
     console.log(`  by language (heldout exactIntentCore): zh ${(byLanguage.zh * 100).toFixed(1)}% (gated) / en ${(byLanguage.en * 100).toFixed(1)}% (observed)`)
@@ -1779,17 +1789,37 @@ async function main() {
     )
   }
 
-  // 两列并列：`all` 的分母是全部 heldout 行，`pinned` 的分母只数**门禁真的钉了该维**的行。
+  // 两列并列：`completeness` 的分母是全部 heldout 行（含 NL 从未点名的细节，诊断用）；
+  // `gated` 的分母只数**门禁真的钉了该维**的行 —— 唯一可作为「成绩」引用的口径。
   // 只读前者会把预算投到对门禁没有杠杆的维度上（`dataOptions` 低，但语料只 pin 了少数行）。
   console.log(`\n  by capability (${heldout.length ? 'heldout' : 'all'} cases; n/a = no case exercises it)`)
   console.log('  ------------------------------------------')
-  console.log('    dimension           all          pinned (gate)')
+  console.log('    dimension           all(completeness)  pinned(gated)')
   for (const { key } of CAPABILITY_SCORERS) {
     const c = byCapability[key]
     const p = byCapabilityOnPinned[key]
     const fmt = (x) =>
       x.applicable ? `${(x.rate * 100).toFixed(0).padStart(3)}%  (${x.pass}/${x.applicable})`.padEnd(14) : ' n/a          '
     console.log(`    ${key.padEnd(16)} ${fmt(c)} ${fmt(p)}`)
+  }
+
+  // R8：未测到记账。任何一项 >0 ⟹ 这次数字不完整（与「模型答错」不同），报表顶部标黄。
+  {
+    const ledger = {
+      compile: Math.max(0, rows.length - compileStats.measured),
+      typecheck: typecheckReport?.notMeasured ?? 0,
+      fragments: fragmentSummary.notMeasured ?? 0,
+      prd: prdSummary.notMeasured ?? 0,
+    }
+    const dirty = Object.entries(ledger).filter(([, n]) => n > 0)
+    if (dirty.length) {
+      console.warn(
+        `\n  ⚠️  notMeasured: ${dirty.map(([k, n]) => `${k} ${n}`).join(' · ')}` +
+          ` —— 这些行不是成绩，是「没测到」；发布数字前先看这里`
+      )
+    } else {
+      console.log(`  notMeasured: 0（四条腿都完整）`)
+    }
   }
 
   // ── 回归防线（AI-33 ④⑤⑦）────────────────────────────────────────────────
@@ -2023,6 +2053,14 @@ async function main() {
     // 分母是**有产物且真被检查**的例；`skipped` 存在时表示腿未跑（缺组件 dist / 没有 zh 产物），
     // 不是「全绿」。首次上闸前先看清真实失败分布（observe first, gate later）。
     typecheck: typecheckReport,
+    // R8：未测到记账（四项都应为 0）。与「模型答错」严格分开：答错的行在各自分母里
+    // 按 0 计，是成绩；未测到的行根本不构成测量。任何一项 >0，报表顶部标黄。
+    notMeasured: {
+      compile: Math.max(0, rows.length - compileStats.measured),
+      typecheck: typecheckReport?.notMeasured ?? 0,
+      fragments: fragmentSummary.notMeasured ?? 0,
+      prd: prdSummary.notMeasured ?? 0,
+    },
     // W1.3 前门腿：**模型产出**经真 `generate_crud` 的落地情况（不动模型调用，纯确定性代码）。
     // `compileFailures` / `noTableExercised` 是门禁判据（见 setupFrontDoor 头注）；
     // `rejected` 是模型侧拒绝（isError / 过不了 crudShape），只记录不判红。
@@ -2055,6 +2093,7 @@ async function main() {
         }
       : null,
     // 「95% 定义」统一数（只观测、不门禁）：scoped zero-edit ∨ ≤K 轮收敛的 per-case OR。
+    // R1/D5：两条腿分列（门禁仍看合数）—— zeroEdit + convergenceOnly = pass。
     definition95: def95.rate === null
       ? null
       : {
@@ -2063,11 +2102,15 @@ async function main() {
           rate: Number(def95.rate.toFixed(4)),
           pass: def95.pass,
           total: def95.total,
+          zeroEdit: def95.zeroEdit,
+          convergenceOnly: def95.convergenceOnly,
+          meanTurns: def95.meanTurns,
         },
-    byCapability,
-    // 门禁口径的逐维视图（A3）：分母只数 pin 了该维的 heldout 行。与 `byCapability` 并列，
-    // 让「这个维度差」和「这个维度差且对门禁有杠杆」分得开（D 阶段据此排序）。
-    byCapabilityOnPinned,
+    // D6/R2：两个口径**改名并标明分母**，防止「66.5%」被当成能力成绩读。
+    //   · completeness：分母 = 全部 heldout 行（含 NL 从未点名的细节）——诊断用；
+    //   · gated：分母 = 金标真的钉了该维的行 —— 唯一可用于「成绩」的口径。
+    completeness: { denominatorKind: 'all', ...byCapability },
+    gated: { denominatorKind: 'nl-stated', ...byCapabilityOnPinned },
     byLanguage,
     passed:
       gateRate >= TARGET_ACCURACY &&
@@ -2114,7 +2157,13 @@ async function main() {
   const shortModel = (id) => String(id).split('/').pop()
   const servedIds = [...SERVED_MODELS]
   const modelTag = servedIds.length ? servedIds.map(shortModel).join('+') : shortModel(MODEL)
-  const badgeLabel = `heldout 95%-definition · ${modelTag}`
+  // R1/D5：徽章的 message 只能是「一个百分比」（shields endpoint + 产物核对都按这个形状），
+  // 故把「一次答对」放进 label：读者一眼看到两个数（zero-edit 与 ∨ 合数），而门禁仍看合数。
+  const zeroEditPct = def95.total ? (def95.zeroEdit.pass / def95.total) * 100 : null
+  const badgeLabel =
+    zeroEditPct === null
+      ? `heldout 95%-definition · ${modelTag}`
+      : `zero-edit ${zeroEditPct.toFixed(1)}% · heldout 95%-definition · ${modelTag}`
   const pct = gateRate * 100
   const color = pct >= 95 ? 'brightgreen' : pct >= 90 ? 'green' : pct >= 80 ? 'yellow' : 'red'
   const badge = {

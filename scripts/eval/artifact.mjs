@@ -262,6 +262,37 @@ export function verifyArtifact(artifact, ctx = {}) {
     if (typeof rate === 'number' && (rate < 0 || rate > 1)) {
       failures.push(`definition95.rate=${rate} 越界`)
     }
+    // R1/D5：两条腿分列（zeroEdit + convergenceOnly = pass）。旧产物没有这两个子块 →
+    // 跳过（与 AN-13 同一处置：恒红 = 红盲）。
+    const legs = [['zeroEdit', d95.zeroEdit], ['convergenceOnly', d95.convergenceOnly]]
+    if (legs.some(([, b]) => b !== undefined)) {
+      let sum = 0
+      let intact = true
+      for (const [name, b] of legs) {
+        if (!b || !Number.isInteger(b.pass) || !Number.isInteger(b.total)) {
+          failures.push(`definition95.${name} 非法：${JSON.stringify(b)}`)
+          intact = false
+          continue
+        }
+        if (b.total !== total) {
+          failures.push(`definition95.${name}.total=${b.total} ≠ definition95.total=${total}（两条腿同一分母）`)
+          intact = false
+        }
+        if (b.pass < 0 || b.pass > b.total) {
+          failures.push(`definition95.${name}.pass=${b.pass} 越界（0..${b.total}）`)
+          intact = false
+        }
+        sum += b.pass
+      }
+      if (intact && sum !== pass) {
+        failures.push(`definition95 两腿之和 ${sum} ≠ pass ${pass}（zeroEdit 与 convergenceOnly 必须划分全部通过行）`)
+      }
+    }
+    if (d95.meanTurns !== undefined && d95.meanTurns !== null) {
+      if (typeof d95.meanTurns !== 'number' || d95.meanTurns < 0) {
+        failures.push(`definition95.meanTurns 非法：${JSON.stringify(d95.meanTurns)}`)
+      }
+    }
   }
   // ── AN-13：编译门进入 `passed`，产物必须自洽 ──────────────────────────────
   // 新产物带 `compileMeasured`（分母 = 有产物的行）。旧产物没有这个字段，按旧口径放行 ——
@@ -307,18 +338,42 @@ export function verifyArtifact(artifact, ctx = {}) {
       }
     }
   }
-  // ── A3：门禁口径的逐维视图（`byCapabilityOnPinned`）── 只查算术自洽 ──────────
-  // 它是**观测**口径（不进门禁），但「pass > applicable」是自相矛盾的数字，与观测无关。
-  // 旧产物没有这个块 → 跳过（与 AN-13/AN-18 同一处置：恒红 = 红盲）。
-  const pinnedCaps = artifact.byCapabilityOnPinned
-  if (pinnedCaps && typeof pinnedCaps === 'object') {
-    for (const [key, c] of Object.entries(pinnedCaps)) {
+  // ── D6/R2：两个逐维口径（`completeness` / `gated`）── 只查算术自洽 ──────────
+  // 旧产物用的是 `byCapability` / `byCapabilityOnPinned`：继续校验（不然新守卫会红到下一次
+  // 完整跑批），新名字优先。新名字必须带 `denominatorKind` —— 没有分母说明的百分比正是
+  // D6 指出的误读源头。
+  const dimViews = [
+    {
+      name: 'completeness',
+      legacy: 'byCapability',
+      block: artifact.completeness ?? artifact.byCapability,
+      isNew: !!artifact.completeness,
+      kind: 'all',
+    },
+    {
+      name: 'gated',
+      legacy: 'byCapabilityOnPinned',
+      block: artifact.gated ?? artifact.byCapabilityOnPinned,
+      isNew: !!artifact.gated,
+      kind: 'nl-stated',
+    },
+  ]
+  for (const { name, legacy, block, isNew, kind } of dimViews) {
+    if (!block || typeof block !== 'object') continue
+    // 报错用**实际读到的那个键名**：旧产物只带 `byCapabilityOnPinned`，消息里却写 `gated`
+    // 会让读者去产物里找一个不存在的字段（meta-eval 正是按旧名字守这条）。
+    const label = isNew ? name : legacy
+    if (isNew && block.denominatorKind !== kind) {
+      failures.push(`${label}.denominatorKind=${JSON.stringify(block.denominatorKind)}，应为 '${kind}'`)
+    }
+    for (const [key, c] of Object.entries(block)) {
+      if (key === 'denominatorKind') continue
       if (!c || !Number.isInteger(c.applicable) || !Number.isInteger(c.pass) || c.pass < 0 || c.pass > c.applicable) {
-        failures.push(`byCapabilityOnPinned.${key} 非法：pass=${c?.pass} applicable=${c?.applicable}`)
+        failures.push(`${label}.${key} 非法：pass=${c?.pass} applicable=${c?.applicable}`)
         continue
       }
       if (c.applicable === 0 && c.rate !== null) {
-        failures.push(`byCapabilityOnPinned.${key}：applicable=0 时 rate 必须是 null（不能把「没人 pin」写成 0）`)
+        failures.push(`${label}.${key}：applicable=0 时 rate 必须是 null（不能把「没人 pin」写成 0）`)
       }
     }
   }

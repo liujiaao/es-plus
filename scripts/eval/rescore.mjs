@@ -234,7 +234,18 @@ const out = {
   skippedLines: skipped,
   cases: m.n,
   heldout: m.heldout.length,
-  definition95: m.def95.rate === null ? null : { rate: r4(m.def95.rate), pass: m.def95.pass, total: m.def95.total },
+  definition95:
+    m.def95.rate === null
+      ? null
+      : {
+          rate: r4(m.def95.rate),
+          pass: m.def95.pass,
+          total: m.def95.total,
+          // R1/D5：两条完成腿分列（门禁仍看合数）。
+          zeroEdit: m.def95.zeroEdit,
+          convergenceOnly: m.def95.convergenceOnly,
+          meanTurns: m.def95.meanTurns,
+        },
   coreRate: r4(m.coreRate),
   scoped: r4(m.exactScopedHeldout ?? m.exactScoped),
   scopedAll: r4(m.exactScoped),
@@ -260,13 +271,16 @@ const out = {
         withinK: m.convStats.withinK,
       }
     : null,
-  byCapability: m.byCapability,
+  // D6/R2：两个逐维口径带上分母说明（诊断 vs 判据）。
+  completeness: { denominatorKind: 'all', ...m.byCapability },
+  gated: { denominatorKind: 'nl-stated', ...m.byCapabilityOnPinned },
   // W5 归因：逐行失败明细（只观测）。与 `eval-llm.mjs` 同一份 `summarizeMisses`，
   // 故离线复算出的归因与产物旁路文件结构一致。
   misses,
-  // 门禁口径的逐维视图（A3）：分母只数 pin 了该维的行。旧 dump 没有 pinnedDims（缺省 []）
+  // 门禁口径的逐维视图（A3/D6）：分母只数 pin 了该维的行。旧 dump 没有 pinnedDims（缺省 []）
   // ⟹ 各维分母为 0、rate 为 null —— 不是「全错」，是「这份 dump 记不下来」。
-  byCapabilityOnPinned: m.byCapabilityOnPinned,
+  // 这里保持计算（`out.gated`），与产物新名字对齐；旧产物比对走回退（见下）。
+
   fragments: {
     cases: fragmentSummary.cases,
     measured: fragmentSummary.measured,
@@ -385,9 +399,27 @@ if (EXPECT) {
     ['convergence.scripted', out.convergence?.scripted, exp.convergence?.scripted],
     ['definition95.k', convergeK, exp.definition95?.k],
   ]
+  // D6/R2：产物可能是新名字（completeness/gated）或旧名字（byCapability*）；两者都比。
+  const expCompleteness = exp.completeness ?? exp.byCapability
+  const expGated = exp.gated ?? exp.byCapabilityOnPinned
   for (const { key } of CAPABILITY_SCORERS) {
-    pairs.push([`byCapability.${key}.rate`, out.byCapability[key]?.rate, exp.byCapability?.[key]?.rate])
-    pairs.push([`byCapability.${key}.applicable`, out.byCapability[key]?.applicable, exp.byCapability?.[key]?.applicable])
+    pairs.push([`completeness.${key}.rate`, out.completeness[key]?.rate, expCompleteness?.[key]?.rate])
+    pairs.push([`completeness.${key}.applicable`, out.completeness[key]?.applicable, expCompleteness?.[key]?.applicable])
+  }
+  // R1/D5：两条腿只在产物带了它们时比对（旧产物没有 → 不制造假红）。
+  if (exp.definition95?.zeroEdit) {
+    pairs.push(['definition95.zeroEdit.pass', out.definition95?.zeroEdit?.pass, exp.definition95.zeroEdit.pass])
+    pairs.push(['definition95.zeroEdit.total', out.definition95?.zeroEdit?.total, exp.definition95.zeroEdit.total])
+  }
+  if (exp.definition95?.convergenceOnly) {
+    pairs.push([
+      'definition95.convergenceOnly.pass',
+      out.definition95?.convergenceOnly?.pass,
+      exp.definition95.convergenceOnly.pass,
+    ])
+  }
+  if (exp.definition95?.meanTurns !== undefined && exp.definition95?.meanTurns !== null) {
+    pairs.push(['definition95.meanTurns', out.definition95?.meanTurns, exp.definition95.meanTurns])
   }
   // 片段腿（AN-18 起是门禁腿）也必须逐字段比对：此前只复算、不比对，片段 scorer 或
   // dump 重建路径漂移在 parity 守卫里完全不可见。产物带 `fragments` 块（AN-18 之后）就比；
@@ -410,20 +442,12 @@ if (EXPECT) {
   } else {
     console.warn('  ⚠ 产物没有 fragments 块（早于 AN-18）—— 片段腿无法与复算比对')
   }
-  // A3 的视图同样比对 —— 但只在**产物带了这个块**时：已提交的旧产物没有它，
+  // A3/D6 的 gated 视图同样比对 —— 但只在**产物带了这个块**时：已提交的旧产物没有它，
   // 无条件比对会把「产物写得早」误报成「复算漂移」（与 rulerVersion 同一处置）。
-  if (exp.byCapabilityOnPinned && out.byCapabilityOnPinned) {
+  if (expGated && out.gated) {
     for (const { key } of CAPABILITY_SCORERS) {
-      pairs.push([
-        `byCapabilityOnPinned.${key}.rate`,
-        out.byCapabilityOnPinned[key]?.rate,
-        exp.byCapabilityOnPinned[key]?.rate,
-      ])
-      pairs.push([
-        `byCapabilityOnPinned.${key}.applicable`,
-        out.byCapabilityOnPinned[key]?.applicable,
-        exp.byCapabilityOnPinned[key]?.applicable,
-      ])
+      pairs.push([`gated.${key}.rate`, out.gated[key]?.rate, expGated[key]?.rate])
+      pairs.push([`gated.${key}.applicable`, out.gated[key]?.applicable, expGated[key]?.applicable])
     }
   }
 

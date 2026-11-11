@@ -131,7 +131,10 @@ try {
     compileMeasured: out?.compileMeasured,
     compileCompiled: out?.compileCompiled,
     convergence: null,
-    byCapability: out?.byCapability,
+    // D6/R2：产物侧用**新名字**（completeness/gated）；旧的 byCapability* 仍被
+    // `rescore --expect` 接受，但这条合成产物应跟随当前写出方，否则测的是兼容分支而不是主路径。
+    completeness: out?.completeness,
+    gated: out?.gated,
     // AN-18 门禁腿：片段块同样在比对清单里（此前只复算不比对）。
     fragments: out?.fragments,
   }
