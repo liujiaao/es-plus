@@ -220,6 +220,17 @@ for (const scene of SCENES) {
   const hit = cells.filter((x) => present.has(`${x.scene}|${x.target}|${x.mode ?? ''}`)).length
   const modeNote = modesOf(scene)[0] === null ? '（该场景无 mode 轴）' : ` × ${modesOf(scene).length} 模式`
   console.log(`  ${scene.padEnd(7)} ${hit}/${cells.length} 格 · ${String(byScene(scene)).padEnd(3)} 例${modeNote}`)
+  // D10/R7：`mode` 轴单独成行 —— 汇总成「6/6 格」会让「schema 全绿、sfc 零语料」
+  // 和「两模式各半」看起来一样。`crud@schema` / `crud@sfc`（dialog 同理）必须各自可读。
+  const modes = modesOf(scene)
+  if (modes[0] !== null) {
+    for (const mode of modes) {
+      const modeCells = cells.filter((x) => x.mode === mode)
+      const modeHit = modeCells.filter((x) => present.has(`${x.scene}|${x.target}|${x.mode ?? ''}`)).length
+      const modeCases = cases.filter((c) => c.scene === scene && cellOf(c.raw).mode === mode).length
+      console.log(`    ${`${scene}@${mode}`.padEnd(14)} ${modeHit}/${modeCells.length} 格 · ${modeCases} 例`)
+    }
+  }
 }
 if (fragmentResults.length) {
   console.log(`[scene-coverage] 片段语料编译：${fragmentResults.filter((x) => x.ok).length}/${fragmentResults.length} 可解析，全部进 golden:e2e 的 vite build`)

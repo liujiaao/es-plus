@@ -154,6 +154,17 @@ function checkEnvelope(file, plan, envelope, text, mod) {
   if (!FINGERPRINT_RE.test(envelope.fingerprint)) {
     fail(`${file}: fingerprint=${JSON.stringify(envelope.fingerprint)} 不是 16 位十六进制`)
   }
+  // ── D7：出处是发射器的产物 ─────────────────────────────────────────────
+  // 每个信封都必须带**解析后的输入**（`config`）：这是「产物知道自己从哪来」的最小证据，
+  // 覆盖片段场景（没有 pageSchema 可嵌出处）。CRUD 页面还必须把 `__esPlusSource` 写进
+  // 代码本身 —— 宿主落盘时只有那一个文件，出处不能只活在信封里。
+  if (!envelope.config || typeof envelope.config !== 'object' || Object.keys(envelope.config).length === 0) {
+    fail(`${file}: 信封缺少 config（出处缺失：产物无法回答「我是从哪份输入生成的」）`)
+  }
+  if (plan.scene === 'crud' && envelope.artifact === 'crud-page') {
+    const hasMark = envelope.files.some((f) => typeof f.code === 'string' && f.code.includes('__esPlusSource'))
+    if (!hasMark) fail(`${file}: crud-page 产物缺少 __esPlusSource 出处标记（D7：每个确定性入口都要带出处）`)
+  }
 }
 
 function checkStructuralGuards(mod) {
