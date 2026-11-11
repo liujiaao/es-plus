@@ -30,6 +30,22 @@ const CRUD_PAGE_TYPES_FALLBACK = `export interface CrudPageSchema {
   /** @deprecated */ actions?: CrudAction[]
   /** @deprecated */ dialogFormItems?: FormItemOption[]
   /** @deprecated */ dialogOptions?: Partial<DialogOptions>
+  /**
+   * Provenance written by the generator (es-plus.page-source@1) in schema mode.
+   * Ignored at runtime; \`read_page\` unzips it back to the generator input. Present
+   * here so a host-authored pageSchema carrying it still type-checks.
+   */
+  __esPlusSource?: EsPlusPageSource
+}
+
+/** Mirrors @es-plus/core / the three renderer packages (same shape). */
+export interface EsPlusPageSource {
+  contract: string
+  generator: 'es-plus'
+  target: 'vue3' | 'vue2' | 'antdv'
+  mode: 'schema' | 'sfc'
+  config: Record<string, unknown>
+  lossy: Array<{ path: string; kind: string; detail: string }>
 }
 
 export interface CrudBtnConfig extends BtnConfig {

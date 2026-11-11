@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { generateFromConfig, type StructuredCrudConfig } from "@es-plus/shared";
+import { emitComposition, generateFromConfig, type CompositionPlan, type StructuredCrudConfig } from "@es-plus/shared";
 import { buildReadPageResult } from "../src/tools/read-page.js";
 
 /**
@@ -67,5 +67,39 @@ describe("buildReadPageResult", () => {
     expect(result.surfacesLossy?.some((l: any) => l.path === "columns")).toBe(true);
     // config 仍是无损的那份 —— 要保留 columns 的宿主走高级路径
     expect((result.config as any).columns).toEqual([{ prop: "name", label: "姓名" }]);
+  });
+
+  it("组合产物：identifies kind=composition 并返回整份 plan（不投影 surfaces）", () => {
+    const plan = {
+      name: "UsersPage",
+      nodes: [
+        {
+          id: "users",
+          plan: {
+            scene: "table" as const,
+            intent: { fields: [{ prop: "name", label: "姓名" }], rowButtons: [{ key: "edit", name: "编辑" }] },
+          },
+        },
+        { id: "edit", plan: { scene: "dialog" as const, intent: { fields: [{ prop: "name", label: "姓名" }], mode: "component" as const } } },
+      ],
+    } as unknown as CompositionPlan;
+    const page = emitComposition(plan).page!;
+    const result = buildReadPageResult({ code: page.code, label: "Page.vue" });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.kind).toBe("composition");
+    expect(result.contract).toBe("es-plus.composition-source@1");
+    expect(result.compositionPlan).toEqual(JSON.parse(JSON.stringify(plan)));
+    // 组合没有 surfaces 投影：不给宿主一条「看起来能用」的有损路径
+    expect(result.intent).toBeUndefined();
+    expect(result.surfacesLossy).toBeUndefined();
+  });
+
+  it("页面产物标注 kind=page（组合分支不许抢页面产物）", () => {
+    const { code } = generateFromConfig(config);
+    const result = buildReadPageResult({ code });
+    expect(result.ok).toBe(true);
+    if (!result.ok) return;
+    expect(result.kind).toBe("page");
   });
 });

@@ -109,6 +109,7 @@
  */
 
 import { DEFAULT_TARGET, type TargetFramework } from '../target.js'
+import { buildCompositionSource, compositionSourceLine } from '../page-source.js'
 import { fingerprintPayload, type ArtifactEnvelope, type ArtifactFile } from './artifact.js'
 import { emitSceneArtifact, type ScenePlan } from './emit.js'
 import { dialogTitleFor } from './registry.js'
@@ -832,6 +833,8 @@ function pageCode(
   analysis: CompositionAnalysis,
   nodes: EmittedNode[],
   wires: readonly CompositionWire[],
+  /** 出处注释行（`es-plus.composition-source@1`）。为空串则不发（兼容旧调用）。 */
+  sourceLine = '',
 ): string {
   const vue2 = analysis.target === 'vue2'
   const ts = analysis.typescript
@@ -954,6 +957,9 @@ function pageCode(
     lines.push('</template>')
     lines.push('')
     lines.push(ts ? '<script lang="ts">' : '<script>')
+    // 组合出处：整份 plan 回写进产物。放在 script 内第一行之前、import 之后看不见的
+    // 位置都行 —— 这里紧贴 `<script>`，保证任何格式化工具都先看到它。
+    if (sourceLine) lines.push(sourceLine)
     for (const n of componentNodes) {
       lines.push(`import ${n.componentName} from './${n.renamed.path}'`)
     }
@@ -1029,6 +1035,7 @@ function pageCode(
 
   const lines: string[] = []
   lines.push(ts ? '<script setup lang="ts">' : '<script setup>')
+  if (sourceLine) lines.push(sourceLine)
   const needRef = componentNodes.length > 0
   if (needRef) lines.push("import { ref } from 'vue'")
   for (const n of nodes) {
@@ -1264,7 +1271,9 @@ export function emitComposition(plan: CompositionPlan): CompositionResult {
     }
     const page: ArtifactFile = {
       path: 'Page.vue',
-      code: pageCode(analysis, nodes, analysis.wires),
+      // 出处 = 生成器**收到的** plan（不是 analysis 派生物）：回读后原样重放
+      // 才能逐字节复现同一页面，连 role / 派生接线都不用重新推导。
+      code: pageCode(analysis, nodes, analysis.wires, compositionSourceLine(buildCompositionSource(plan))),
       language: 'vue',
     }
     if (nodes.some((n) => n.renamed.path === page.path)) {

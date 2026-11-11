@@ -4,6 +4,7 @@ import {
   buildPageSource,
   configToSurfaces,
   readPageSource,
+  stripPageSourceArtifact,
   PAGE_SOURCE_CONTRACT,
   PAGE_SOURCE_KEY,
 } from '../src/page-source.js'
@@ -257,5 +258,82 @@ describe('configToSurfaces — 回读 → 前门意图表', () => {
     expect(lossy[0]).toMatchObject({ path: 'columns', kind: 'not-expressible' })
     // 丢了列，但字段仍在 —— 宿主至少能拿回 fields 派生的那部分
     expect((intent.surfaces as any).table).toHaveLength(3)
+  })
+
+  it('弹窗底座键与 DialogBlockOptionsSchema 同源（不再只留 width/fullscreen）', () => {
+    const { intent, lossy } = configToSurfaces({
+      ...config,
+      dialogs: {
+        edit: {
+          title: '编辑',
+          maxHeight: '80vh',
+          destroyOnClose: true,
+          closeOnClickModal: false,
+          formItems: [{ prop: 'name', label: '姓名', formtype: 'Input' }],
+          formLayout: { labelWidth: '100px' }, // 底座 pick 之外 → 必须点名
+        },
+      },
+    })
+    const dialog = (intent.surfaces as any).dialog[0]
+    expect(dialog).toMatchObject({ key: 'edit', title: '编辑', maxHeight: '80vh', destroyOnClose: true, closeOnClickModal: false })
+    expect(lossy).toContainEqual(expect.objectContaining({ path: 'dialogs.edit.formLayout', kind: 'not-expressible' }))
+  })
+})
+
+describe('readPageSource — TypeScript 产物（回归：首个 `{` 是 import 解构）', () => {
+  it('默认 schema 产物（typescript:true）能读回', () => {
+    const code = generateFromConfig(schemaConfig({ typescript: true })).code
+    expect(code.startsWith('import type { CrudPageSchema }')).toBe(true)
+    const read = readPageSource(code, 'schema.ts')
+    expect(read.ok, read.ok ? '' : read.error).toBe(true)
+    if (!read.ok) return
+    expect((read.source.config.fields as any)[0].prop).toBe('name')
+  })
+
+  it('JS 产物与 SFC 产物仍能读回', () => {
+    expect(readPageSource(generateFromConfig(schemaConfig({ typescript: false })).code).ok).toBe(true)
+    expect(readPageSource(generateFromConfig(schemaConfig({ mode: 'sfc' })).code).ok).toBe(true)
+  })
+})
+
+describe('stripPageSourceArtifact — 度量/哨兵前先剔除出处', () => {
+  it('schema（JS 与 TS）都删掉出处属性，且仍是合法 pageSchema', () => {
+    for (const typescript of [false, true]) {
+      const code = generateFromConfig(schemaConfig({ typescript })).code
+      const stripped = stripPageSourceArtifact(code)
+      expect(stripped).not.toContain(PAGE_SOURCE_KEY)
+      // 剩下的对象仍可 JSON.parse（TS 模式的第一个 `{` 是 import 解构，要从 `pageSchema` 后切）
+      const objText = stripped.slice(stripped.indexOf('pageSchema'))
+      expect(() => JSON.parse(objText.slice(objText.indexOf('{')))).not.toThrow()
+    }
+  })
+
+  it('sfc 删掉整行注释', () => {
+    const code = generateFromConfig(schemaConfig({ mode: 'sfc' })).code
+    expect(stripPageSourceArtifact(code)).not.toContain(`// ${PAGE_SOURCE_KEY}:`)
+  })
+
+  it('没有出处时原样返回（不猜）', () => {
+    expect(stripPageSourceArtifact('export const pageSchema = { a: 1 }')).toBe('export const pageSchema = { a: 1 }')
+  })
+})
+
+describe('modeLossy — 弹窗表单项里的行内函数', () => {
+  it('dialogs.*.formItems[].render 必须点名（不能只查顶层 fields）', () => {
+    const config = schemaConfig({
+      dialogs: {
+        add: {
+          title: '新增',
+          formItems: [
+            { prop: 'name', label: '姓名', formtype: 'Input', render: '(h, item) => h("b", item.label)' },
+          ],
+        },
+      },
+    })
+    const read = readPageSource(generateFromConfig(config).code)
+    expect(read.ok).toBe(true)
+    if (!read.ok) return
+    const entry = read.source.lossy.find((l) => l.path === 'dialogs.add.formItems[0].render')
+    expect(entry?.kind).toBe('not-expressible')
   })
 })

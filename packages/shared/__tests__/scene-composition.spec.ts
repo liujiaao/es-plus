@@ -737,3 +737,34 @@ describe('composition@3 复核 — 主从参数映射与 behavior 改名', () =>
     expect(wSubmit).not.toContain('reset 的接线永远不会被触发')
   })
 })
+
+describe('composition — 出处（es-plus.composition-source@1）', () => {
+  it('产物带出处，读回后原样重放 → 逐字节相同', async () => {
+    const { readCompositionSource, COMPOSITION_SOURCE_CONTRACT } = await import('../src/page-source.js')
+    const p = plan([table(), form(), dialog()])
+    const first = emitComposition(p)
+    const page = first.page!
+    expect(page.code).toContain('// __esPlusCompositionSource: ')
+
+    const read = readCompositionSource(page.code)
+    expect(read.kind).toBe('ok')
+    if (read.kind !== 'ok') return
+    expect(read.source.contract).toBe(COMPOSITION_SOURCE_CONTRACT)
+    expect(read.source.plan).toEqual(JSON.parse(JSON.stringify(p)))
+
+    const again = emitComposition(read.source.plan as unknown as CompositionPlan)
+    expect(again.page!.code).toBe(page.code)
+  })
+
+  it('没有出处 → absent（调用方继续按页面出处读），坏出处 → error（不许退回猜）', async () => {
+    const { readCompositionSource } = await import('../src/page-source.js')
+    expect(readCompositionSource('<template><div /></template>').kind).toBe('absent')
+    const bad = readCompositionSource('// __esPlusCompositionSource: { not json')
+    expect(bad.kind).toBe('error')
+    const wrongVersion = readCompositionSource(
+      '// __esPlusCompositionSource: {"contract":"es-plus.composition-source@0","plan":{}}',
+    )
+    expect(wrongVersion.kind).toBe('error')
+    if (wrongVersion.kind === 'error') expect(wrongVersion.error).toContain('composition-source@0')
+  })
+})
