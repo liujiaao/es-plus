@@ -26,18 +26,25 @@
  *   5. MCP 的 `resources/types.ts`（模型读的类型文档）
  *   6. MCP 的 `get-component-api` 文案与 `form-config` prompt（模型读的自然语言）
  *   7. `bundled/*.d.ts` 是否仍是源码的新鲜副本（否则发布出去的包教模型旧形状）
+ *   8. **列面**的 `TableColumnDataOption`（core / MCP 类型文档）与 `ColumnSchema.dataOptions`
+ *      —— 它与字段面是两个契约（列不级联，故没有 `children`/`disabled`）。
+ *      生成器 `projectColumnDataOptions` 的实际输出也在这里逐键验证是列面的子集：
+ *      字段是 Cascader、表格里也露一列时，旧实现把 `children` 整份复制到列上，
+ *      产物 `TS2353`（2026-11-10 的 `13-all-formtypes` 就这么红的）。
+ *      文字对账挡不住它，必须跑一遍真函数。
  *
  * 另外扫一遍各包 `src`：任何 `dataOptions?: Array<{ … }>` 内联声明都判红。
  * 契约要变时，改 Zod + JSON Schema + core 类型，其余各处跟着**引用**它，同一批
  * 提交里更新本文件的 EXPECTED 常量（那是刻意的评审时刻，不是负担）。
  *
  * 用法：node scripts/check-option-shape.mjs
- * 退出码：0 = 七处逐键一致；1 = 至少一处分叉。
+ * 退出码：0 = 各处逐键一致；1 = 至少一处分叉。
  */
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
 import { dirname, join, relative } from 'node:path'
 import { normalizeEol } from './lib/text-sync.mjs'
+import { loadGenerator } from './lib/generator-loader.mjs'
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), '..')
 const read = (p) => normalizeEol(readFileSync(join(ROOT, p), 'utf8'))
@@ -50,6 +57,15 @@ const read = (p) => normalizeEol(readFileSync(join(ROOT, p), 'utf8'))
  */
 const EXPECTED_REQUIRED = ['label', 'value']
 const EXPECTED_OPTIONAL = ['disabled', 'children', 'tagType']
+
+/**
+ * 列面契约（**独立**于字段面）：
+ *   - `TableColumnDataOption`（core 权威类型 / MCP 类型文档）；
+ *   - `ColumnSchema.dataOptions`（前门 Zod，宿主与 AI 写显式列时走它）。
+ * 单元格不级联、不联动，故只有 `tagType` 一个修饰键。
+ */
+const COLUMN_REQUIRED = ['label', 'value']
+const COLUMN_OPTIONAL = ['tagType']
 
 let failed = false
 const ok = (msg) => console.log(`✅ ${msg}`)
@@ -332,8 +348,84 @@ function checkLiteralLine(file, line, what) {
   }
 }
 
+// ── 9. 列面契约：TableColumnDataOption / ColumnSchema.dataOptions ───────
+//
+// 字段面（`DataOptionSchema`）与列面（`TableColumnDataOption`）是**两个**契约：
+// 表单控件要级联（`children`），表格单元格只是 code→label 映射 + 染色。
+// 两边混用会产出被本库自己类型判红的配置（TS2353），且只在
+// 「字段是 Cascader 且 inTable 非 false」时暴露 —— 语料里很窄的角落。
+{
+  const columnOpts = { requiredKeys: COLUMN_REQUIRED, optionalKeys: COLUMN_OPTIONAL }
+
+  // 9a. core 权威类型
+  {
+    const file = 'packages/core/src/types.ts'
+    const src = read(file)
+    const body = interfaceBody(src, 'TableColumnDataOption', `${file} · TableColumnDataOption`)
+    if (body !== null) {
+      checkKeySet(`${file} · TableColumnDataOption`, propsOf(body, 2, file), columnOpts)
+      ok('core TableColumnDataOption 与列面契约一致')
+    }
+  }
+
+  // 9b. MCP 的类型文档（模型读的 TS）
+  {
+    const file = 'packages/mcp-server/src/resources/types.ts'
+    const src = read(file)
+    const body = interfaceBody(src, 'TableColumnDataOption', `${file} · TableColumnDataOption`)
+    if (body !== null) {
+      checkKeySet(`${file} · TableColumnDataOption`, propsOf(body, 2, file), columnOpts)
+      ok('MCP resources/types.ts · TableColumnDataOption 与列面契约一致')
+    }
+  }
+
+  // 9c. 前门 Zod：ColumnSchema.dataOptions（显式列）
+  {
+    const file = 'packages/shared/src/structured-config.schema.ts'
+    const src = read(file)
+    const at = src.indexOf('const ColumnSchema')
+    if (at === -1) {
+      fail(`${file}：找不到 ColumnSchema（选择器失效）`)
+    } else {
+      const m = src.slice(at).match(/dataOptions:\s*z\s*\.array\(\s*z\.object\(\{([\s\S]*?)\n\s*\}\)\s*\)/)
+      if (!m) fail(`${file} · ColumnSchema.dataOptions：定位不到内联对象（契约搬家了就同步本守卫）`)
+      else {
+        checkKeySet(`${file} · ColumnSchema.dataOptions`, propsOf(m[1], 10, file), columnOpts)
+        ok('前门 Zod（ColumnSchema.dataOptions）与列面契约一致')
+      }
+    }
+  }
+
+  // 9d. 生成器投影的实际输出：真跑 `projectColumnDataOptions`，不做文字推断。
+  //     字段面 → 列面是**单向投影**；投影漏键会让列丢染色，投影多键会 TS2353。
+  {
+    const { projectColumnDataOptions } = await loadGenerator()
+    if (typeof projectColumnDataOptions !== 'function') {
+      fail('生成器没有导出 projectColumnDataOptions —— 列面投影不再是单源，守卫无法对账')
+    } else {
+      const projected = projectColumnDataOptions([
+        { label: '浙江', value: 'zj', children: [{ label: '杭州', value: 'hz' }], disabled: true, tagType: 'info' },
+        { label: '江苏', value: 'js' },
+      ])
+      const keys = new Set(projected.flatMap((o) => Object.keys(o)))
+      const want = [...COLUMN_REQUIRED, ...COLUMN_OPTIONAL]
+      const extra = [...keys].filter((k) => !want.includes(k))
+      const missing = want.filter((k) => !keys.has(k))
+      if (extra.length) fail(`projectColumnDataOptions 多出列面未登记键 ${extra.join(', ')}（产物会 TS2353）`)
+      if (missing.length) fail(`projectColumnDataOptions 丢了列面键 ${missing.join(', ')}（列会丢展示/染色）`)
+      if (JSON.stringify(projected).includes('children')) {
+        fail('projectColumnDataOptions 把字段级 children 带到了列上 —— 表格不级联，产物会 TS2353')
+      }
+      if (JSON.stringify(projected).includes('disabled')) {
+        fail('projectColumnDataOptions 把 disabled 带到了列上 —— 列面契约没有这个键')
+      }
+      if (!extra.length && !missing.length) ok('projectColumnDataOptions 输出恰为列面子集（无 children/disabled）')
+    }
+  }
+}
+
 if (failed) {
   console.error('\n[check-option-shape] 选项契约分叉 —— 前门放行 ≠ 类型/文档放行，模型会照发布出去的形状写。')
   process.exit(1)
 }
-console.log('[check-option-shape] 选项契约七处逐键一致 ✔')
+console.log('[check-option-shape] 选项契约逐键一致（字段面 + 表格列面）✔')

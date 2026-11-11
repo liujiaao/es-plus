@@ -332,6 +332,77 @@ describe('generateFromConfig — schema mode', () => {
     expect(result.code).toContain('"group": "basic"')
   })
 
+  // D9 探针抓到的两处（sfc + formLayout）：
+  // 1) 裸字面量把 `layout.type` 放宽成 string ⟹ 赋给 `:layout-form-props`（LayoutFormProps）
+  //    报 TS2322；2) vue2 的 setup() 没 return `formLayoutProps` ⟹ TS2339 / 运行时 undefined。
+  it('D9：TS 模式下 formLayoutProps 带 LayoutFormProps 注解，且类型被导入', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'sfc' as const,
+      typescript: true,
+      formLayout: { layout: { type: 'tabs', groups: [{ key: 'basic', label: '基础' }] } },
+      fields: [{ prop: 'name', label: '姓名', formtype: 'Input' as const, group: 'basic' }],
+    })
+    expect(result.code).toContain('const formLayoutProps: LayoutFormProps = ')
+    // 注解没用到的导入会被 vue-tsc 报 noUnusedLocals 的环境当噪音；只断言它在类型导入里。
+    expect(result.code).toMatch(/import type \{[^}]*\bLayoutFormProps\b[^}]*\} from '@es-plus\/vue3'/)
+  })
+
+  it('D9：vue2 的 setup() 把 formLayoutProps return 出去（模板里可见）', () => {
+    const result = generateFromConfig({
+      ...baseConfig,
+      mode: 'sfc' as const,
+      target: 'vue2' as const,
+      formLayout: { labelWidth: '90px' },
+      fields: [{ prop: 'name', label: '姓名', formtype: 'Input' as const }],
+      actions: ['add' as const],
+    })
+    expect(result.code).toContain('const formLayoutProps = {')
+    expect(result.code).toMatch(/return \{[^}]*\bformLayoutProps\b[^}]*\}/)
+  })
+
+  // ── D1：行内编辑的覆盖度告警（教学面与 gold 的冲突面）───────────────
+  describe('editCoverageWarnings（D1）', () => {
+    const editConfig = (mode: 'cell' | 'row') => ({ engine: 'vxe' as const, editConfig: { mode } })
+    const cols = (renders: boolean[]) => ({
+      columns: renders.map((on, i) => ({
+        prop: `c${i}`,
+        label: `C${i}`,
+        ...(on ? { editRender: { name: '$input' } } : {}),
+      })),
+    })
+    const fieldConfig = {
+      ...baseConfig,
+      mode: 'schema' as const,
+      actions: ['add' as const],
+      fields: baseConfig.fields.map((f) => ({ ...f, inTable: true })),
+    }
+
+    it('row 全覆盖 → 零告警', () => {
+      const result = generateFromConfig({ ...fieldConfig, ...cols([true, true]), tableOptions: editConfig('row') })
+      expect(result.warnings.join('\n')).not.toContain('mode=\'row\'')
+    })
+
+    it('row 部分覆盖 → 点名缺 editRender 的列', () => {
+      const result = generateFromConfig({ ...fieldConfig, ...cols([true, false]), tableOptions: editConfig('row') })
+      const joined = result.warnings.join('\n')
+      expect(joined).toContain("mode='row'")
+      expect(joined).toContain('c1')
+      expect(joined).not.toContain('c0,')
+    })
+
+    it('点名单列（mode=cell）→ 零覆盖告警', () => {
+      const result = generateFromConfig({ ...fieldConfig, ...cols([true, false]), tableOptions: editConfig('cell') })
+      expect(result.warnings.join('\n')).not.toContain("mode='row'")
+    })
+
+    it('写了 editRender 却没有 editConfig / 非 vxe → 告警（inlineEditWarnings 从 editConfig 缺失处直接返回，管不到）', () => {
+      const result = generateFromConfig({ ...fieldConfig, ...cols([true, false]) })
+      expect(result.warnings.join('\n')).toContain('editRender')
+      expect(result.warnings.join('\n')).toContain('engine')
+    })
+  })
+
   it('generates validation rules for required fields', () => {
     const result = generateFromConfig({ ...baseConfig, mode: 'schema' })
     const schema = JSON.parse(result.code.replace(/^.*?= /, '').replace(/\n$/, ''))

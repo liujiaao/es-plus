@@ -272,6 +272,28 @@ export function strippedColumnKeys(columns: Array<Record<string, unknown>>): str
   return out
 }
 
+/**
+ * 字段级 `dataOptions` → **列级** `dataOptions` 的投影。
+ *
+ * 两者契约不同：字段面允许 `disabled` / `children`（Cascader、级联树），列面只有
+ * `label` / `value` / `tagType`（`TableColumnDataOption`）。此前生成器把字段数组**原样**
+ * 搬到列上，于是 `dataOptions:[{label,value,children}]` 会产出
+ * `TS2353: 'children' does not exist in type 'TableColumnDataOption'` —— 生成物开箱不编译。
+ *
+ * 表格单元格不级联（core `TableColumnDataOption` 的注释写明），所以这里不是「丢功能」，
+ * 而是把列面表达不了的部分留在字段面。空数组返回 `undefined`：不发射空键。
+ */
+export function projectColumnDataOptions(
+  options: ReadonlyArray<Record<string, unknown>> | undefined,
+): Array<Record<string, unknown>> | undefined {
+  if (!Array.isArray(options) || options.length === 0) return undefined
+  return options.map((o) => {
+    const out: Record<string, unknown> = { label: o.label, value: o.value }
+    if (o.tagType !== undefined) out.tagType = o.tagType
+    return out
+  })
+}
+
 /** 递归剥掉显式列里**不属于列契约**的键（保留 `x-*`）。`groups` 自指递归。 */
 export function sanitizeExplicitColumns(
   columns: Array<Record<string, unknown>>,
@@ -281,7 +303,11 @@ export function sanitizeExplicitColumns(
     const out: Record<string, unknown> = {}
     for (const [k, v] of Object.entries(col)) {
       if (!keys.has(k) && !isExtensionKey(k)) continue
-      out[k] = k === 'groups' && Array.isArray(v) ? (v as Array<Record<string, unknown>>).map(walk) : v
+      if (k === 'groups' && Array.isArray(v)) out[k] = (v as Array<Record<string, unknown>>).map(walk)
+      else if (k === 'dataOptions') {
+        const projected = projectColumnDataOptions(v as Array<Record<string, unknown>>)
+        if (projected) out[k] = projected
+      } else out[k] = v
     }
     return out
   }
@@ -363,7 +389,10 @@ function attachFieldDataOptions(
       if (Array.isArray(c.groups)) return { ...c, groups: walk(c.groups as Array<Record<string, unknown>>) }
       if (!c.type && typeof c.prop === 'string' && c.dataOptions === undefined) {
         const f = byProp.get(c.prop)
-        if (f) return { ...c, dataOptions: f.dataOptions }
+        if (f) {
+          const projected = projectColumnDataOptions(f.dataOptions)
+          if (projected) return { ...c, dataOptions: projected }
+        }
       }
       return c
     })
@@ -690,6 +719,8 @@ export function generateFromConfig(rawConfig: StructuredCrudConfig): StructuredG
     ...duplicateOpColumnWarnings,
     // AN-11③④：两种「配了却不会发生任何事」的静默丢弃，按 mode 判一次（两种模式共用）。
     ...inlineEditWarnings(config),
+    // D1：列覆盖率 / `editRender` 没配 editConfig —— 与上面那条互补，不重复报同一问题。
+    ...editCoverageWarnings(config),
     ...(mode === 'schema' ? schemaModePermissionWarnings(config) : []),
   ]
   if (extra.length) {
@@ -737,6 +768,69 @@ export function inlineEditWarnings(config: StructuredCrudConfig): string[] {
   return [
     'tableOptions.editConfig is set on the vxe engine, but no column declares `editRender` — vxe only makes a cell editable when its column carries one, so no cell will be editable. Add `columns[].editRender` (e.g. { "name": "$input" }).',
   ]
+}
+
+/**
+ * 行内编辑的**覆盖度**告警（D1）：教学面说「只有 NL 点名要改的那一列才写 `editRender`」，
+ * 但 `mode:'row'` 的语义是整行可编辑 —— 没挂 `editRender` 的单元格在行模式下**仍然只读**。
+ * 两者都是「配了却有一半不生效」，运行时静默。
+ *
+ * 与 `inlineEditWarnings` 的分工：
+ *   - 那个管 `tableOptions.editConfig` 的两条死路（引擎不对 / vxe 但一列都没挂）；
+ *   - 这个管**列覆盖率**，以及 `editRender` 存在但**根本没写 editConfig**（前者直接从
+ *     `editConfig === undefined` 返回，管不到这一种）。
+ *
+ * 为什么用告警而不是硬修：「表格支持行内编辑」是否等于「所有列可编辑」取决于业务
+ * （主键/标识列通常就是不可编辑的）。硬修会把标识列变成可写，正是教学面担心的那件事。
+ */
+export function editCoverageWarnings(config: StructuredCrudConfig): string[] {
+  const tOpts = (config.tableOptions || {}) as Record<string, unknown>
+  const engine: 'default' | 'virtual' | 'vxe' =
+    tOpts.engine === 'vxe' ? 'vxe'
+      : tOpts.virtual === true || tOpts.engine === 'virtual' ? 'virtual'
+        : 'default'
+
+  type ColLike = { prop?: string; type?: string; editRender?: unknown; groups?: ColLike[] }
+  // 数据列 = 去掉 index / selection / expand 与分组壳（groups 递归展平到叶子）。
+  const flatten = (cols: ColLike[]): ColLike[] =>
+    cols.flatMap((c) =>
+      Array.isArray(c.groups) && c.groups.length
+        ? flatten(c.groups)
+        : c.type || !c.prop
+          ? []
+          : [c]
+    )
+  const dataCols: ColLike[] = Array.isArray(config.columns) && config.columns.length
+    ? flatten(config.columns as ColLike[])
+    // 派生列与 buildTableColumn 同口径：inTable !== false 的字段即数据列（嵌套容器不产列）。
+    : (config.fields || [])
+        .filter((f) => f.inTable !== false && !(f as { children?: unknown }).children)
+        .map((f) => ({ prop: f.prop, editRender: undefined }))
+
+  const editable = dataCols.filter((c) => c.editRender != null)
+  if (editable.length === 0) return []
+
+  const out: string[] = []
+  // editConfig 存在时，引擎不匹配由 inlineEditWarnings 报（专属判据，措辞更具体）。
+  if (tOpts.editConfig === undefined && engine !== 'vxe') {
+    out.push(
+      `Columns declare \`editRender\`, but no \`tableOptions.editConfig\` is set and the engine is '${engine}' — ` +
+        `editRender is only consumed by engine:'vxe' (with editConfig), so every cell stays read-only. ` +
+        `Add \`tableOptions: { engine: 'vxe', editConfig: { mode: 'cell' } }\`.`
+    )
+  }
+  const rowMode = ((tOpts.editConfig as { mode?: string } | undefined)?.mode) === 'row'
+  if (rowMode) {
+    const missing = dataCols.filter((c) => c.editRender == null).map((c) => c.prop)
+    if (missing.length) {
+      out.push(
+        `editConfig.mode='row' means the WHOLE row is editable, but ${missing.length} data column(s) declare no \`editRender\`: ` +
+          `${missing.join(', ')} — those cells stay read-only in row mode. ` +
+          `Either give every editable column an \`editRender\`, or use mode:'cell' if only the named columns should be editable.`
+      )
+    }
+  }
+  return out
 }
 
 /**
@@ -1022,6 +1116,10 @@ function generateSchema(
     : buildSchemaWrapper(config, hasDelete, hasDialog, renderFields, target)
 
   const esPlusPkg = getEsPlusPackageName(target)
+  // 注意：这里的真值语义（falsy = JS）与场景发射 `typescript === false ? 'js' : 'ts'`
+  // 不同，CLI 在 create 时又补 true。三处不一致是已知缺陷（见整改方案 B1 后半），
+  // 但统一会改变所有「不传 typescript」调用方的产物形态，必须连同 30 处测试解析一起
+  // 单独成批 —— 本批只修 `readPageSource`（它现在两种形态都能读）。
   const tsImport = config.typescript
     ? `import type { CrudPageSchema } from '${esPlusPkg}'\n\nexport const pageSchema: CrudPageSchema = `
     : `export const pageSchema = `
@@ -1243,7 +1341,12 @@ function generateSFC(
   // 赋给 `:form-item-list` / `:config-btn` 时在 vue-tsc 里报 TS2322 —— 产物语法正确、
   // 类型不正确。注解同时把拼错的键（如 `formtype` 写成 `formType`）变成类型错误。
   if (ts) {
-    lines.push(`import type { FormItemOption, BtnConfig, TableColumn, TableOptions } from '${esPlusPkg}'`)
+    // `LayoutFormProps` 与上面四兄弟同理：`formLayoutProps` 里的 `layout.type`
+    // （'tabs' | 'steps' | 'collapse'）在裸字面量里会被放宽成 `string`，赋给
+    // `:layout-form-props` 时 TS2322 —— 只有注解能把联合类型收住。
+    const typeNames = ['FormItemOption', 'BtnConfig', 'TableColumn', 'TableOptions']
+    if (hasSfcFormLayout) typeNames.push('LayoutFormProps')
+    lines.push(`import type { ${typeNames.join(', ')} } from '${esPlusPkg}'`)
   }
   lines.push(``)
 
@@ -1293,7 +1396,7 @@ function generateSFC(
     // `layout`（P1-3 分组容器）是同级键，原样透传。
     const layoutPart = sfcFormGroupLayout ? `, layout: ${inlineJson(sfcFormGroupLayout)}` : ''
     lines.push(
-      `const formLayoutProps = { rowLayProps: { gutter: 16 }, formLayProps: ${inlineJson(sfcFormLayProps)}${layoutPart} }`,
+      `const formLayoutProps${ts ? ': LayoutFormProps' : ''} = { rowLayProps: { gutter: 16 }, formLayProps: ${inlineJson(sfcFormLayProps)}${layoutPart} }`,
     )
   }
   lines.push(``)
@@ -1567,6 +1670,9 @@ function generateSFC(
   // Vue 2 模式：闭合 setup() 并把所有顶层声明 return 出去
   if (isVue2) {
     const exposedNames: string[] = ['queryForm', 'formItems', 'queryBtns', 'tableRef', 'tableData', 'pagination', 'columns', 'options']
+    // setup() 没 return 的名字在模板里**不可见**：`:layout-form-props="formLayoutProps"`
+    // 会报 TS2339（Property 'formLayoutProps' does not exist on …），运行时则是静默 undefined。
+    if (hasSfcFormLayout) exposedNames.push('formLayoutProps')
     if (hasDialog) exposedNames.push('dialog', 'openForm')
     if (hasDelete) exposedNames.push('handleDelete')
     if (config.actions.includes('export')) exposedNames.push('handleExport')
@@ -2207,7 +2313,9 @@ export function buildTableColumn(field: FieldConfig, i18n?: boolean, defaultSort
   if (field.permissionValue) col.permissionValue = field.permissionValue
   // 声明式码值映射：字段级 dataOptions（表单 Select 的同一份选项）直接带到派生列。
   // 「表单是下拉、表格却显示 0/1/2」是最常见的割裂；用户不必为表格再写一遍同样的选项。
-  if (Array.isArray(field.dataOptions) && field.dataOptions.length > 0) col.dataOptions = field.dataOptions
+  // 投影到列契约（label/value/tagType）：字段面的 children/disabled 列上不存在。
+  const colOptions = projectColumnDataOptions(field.dataOptions)
+  if (colOptions) col.dataOptions = colOptions
   return col
 }
 
@@ -2381,9 +2489,10 @@ export function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudCo
   // 它是权限码不是 JS 源码。与静态 hidCol 同层。
   if (field.permissionValue) parts.push(`permissionValue: ${q(field.permissionValue)}`)
   // 声明式码值映射（纯 JSON）：与 schema 模式 buildTableColumn 同口径，派生列直接带上。
-  if (Array.isArray(field.dataOptions) && field.dataOptions.length > 0) {
-    parts.push(`dataOptions: ${inlineJson(field.dataOptions)}`)
-  }
+  // 投影到列契约的键集 —— 字段面允许的 `children`/`disabled` 不是列的可表达键（见
+  // projectColumnDataOptions），原样内联会让生成的 TS 报 TS2353。
+  const columnOptions = projectColumnDataOptions(field.dataOptions)
+  if (columnOptions) parts.push(`dataOptions: ${inlineJson(columnOptions)}`)
   parts.push(...sourceExtensionParts(field, warnings))
   return `{ ${parts.join(', ')} }`
 }

@@ -642,7 +642,11 @@ export function generateTableBlock(input: TableBlockInput): FragmentResult {
       pushSfcColumn(col, lines, '  ', warnings)
     }
   } else {
+    // 表格面没有「容器列」：`children` 容器只属于表单面。整页派生列路径一直跳过它
+    // （`isNestedContainerField`），片段路径此前把容器当成普通字段，产出一列
+    // `prop: 'address'` 的幽灵列。同一判据在这里补齐。
     for (const f of fields) {
+      if (Array.isArray((f as { children?: unknown[] }).children) && (f as { children?: unknown[] }).children!.length) continue
       lines.push(`  ${buildTableColumnSFC(f as unknown as FieldConfig, cfgLike, warnings)},`)
     }
   }

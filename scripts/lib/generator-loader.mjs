@@ -30,7 +30,11 @@ export const ESCAPE_MODULE = join(SHARED_SRC, 'codegen-escape.ts')
  * @param {false | ((source: string|null, path: string) => string | null)} cripple
  *   传函数时，该函数返回的字符串会**替换** `codegen-escape.ts` 的内容
  *   （用于非空证明：把转义器打成恒等）。
- * @returns {Promise<{generateFromConfig: Function}>}
+ * 入口是一段虚拟模块（stdin），因为守卫还需要 `stripPageSourceArtifact`：
+ * 度量前必须剔掉 `__esPlusSource`，否则「载荷只出现在出处里」会被哨兵误判成通过。
+ * 从 `structured-generator.ts` 再手写一份剔除逻辑就是第二真源，故让打包入口多导出一次。
+ *
+ * @returns {Promise<{generateFromConfig: Function, stripPageSourceArtifact: Function}>}
  */
 export async function loadGenerator(cripple = false) {
   const tmp = mkdtempSync(join(tmpdir(), 'es-esc-'))
@@ -46,7 +50,15 @@ export async function loadGenerator(cripple = false) {
     },
   }
   await build({
-    entryPoints: [join(SHARED_SRC, 'structured-generator.ts')],
+    stdin: {
+      contents: [
+        "export * from './structured-generator.ts'",
+        "export { stripPageSourceArtifact } from './page-source.ts'",
+      ].join('\n'),
+      resolveDir: SHARED_SRC,
+      sourcefile: 'es-plus-guard-entry.ts',
+      loader: 'ts',
+    },
     bundle: true,
     format: 'esm',
     outfile,

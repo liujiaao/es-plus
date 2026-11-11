@@ -34,13 +34,14 @@
  *   P6 删掉 partial+requires 的引擎不匹配告警          → A8 必须红
  *   P7 从 core 运行时 vxe-only 清单删一个键            → D2 必须红
  *   P8 某端 es-table 不再调用运行时告警                → D3 必须红
+ *   P9 文档把 antdv 虚拟滚动写回「可用」               → E1 必须红
  *
  * P3 为什么不是「把 vue2 的 virtual 格子改成 full」：那是**改数据**——矩阵说 full，
  * B 就没有格子可查，判据是「不触发」而不是「变红」，证明不了 B 有效。要证明 B 有效，
  * 必须让**消费路径**失明而矩阵不变：B 的红必须来自 `generateFromConfig` 的 warnings 消失。
  *
  * 用法：node scripts/check-capability-parity.mjs
- * 退出码：0 = A/B/C 全绿且四种注入各自变红；1 = 有缺口或守卫失效。
+ * 退出码：0 = A/B/C/D/E 全绿且每条注入各自变红；1 = 有缺口或守卫失效。
  */
 import { mkdirSync, mkdtempSync, readFileSync, rmSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -521,6 +522,65 @@ function checkRuntimeVxeOnly(api, read) {
   return problems
 }
 
+/**
+ * E. **文档不许比矩阵更乐观**（E1）。
+ *
+ * 矩阵说 antdv 的 `tableOptions.virtual` 是 `none`，而代码里那三处文档却写成
+ * 「`virtual` 透传给 `<a-table :virtual>`（ADV 4 原生虚拟滚动）」—— 端上实际
+ * 告警降级。这不是文案小瑕疵：MCP 的 resources / get-component-api 正是模型读的
+ * 指令，模型会照它发 `virtual: true`，然后得到一张全量渲染的表格。
+ *
+ * 判据：凡是**同一行/相邻行**同时出现「a-table（或 antdv 口径）」与 `virtual`，
+ * 又没有否定/降级措辞的，一律判红。矩阵不是 none 时本判据不适用（那时改矩阵，
+ * 而不是让文档先说话）。
+ */
+const VIRTUAL_DOC_FILES = [
+  'packages/core/src/types.ts',
+  'packages/mcp-server/src/resources/types.ts',
+  'packages/mcp-server/src/tools/get-component-api.ts',
+  'packages/mcp-server/src/resources/conventions.ts',
+]
+const DOC_NEGATION =
+  /(?:not|never|no\s|without|unsupported|ignored|fall(?:s)?\s*back|fallback|warn|degrad|没有|无|不支持|降级|告警|忽略)/i
+/** 「在说虚拟滚动这件事」的措辞。只认这几种，避免把 `virtual engine`（vue3 的引擎名）
+ *  或 `a-table 默认引擎` 这类正常的对照说明误判成「声称 antdv 支持虚拟滚动」。 */
+const VIRTUAL_CLAIM = /:virtual|virtual\s*scroll|virtual\s*table|虚拟滚动|虚拟表格/i
+
+function checkVirtualDocClaims(api, readFn = readSrc) {
+  const problems = []
+  const entry = api.CAPABILITIES.find((e) => e.key === 'tableOptions.virtual')
+  if (!entry) {
+    problems.push('E0 矩阵里没有 tableOptions.virtual —— 文档对账失去依据')
+    return problems
+  }
+  const antdv = entry.targets.antdv
+  if (!antdv || antdv.level !== 'none') return problems
+  for (const rel of VIRTUAL_DOC_FILES) {
+    let src
+    try {
+      src = readFn(join(ROOT, rel))
+    } catch {
+      problems.push(`E0 读不到 ${rel}（文档检查目标已搬家）`)
+      continue
+    }
+    const lines = src.split('\n')
+    lines.forEach((line, i) => {
+      if (!VIRTUAL_CLAIM.test(line)) return
+      if (!/a-table|ant-design-vue|antdv|adapter-antdv/i.test(line)) return
+      // 否定/降级措辞可能折到下一行（长句换行），但**不能**看上一行：
+      // 上一行常是另一段落的标题（「… NOT implemented on this target.」），
+      // 会把紧随其后的真·假声明一起放过（P9 就是这么暴露的）。
+      const window = [line, lines[i + 1] ?? ''].join(' ')
+      if (DOC_NEGATION.test(window)) return
+      problems.push(
+        `E1 ${rel}:${i + 1} 把 a-table 与 virtual 写成可用（矩阵 antdv=${antdv.level}）—— ` +
+          `模型会照文档发 virtual:true，运行时却降级全量渲染`
+      )
+    })
+  }
+  return problems
+}
+
 async function main() {
   // 正向
   const api = await loadApi()
@@ -528,11 +588,12 @@ async function main() {
     ...checkSuite(api),
     ...checkInternalKeys((rel) => readSrc(join(ROOT, rel))),
     ...checkRuntimeVxeOnly(api, (rel) => readSrc(join(ROOT, rel))),
+    ...checkVirtualDocClaims(api),
   ]
   if (problems.length) {
     for (const p of problems) fail(p)
   } else {
-    console.log(`✅ 能力矩阵三方对账通过（${api.CAPABILITIES.length} 个键 × ${api.CAPABILITY_TARGETS.length} 端；none 格双向告警；${COLUMN_CONSUMERS.length} 个列产出路径共用 core 单源；${INTERNAL_KEY_CONSUMERS.length} 端的 TABLE_INTERNAL_KEYS 覆盖 ${vxeFirstClassKeys().size} 个 vxe 直传键）`)
+    console.log(`✅ 能力矩阵三方对账通过（${api.CAPABILITIES.length} 个键 × ${api.CAPABILITY_TARGETS.length} 端；none 格双向告警；${COLUMN_CONSUMERS.length} 个列产出路径共用 core 单源；${INTERNAL_KEY_CONSUMERS.length} 端的 TABLE_INTERNAL_KEYS 覆盖 ${vxeFirstClassKeys().size} 个 vxe 直传键；${VIRTUAL_DOC_FILES.length} 份文档不比矩阵乐观）`)
   }
 
   // ── 非空证明：每种注入都必须让**对应**判据变红 ──
@@ -644,6 +705,22 @@ async function main() {
         overrides.set(abs, next)
       },
       run: () => checkRuntimeVxeOnly(api, (rel) => readSrc(join(ROOT, rel))),
+    },
+    {
+      name: 'P9 文档把 antdv 虚拟滚动写回「可用」',
+      expect: /E1 .*antdv.*virtual/i,
+      override: () => {
+        const rel = 'packages/mcp-server/src/resources/conventions.ts'
+        const abs = join(ROOT, rel)
+        const src = readFileSync(abs, 'utf-8')
+        // 追加一整行「声称支持」，而不是替换段落首句：原段落的后半句仍写着
+        // `a-table has no virtual table`，相邻行会把这次的假声明一起放过。
+        const next =
+          src +
+          '\n// Virtual scrolling is supported: virtual is forwarded to <a-table :virtual> on antdv.\n'
+        overrides.set(abs, next)
+      },
+      run: () => checkVirtualDocClaims(api),
     },
   ]
 

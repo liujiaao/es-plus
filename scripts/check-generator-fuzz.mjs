@@ -170,6 +170,58 @@ function identitySlotConfig(v, target, mode) {
 /** Zod 拒绝的可识别文案（`assertValidConfig` 的唯一出口）。 */
 const SCHEMA_REJECT = '配置未通过 StructuredCrudConfigSchema 校验'
 
+/**
+ * 自由槽的哨兵判据：**出处不算发射**。
+ *
+ * 产物里带着 `__esPlusSource`（W4），它把整份输入配置回写进了产物 —— 于是任何载荷值都
+ * 「出现在产物里」，即使生成器把它静默丢掉了。这是最隐蔽的假绿：编译断言照样通过，
+ * 哨兵断言也通过，两条腿一起空转。故度量前先剔除出处，再看发射器自己有没有把值写出去。
+ */
+function emittedHasSentinel(gen, product, payload) {
+  return gen.stripPageSourceArtifact(product).includes(`ZZF${payload.id}`)
+}
+
+/**
+ * 哨兵判据的自检：证明「只在出处里出现」确实判红、而「真的被发射」判绿。
+ * 没有这一步，剔除逻辑哪天失效（比如出处格式变了），守卫会悄悄退回假绿。
+ */
+function selfTestSentinel(gen) {
+  const payload = { id: 'SELF', value: 'ZZFSELF' }
+  const artifact = (extra) =>
+    `export const pageSchema = ${JSON.stringify({
+      ...extra,
+      __esPlusSource: {
+        contract: 'es-plus.page-source@1',
+        config: { fields: [{ prop: 'ZZFSELF' }] },
+        lossy: [],
+      },
+    })}`
+
+  if (typeof gen.stripPageSourceArtifact !== 'function') {
+    console.error('❌ 自检失败：生成器装载器没有导出 stripPageSourceArtifact —— 哨兵无法排除出处')
+    process.exit(1)
+  }
+  // 假绿场景：值只在出处里。未剔除时「命中」，剔除后必须「未命中」。
+  const onlyInSource = artifact({ columns: [] })
+  if (!onlyInSource.includes('ZZFSELF')) {
+    console.error('❌ 自检失败：合成产物里根本没有哨兵（自检写错了）')
+    process.exit(1)
+  }
+  if (emittedHasSentinel(gen, onlyInSource, payload)) {
+    console.error(
+      '❌ 自检失败：只在出处里出现的哨兵被判成「已发射」—— ' +
+        'stripPageSourceArtifact 没有生效，fuzz 的静默丢弃判据形同虚设'
+    )
+    process.exit(1)
+  }
+  // 反向对照：真的被发射的值不能被顺手删掉（剔除只许动出处）。
+  const reallyEmitted = artifact({ columns: [{ label: 'ZZFSELF' }] })
+  if (!emittedHasSentinel(gen, reallyEmitted, payload)) {
+    console.error('❌ 自检失败：真的被发射的哨兵在剔除后被判成「未出现」—— 剔除范围过大')
+    process.exit(1)
+  }
+}
+
 /** 某个 (载荷, 槽族) 一份配置 → 一组判定。 */
 function probe(gen, cfg, { family, payload, target, mode }) {
   const where = `${family}/${payload.id}/${target}/${mode}`
@@ -191,9 +243,14 @@ function probe(gen, cfg, { family, payload, target, mode }) {
 
   if (family === 'free') {
     // 值必须真的落进产物：否则「能编译」可能只是因为它被静默丢弃了（假绿）。
+    // 出处（`__esPlusSource`）里一定有这个值 —— 它记录的是输入配置，不是发射结果。
     const whole = fields.map((f) => result[f]).join('\n')
-    if (!whole.includes(`ZZF${payload.id}`)) {
-      return { kind: 'bad', where, reason: `哨兵 ZZF${payload.id} 未出现在产物里 —— 值被静默丢弃，编译断言形同虚设` }
+    if (!emittedHasSentinel(gen, whole, payload)) {
+      return {
+        kind: 'bad',
+        where,
+        reason: `哨兵 ZZF${payload.id} 未出现在发射产物里（已排除出处）—— 值被静默丢弃，编译断言形同虚设`,
+      }
     }
   }
 
@@ -250,7 +307,10 @@ function report(results, { tag = '', samples = Infinity } = {}) {
 async function main() {
   const gen = await loadGenerator()
 
-  // 0. 载荷自检：每个载荷都必须自带唯一哨兵，否则「值落进产物」的断言无从谈起。
+  // 0. 判据自检：出处里的值不算发射。否则下面所有哨兵断言都是空转的。
+  selfTestSentinel(gen)
+
+  // 0b. 载荷自检：每个载荷都必须自带唯一哨兵，否则「值落进产物」的断言无从谈起。
   const ids = new Set()
   for (const p of PAYLOADS) {
     if (!p.value.startsWith(`ZZF${p.id}`)) {
