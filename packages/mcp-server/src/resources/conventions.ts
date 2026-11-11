@@ -311,6 +311,10 @@ Built-in keys: ${BUILT_IN_BTN_KEYS.join(", ")}
 ## CRUD Actions
 Valid values: ${VALID_CRUD_ACTIONS.join(", ")}
 - Default actions when none specified: add, edit, delete
+- \`import\` is a BUTTON, not a pipeline: the generator emits \`handleImport\` as a
+  placeholder and es-plus never parses files (encoding, size limits, backend validation
+  and permissions are host concerns). Wire your own upload handler; do not expect
+  \`parseCsv\`/\`ImportConfig\` — they do not exist.
 
 ## Table Configuration
 configTableOut (API response field mapping):
@@ -324,11 +328,14 @@ Each value is the FLAT response key for that slot; slots are fixed semantics —
 \`{ tableData: "data", pageSize: "perPage" }\` (perPage is the page size, NOT the
 total). Declare only the keys that differ; never a deep path, never a callback.
 
-Column-header filters (\`columns[].filters\` — cell-level, LOCAL filtering; distinct
-from \`inQuery\` which is the form above the table): the options are PLAIN JSON
-\`{ text, value }\`; \`filterMultiple: false\` = single-select (default true = multi);
-\`filterMode: "includes"\` = text-contains (default \`"equals"\` = exact match);
-\`autoFilters: true\` derives the options from the column's \`dataOptions\`.
+Column filters (cell-level, LOCAL filtering; distinct from \`inQuery\` which is the
+form above the table). Put the four keys on the FIELD (D2) — the generator projects
+them onto that field's derived table column, so no \`columns\` array is needed:
+the options are PLAIN JSON \`{ text, value }\`; \`filterMultiple: false\` = single-select
+(default true = multi); \`filterMode: "includes"\` = text-contains (default \`"equals"\`
+= exact match); \`autoFilters: true\` derives the options from the field's \`dataOptions\`.
+Use an explicit \`columns\` entry only when you also need grouped headers, non-field
+columns, or a custom column order — then the same four keys go on that column.
 
 ## Virtual Scrolling (10k+ rows)
 ${target === "vue3"
@@ -831,7 +838,8 @@ This ensures global config is available even in auto-import mode (unplugin-vue-c
 10. Dialog form validation: always call \`getRefs('form')?.validate()\` before submitting
 11. \`dialogKey\` on buttons auto-opens the named dialog — no manual click handler needed
 12. \`operationColumn: false\` explicitly hides the action column (read-only tables)
-${target === "vue2" ? "13. Vue 2: use `:visible.sync` not `v-model:visible`; use `defineComponent + setup()` for Composition API (needs vue@>=2.7)\n" + v2Faq14 : ""}${isAntdv ? "13. antdv: syntax is Vue 3 (`<script setup>`, `v-model:visible`) — same as vue3; ONLY the UI-lib symbols differ\n14. antdv: toasts use `message.success()` (from 'ant-design-vue'), NOT `ElMessage`\n15. antdv: delete confirm is `Modal.confirm({ title, content, async onOk() {} })`, NOT `ElMessageBox.confirm(...).then().catch()`\n16. antdv: status render is `<a-tag :color=\"... ? 'green' : 'red'\">`, NOT `<el-tag :type=\"... ? 'success' : 'danger'\">`" : ""}
+13. \`tableOptions.engine\` has NO 'auto' — choosing an engine by guessing fails silently (e.g. editRender without 'vxe' is inert). Pick explicitly: inline editing → 'vxe'; large data + vue3 → 'virtual'; otherwise 'default'
+${target === "vue2" ? "14. Vue 2: use `:visible.sync` not `v-model:visible`; use `defineComponent + setup()` for Composition API (needs vue@>=2.7)\n" + v2Faq14 : ""}${isAntdv ? "14. antdv: syntax is Vue 3 (`<script setup>`, `v-model:visible`) — same as vue3; ONLY the UI-lib symbols differ\n15. antdv: toasts use `message.success()` (from 'ant-design-vue'), NOT `ElMessage`\n16. antdv: delete confirm is `Modal.confirm({ title, content, async onOk() {} })`, NOT `ElMessageBox.confirm(...).then().catch()`\n17. antdv: status render is `<a-tag :color=\"... ? 'green' : 'red'\">`, NOT `<el-tag :type=\"... ? 'success' : 'danger'\">`" : ""}
 ${isVue2 ? buildVue2Addendum() : ""}${isAntdv ? buildAntdvAddendum() : ""}`;
 }
 
