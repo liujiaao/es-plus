@@ -85,13 +85,20 @@ import { createHash } from 'node:crypto'
  *   +label-typographic-v1         : 列标题 / 选项标签 / 展开区字段标题与字段身份同规 ——
  *                                   只归一排版差异（NFKC、空白、标点、大小写），不做语义归一。
  *                                   92 的「SKU名称」vs「SKU 名称」曾因此判负（零语义差异）。
+ *   +reaction-value-empty-equiv-v1: `fulfill.value` 上的空值守卫 `if(empty(X),'',X)` ≡ `X`，
+ *                                   **仅当** X 是 `{var:路径}` 且该字段 formtype ∈ 文本类
+ *                                   （Input/Select/Radio/Autocomplete/TreeSelect/Cascader）。
+ *                                   128 的 gold `{var:'storeName'}` 与模型的三参 `if` 语义等价，
+ *                                   此前判负；数字字段上 `''` ≠ `undefined`，刻意不归一。
+ *                                   同批统一了中/英教学（中文说 var 已含空值语义、英文要求套
+ *                                   if(empty)，两条教学自相矛盾）。
  *
  * 串是**复合**的：`<字段身份>` + 各段的 `+…` 后缀。
  * 每个「同一份 pred 得不同分」的改动单独占一段，因为少写一段就等于让两把不同的尺子
  * 共用一个版本号，跨版本比较的护栏（`compareToBaseline`）随之形同虚设。
  */
 export const RULER_VERSION =
-  'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1+reaction-encoding-parity-v1+fragment-bool-literal-v1+dialog-formitems-derive-v1+editor-props-view-v1+en-text-agnostic-v1+label-typographic-v1'
+  'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1+reaction-encoding-parity-v1+fragment-bool-literal-v1+dialog-formitems-derive-v1+editor-props-view-v1+en-text-agnostic-v1+label-typographic-v1+reaction-value-empty-equiv-v1'
 
 /** 递归按键排序的稳定序列化（用于 hash 与逐行 diff）。数组顺序保留。 */
 export function stableStringify(value) {

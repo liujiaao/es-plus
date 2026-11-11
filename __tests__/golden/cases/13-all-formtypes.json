@@ -1,9 +1,9 @@
 {
-  "nl": "全字段覆盖：输入框（备注是多行）、下拉、日期、时间、滑块、颜色选择器、穿梭框、级联、单选、多选、开关、评分、上传，以及一个自定义 render 的复杂状态列。",
-  "nlEn": "Full field-type coverage: input (remark is multiline), select, date, time, slider, color picker, transfer, cascader, radio, checkbox, switch, rate, and upload, plus a complex status column with a custom render.",
-  "fixedFields": ["remark", "complexStatus"],
-  "pinnedDims": ["formtype:remark", "extPoints:complexStatus"],
-  "nlStatedDims": ["propSet", "formtype:remark", "extPoints:complexStatus", "dataOptions:complexStatus", "dataOptions:status", "formtype:complexStatus", "formtype:score", "formtype:status"],
+  "nl": "全字段覆盖：输入框（备注是多行）、日期、时间、滑块、颜色选择器、穿梭框、级联、单选、多选、开关、评分、上传，以及一个下拉形式的状态列，用自定义渲染展示。",
+  "nlEn": "Full field-type coverage: input (remark is multiline), date, time, slider, color picker, transfer, cascader, radio, checkbox, switch, rate and upload, plus a status column backed by a select and displayed with a custom render.",
+  "fixedFields": ["remark", "status"],
+  "pinnedDims": ["formtype:remark", "extPoints:status"],
+  "nlStatedDims": ["propSet", "formtype:remark", "extPoints:status", "dataOptions:status", "formtype:status", "formtype:score"],
   "config": {
     "name": "AllTypes",
     "apiUrl": "/api/all-types",
@@ -21,21 +21,6 @@
           "type": "textarea",
           "rows": 3
         }
-      },
-      {
-        "prop": "status",
-        "label": "状态",
-        "formtype": "Select",
-        "dataOptions": [
-          {
-            "label": "启用",
-            "value": 1
-          },
-          {
-            "label": "禁用",
-            "value": 0
-          }
-        ]
       },
       {
         "prop": "birthday",
@@ -125,8 +110,8 @@
         "inQuery": false
       },
       {
-        "prop": "complexStatus",
-        "label": "复杂状态",
+        "prop": "status",
+        "label": "状态",
         "formtype": "Select",
         "inQuery": false,
         "dataOptions": [
@@ -147,7 +132,7 @@
             "value": "rejected"
           }
         ],
-        "render": "(_, { row }) => h(ElTag, { type: row.complexStatus === 'passed' ? 'success' : row.complexStatus === 'rejected' ? 'danger' : 'warning' }, () => row.complexStatusLabel)"
+        "render": "(_, { row }) => h(ElTag, { type: row.status === 'passed' ? 'success' : row.status === 'rejected' ? 'danger' : 'warning' }, () => row.statusLabel)"
       }
     ],
     "actions": [
@@ -157,5 +142,5 @@
       "view"
     ]
   },
-  "notes": "all 13 VALID_FORM_TYPES plus textarea + render extension point"
+  "notes": "all 13 VALID_FORM_TYPES plus textarea + render extension point. 2026-11-11（B 批 13）：gold 原把「复杂状态」单列成一个字段（prop complexStatus），NL 写「自定义 render 的复杂状态列」——「复杂」是修饰语还是标签的一部分不可判定，pred 写「状态」/`status` 是合理读法；而 gold 另有一个 label「状态」的 启用/禁用 下拉，按 label 身份对齐时两列争夺同一个 pred 字段。改法按方案：状态列并入那个下拉（label 定「状态」、prop 改 `status`、保留 render），NL 改为「一个下拉形式的状态列，用自定义渲染展示」并去掉独立的「下拉」项（同一个控件不数两次）。不放宽 extPoints —— 那会让「随便给某个字段挂 render」得分"
 }

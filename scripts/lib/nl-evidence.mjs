@@ -165,8 +165,11 @@ export function fieldEvidence(dim, nl, field) {
     }
     case 'inForm': {
       // 「表单里…」「…由系统自动生成，表单里不用填」——出现与否都以「填/表单」为锚。
-      if (anyClause(nl, label, /填|表单|录入|输入/)) return true
-      return /(?:不用|不需|无需|不可|不能)(?:填|录入|输入)/.test(String(nl))
+      // 只认**提到该字段的句子**：整段 NL 扫否定词会把同页别的字段的「不用填」
+      // 算成这个字段的 inForm 证据，公平性不变量随之恒真。
+      // （否定句本身必含「填/录入/输入」，已被下面这一条覆盖，故不需要额外的
+      // 全局兜底 —— 那个兜底是词表里唯一的跨句泄漏点。）
+      return anyClause(nl, label, /填|表单|录入|输入/)
     }
     case 'formtype': {
       const cue = field.formtype && FORM_TYPE_CUES[field.formtype]

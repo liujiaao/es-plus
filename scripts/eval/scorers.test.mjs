@@ -425,6 +425,51 @@ console.log('meta-eval: reactions (field linkage)')
   asOpts.fields[0].reactions[0].fulfill = { dataOptions: [{ label: 'x', value: 'y' }] }
   check(scoreAll(goldVal, asOpts).byCapability.reactions.pass === false, 'reactions: value↔dataOptions 互换应判负')
 
+  // D3 / 128：`if(empty(X), '', X)` ≡ `X`（仅文本类字段）。教学面中文/英文曾互相矛盾
+  // （中文说 var 已含空值语义，英文要求套 if(empty)），gold 照中文写、模型照英文做。
+  // 注意被引用的 `province` 必须是**已声明字段**：归一化按该 prop 的 formtype 判文本类。
+  const goldText = {
+    fields: [
+      { prop: 'mirror', label: '镜像', formtype: 'Input', reactions: [{ dependencies: ['province'], fulfill: { value: { var: 'province' } } }] },
+      { prop: 'province', label: '省份', formtype: 'Select' },
+    ],
+    actions: ['add'],
+  }
+  const guarded = clone(goldText)
+  guarded.fields[0].reactions[0].fulfill.value = { if: [{ empty: [{ var: 'province' }] }, '', { var: 'province' }] }
+  check(scoreAll(goldText, guarded).byCapability.reactions.pass === true, 'reactions: if(empty(X),"",X) 与 {var:X} 等价（文本字段）')
+
+  // 反例 1：数字字段**不**归一 —— `''` 与 `undefined` 在数字校验里不是同一件事
+  const goldNum = {
+    fields: [
+      { prop: 'mirror', label: '镜像', formtype: 'InputNumber', reactions: [{ dependencies: ['qty'], fulfill: { value: { var: 'qty' } } }] },
+      { prop: 'qty', label: '数量', formtype: 'InputNumber' },
+    ],
+    actions: ['add'],
+  }
+  const guardedNum = clone(goldNum)
+  guardedNum.fields[0].reactions[0].fulfill.value = { if: [{ empty: [{ var: 'qty' }] }, '', { var: 'qty' }] }
+  check(scoreAll(goldNum, guardedNum).byCapability.reactions.pass === false, 'reactions: 数字字段的 if(empty) 守卫不归一（空串 ≠ 空值）')
+
+  // 反例 2：127 的形态仍判负 —— 写中文标签而**没声明码表**，运行时后端码值不会命中
+  const gold127 = {
+    fields: [{
+      prop: 'settleType', label: '结算类型', formtype: 'Select',
+      dataOptions: [{ label: '国内', value: 'domestic' }, { label: '跨境', value: 'cross' }],
+      reactions: [{
+        dependencies: ['settleType'],
+        when: { '==': [{ var: 'settleType' }, 'cross'] },
+        fulfill: { required: { '==': [{ var: 'settleType' }, 'cross'] } },
+      }],
+    }],
+    actions: ['add'],
+  }
+  const pred127 = clone(gold127)
+  pred127.fields[0].dataOptions = undefined
+  pred127.fields[0].reactions[0].when = { '==': [{ var: 'settleType' }, '跨境结算'] }
+  pred127.fields[0].reactions[0].fulfill.required = { '==': [{ var: 'settleType' }, '跨境结算'] }
+  check(scoreAll(gold127, pred127).byCapability.reactions.pass === false, 'reactions: 只写标签、不声明 dataOptions 仍判负（127 反例）')
+
   // gold 无 reactions → 维度不 applicable
   const plain = { fields: [{ prop: 'a', label: 'A', formtype: 'Input' }], actions: ['add'] }
   check(scoreAll(plain, plain).byCapability.reactions.applicable === false, 'reactions: gold 未声明时维度不 applicable')

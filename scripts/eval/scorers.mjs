@@ -157,7 +157,9 @@ function conditionContext(config) {
   const labels = new Map()
   const labelSet = new Map()
   const bools = new Set()
+  const formtypes = new Map()
   for (const f of config?.fields ?? []) {
+    if (f.formtype !== undefined) formtypes.set(f.prop, f.formtype)
     const opts = f.dataOptions ?? []
     if (opts.length) {
       const byValue = new Map()
@@ -176,7 +178,7 @@ function conditionContext(config) {
     }
     if (f.formtype === 'Switch') bools.add(f.prop)
   }
-  return { labels, labelSet, bools }
+  return { labels, labelSet, bools, formtypes }
 }
 
 /** 字面量 → 标签身份；不是该字段的选项值/标签则返回 null（保持原样参与比较）。 */
@@ -1384,6 +1386,42 @@ function reactionsEqual(gold, pred) {
  * 也同样是「options 与 dataOptions 是同一件事」的落点。134 行 gold `{== insuranceType "auto"}`、
  * 模型 `"car"`（两边标签都是「车险」）就是在这里被判负的。
  */
+/**
+ * `if(empty(X), '', X)` ≡ `X` —— 只对**文本类字段**成立（D3 / 128，ruler 段
+ * `+reaction-value-empty-equiv-v1`）。
+ *
+ * 背景（128 行）：gold 写 `fulfill.value = {var:'storeName'}`，pred 写
+ * `{ if: [ { empty: [ {var:'storeName'} ] }, '', {var:'storeName'} ] }` —— 两者在运行时
+ * 对字符串字段都得「空」，差异只在 `undefined` 与 `''`，而表单模型两者都渲染为空。
+ * 这是教学面自相矛盾（中文说「`var` 已含空值语义」，英文却要求套 `if(empty)`）造成的，
+ * 不该由模型背。教学已在 D3 同批统一，尺子在这里跟上。
+ *
+ * **刻意只归一一类形态**：三参 `if`、条件恰为 `empty(X)`、空值分支是 `''`/`null`、
+ * 回退分支**就是 X 本身**、且 X 是 `{var: 路径}`、该路径的 `formtype` ∈ 文本类。
+ * 其余形态（数字字段、`X` 改成别的表达式、分支顺序颠倒）一概不归一 —— 数字字段上
+ * `''` 与 `undefined` 在表单校验里不是同一件事，归一会把真错判成对。
+ */
+const EMPTY_GUARD_TEXT_FORMTYPES = new Set(['Input', 'Select', 'Radio', 'Autocomplete', 'TreeSelect', 'Cascader'])
+
+function normalizeEmptyGuard(node, ctx) {
+  if (!node || typeof node !== 'object' || Array.isArray(node)) return node
+  const keys = Object.keys(node)
+  if (keys.length !== 1 || keys[0] !== 'if') return node
+  const args = node.if
+  if (!Array.isArray(args) || args.length !== 3) return node
+  const [cond, emptyBranch, fallback] = args
+  if (emptyBranch !== '' && emptyBranch !== null) return node
+  if (!cond || typeof cond !== 'object' || Array.isArray(cond)) return node
+  const ck = Object.keys(cond)
+  if (ck.length !== 1 || ck[0] !== 'empty') return node
+  const tested = Array.isArray(cond.empty) && cond.empty.length === 1 ? cond.empty[0] : null
+  const path = tested && typeof tested === 'object' && typeof tested.var === 'string' ? tested.var : null
+  if (!path) return node
+  if (!eq(tested, fallback)) return node
+  if (!EMPTY_GUARD_TEXT_FORMTYPES.has(ctx.formtypes?.get(path))) return node
+  return fallback
+}
+
 function reactionsView(reactions, ctx, shared) {
   return (reactions ?? []).map((r) => {
     const out = cloneDeep(r)
@@ -1401,7 +1439,11 @@ function reactionsView(reactions, ctx, shared) {
     // 表达式节点（与 isHidden 同一条视图）：规范化 + 字面量按标签身份。
     for (const k of REACTION_EXPR_KEYS) {
       if (out[k] !== undefined) out[k] = conditionView(out[k], ctx, shared)
-      if (out.fulfill?.[k] !== undefined) out.fulfill[k] = conditionView(out.fulfill[k], ctx, shared)
+      if (out.fulfill?.[k] !== undefined) {
+        // D3 / 128：`fulfill.value` 上的空值守卫先归一再走条件视图（顺序无关，二者互不干扰）。
+        const raw = k === 'value' ? normalizeEmptyGuard(out.fulfill[k], ctx) : out.fulfill[k]
+        out.fulfill[k] = conditionView(raw, ctx, shared)
+      }
     }
     // AI-51 同规（与片段腿 canonReactionRule 逐字同源）：无 `when` + fulfill 只含布尔键
     // 且这些表达式彼此相同 ⟹ 运行时等价于 `{when: E, …}`。依据是 core `resolveReactionOverlay`

@@ -1,5 +1,5 @@
 {
-  "nl": "对公账户管理（antd 风格）：查询有开户名称；表格展示开户名称、银行类型、开户支行、账号；支持新增、编辑、删除。表单里「开户支行」的可选项随「银行类型」变化——国有银行给工行/建行，股份制银行给招商/兴业。",
+  "nl": "对公账户管理（antd 风格）：查询有开户名称；表格展示开户名称、银行类型、开户支行、账号；支持新增、编辑、删除。表单里「开户支行」的可选项随「银行类型」变化——国有银行给工行/建行，股份制银行给招商银行/兴业银行。",
   "nlEn": "Corporate-account management (Ant Design look): query by account name; the table shows account name, bank type, branch and account number; supports add, edit and delete. In the form the \"branch\" options follow \"bank type\" — state-owned banks offer ICBC/CCB, joint-stock banks offer CMB/CIB.",
   "fixedFields": [
     "accountName",
@@ -111,5 +111,5 @@
       "delete"
     ]
   },
-  "notes": "AI-07: 分支式 dataOptions 联动（antdv/schema）。2026-10-29 标签改回 NL 原词（工行/建行）：原文写全称「中国工商银行/中国建设银行」，而 NL 只给简称 ⟹ 缩写→全称的展开不可推断，等于把这一行钉成不可过"
+  "notes": "AI-07: 分支式 dataOptions 联动（antdv/schema）。2026-10-29 标签改回 NL 原词（工行/建行）：原文写全称「中国工商银行/中国建设银行」，而 NL 只给简称 ⟹ 缩写→全称的展开不可推断，等于把这一行钉成不可过。2026-11-11 反向修 NL：股份制那半 NL 原本写「招商/兴业」，gold 是「招商银行/兴业银行」，同一条规则两侧不一致 ⟹ NL 改全称。工行/建行保持原样（NL 与 gold 都写简称，一致即可；不建简称别名表——那会变成无限兜底）"
 }
