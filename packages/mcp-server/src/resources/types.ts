@@ -193,7 +193,7 @@ export interface TableOptions {
   rowkey?: string
   heightType?: 'auto' | 'height' | 'maxHeight'
   height?: number | string
-  virtual?: boolean       // vue3 → el-table-v2; antdv → <a-table virtual>; vue2 → ignored (warns)
+  virtual?: boolean       // vue3 → el-table-v2; antdv / vue2 → not implemented (warns, falls back to default engine); use engine:'vxe' for large data on those targets
   engine?: 'default' | 'virtual' | 'vxe'  // 'vxe' works on all three targets
   rowHeight?: number
   estimatedRowHeight?: number

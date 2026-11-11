@@ -1455,7 +1455,7 @@
       "kind": "declarative",
       "structuredPath": "columns[].groups",
       "artifactPaths": [
-        "columns[].children"
+        "columns[].groups"
       ],
       "reach": "config-only",
       "note": "多级表头（CRUD 前门不收 columns，需 from_config；片段 generate_table 自 P10 起直收）"

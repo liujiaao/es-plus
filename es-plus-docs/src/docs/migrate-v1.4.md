@@ -191,7 +191,7 @@ npx @es-plus/cli create --target vue3 ./src/pages/Users.vue
 npx @es-plus/cli create --target vue2 ./src/pages/Users.vue
 ```
 
-The MCP `generate_crud_page` tool accepts the same `target` parameter. Generated code imports from `@es-plus/vue3` or `@es-plus/vue2` accordingly.
+The MCP `generate_crud` tool (or the `generate_scene` front door with `scene: 'crud'`) accepts the same `target` parameter. Generated code imports from `@es-plus/vue3` or `@es-plus/vue2` accordingly.
 
 ---
 

@@ -1079,13 +1079,14 @@ export interface TableOptions {
   configBtn?: BtnConfig[]
   leftText?: string
 
-  // ─── 虚拟滚动（三个 target 都接受，但引擎各不相同） ────────
+  // ─── 虚拟滚动（三个 target 都接受该键，但只有 vue3 有实现） ────────
   /**
    * 启用虚拟滚动。
    *
-   * 引擎按 target 分派：vue3 走 el-table-v2；antdv 把 `virtual` 透传给
-   * `<a-table :virtual>`（Ant Design Vue 4 原生虚拟滚动）；vue2 + Element UI
-   * 无对应实现 —— **不是静默忽略**，会打 console 警告并降级为普通 el-table。
+   * 引擎按 target 分派：vue3 走 el-table-v2；**antdv 与 vue2 都没有实现**
+   * （`a-table` / `el-table` 无虚拟表格），二者会打 console 警告并降级为默认引擎
+   * 全量渲染 —— **不是静默忽略**。大数据量在这两端请用 `engine: 'vxe'`
+   * （vxe-table 自带虚拟滚动，三端都有适配器）。
    */
   virtual?: boolean
   /** 渲染引擎选择。'vxe' 三端均支持：vue3 / antdv / vue2 各有自己的 vxe 适配器

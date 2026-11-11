@@ -142,17 +142,33 @@ function docEsTable(v: TargetVars): string {
 \`\`\`typescript
 interface TableColumn {
   prop?: string            // Data field key
+  key?: string             // Explicit row key (defaults to prop)
   label?: string           // Column header
+  labelKey?: string        // i18n key (resolved through the global t())
   width?: number | string
   minWidth?: number | string
-  align?: string           // left/center/right (default: center)
+  align?: 'left' | 'center' | 'right'   // default: center
   fixed?: boolean | 'left' | 'right'
-  groups?: TableColumn[]   // Nested group columns
+  type?: 'selection' | 'index' | 'expand'   // leading-column kind
+  sortable?: boolean | 'custom'
+  formatter?: (row, column, cellValue, index) => string   // built-in cell formatting
   render?: (h, ctx) => VNode    // Custom cell render
   scopedSlots?: { customRender?: string }  // Named slot
-  btns?: Array<{ name: string; type?: string; clickEvent?: (row) => void }>
+  groups?: TableColumn[]   // Nested group columns (multi-level header)
+  expandConfig?: { fields?: string[]; title?: string }   // Row expand content
   ellipsis?: boolean       // Show tooltip on overflow
+  emptyPlaceholder?: string  // Text for null/empty cells (default '-')
+  dataOptions?: TableColumnDataOption[]  // code → label map for the CELL; { label, value, tagType? }
+  filters?: TableColumnFilterOption[]   // Filter panel options: { text, value }
+  autoFilters?: boolean    // Derive filters from dataOptions
+  filterMultiple?: boolean
+  filterMode?: 'equals' | 'includes'   // Local filter matching mode
+  filterMethod?: (value, row, column) => boolean
   hidCol?: boolean         // Hide column
+  permissionValue?: string // RBAC code; column hidden without permission
+  btns?: Array<{ name: string; type?: string; clickEvent?: (row) => void }>
+  editRender?: VxeEditRender     // vxe engine inline editing
+  footerFormatter?: (params) => string   // vxe engine footer (with footerMethod)
 }
 \`\`\`
 
@@ -205,7 +221,7 @@ import { EsTable } from '${v.esPlusPkg}'
 ${v.esPlusPkg === "@es-plus/vue3"
     ? "- Virtual scrolling: same API, just add `virtual: true` for 10k+ row performance (renders the el-table-v2 engine; `engine: 'virtual'` is equivalent, `engine: 'vxe'` switches to vxe-table)"
     : v.esPlusPkg === "@es-plus/adapter-antdv"
-    ? "- Virtual scrolling: `virtual: true` is forwarded to `<a-table :virtual>` (Ant Design Vue 4 native virtual scroll) — pair it with `height` for the viewport. The el-table-v2 renderer is Element Plus (vue3) only, and its `rowHeight`/`estimatedRowHeight`/`overscanCount` knobs do not apply here. `engine: 'vxe'` switches to vxe-table instead."
+    ? "- No virtual scrolling on this target: \`a-table\` has no virtual table, so \`virtual: true\` / \`engine: 'virtual'\` are NOT forwarded — the adapter warns and falls back to the default engine (full render). For large data use \`engine: 'vxe'\` instead (vxe-table's own virtual scroll); the el-table-v2 knobs \`rowHeight\`/\`estimatedRowHeight\`/\`overscanCount\` do not apply here either."
     : "- For 10k+ rows on Vue 2, use server-side pagination or `engine: 'vxe'` — Element UI has no el-table-v2, so `virtual: true` / `engine: 'virtual'` are ignored (with a console warning), but the vxe engine is fully supported here and brings vxe-table's own virtual scroll."}
 
 ## vxe engine — \`options.engine: 'vxe'\`

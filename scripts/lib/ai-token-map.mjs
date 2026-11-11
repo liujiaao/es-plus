@@ -227,7 +227,10 @@ export const TOKEN_MAP = [
     token: 'columnGroups',
     kind: 'declarative',
     structuredPath: 'columns[].groups',
-    artifactPaths: ['columns[].children'],
+    // 产物里是 `groups`（core TableColumn.groups）；`children` 是**字段面**的容器键
+    // （DataOptionSchema / 嵌套字段），不是多级表头。写错会让「产物路径」指向不存在的键，
+    // 读者按图索骥找不到分组表头。
+    artifactPaths: ['columns[].groups'],
     note: '多级表头（CRUD 前门不收 columns，需 from_config；片段 generate_table 自 P10 起直收）',
   },
   {

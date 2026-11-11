@@ -42,7 +42,7 @@ Usage:
 
 Environment:
   ESPLUS_MCP_PROFILE=front-door      register the front-door tool surface only
-                                     (default: full — all 18 tools; 12 under front-door)
+                                     (default: full — all 19 tools; 13 under front-door)
 
 Clients configure this binary as a stdio command, e.g.
   { "mcpServers": { "es-plus": { "command": "mcp-server-es-plus", "args": [] } } }

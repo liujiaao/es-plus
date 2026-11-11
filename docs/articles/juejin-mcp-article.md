@@ -432,7 +432,7 @@ npm install es-plus-ui element-plus
 
 | 工具 | 用途 | 场景 |
 |------|------|------|
-| `generate_crud_page` | 自然语言 → CRUD 页面 | 快速原型 |
+| `generate_scene` | 自然语言 → 页面（crud / form / table / dialog） | 快速原型 |
 | `generate_crud_from_config` | 结构化配置 → 生产代码 | 精确控制 |
 | `validate_config` | 校验配置 JSON | 防错 |
 | `get_component_api` | 获取组件 API 文档 | AI 理解组件用法 |

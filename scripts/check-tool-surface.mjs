@@ -298,6 +298,94 @@ try {
       }
     }
 
+    // 8b. 工具**数量**与**体积**的另两处发布面：`server.json`（MCP registry 读到的）
+    //     与 CLI `--help`。两处都曾长期落后一个版本（12/18 与 ~244 KB，实际 13/19 与
+    //     ~341 KB）—— 没人会去读 registry 里的描述，模型却会照着它决定开哪个档位。
+    //     体积按快照实测（与 check-surface-budget 同一算式），允许 ±15% 的措辞余地：
+    //     判据要抓的是「差了一个版本」，不是每次改描述都要重算数字。
+    {
+      const snapshotPath = join(ROOT, 'packages', 'mcp-server', 'tools-list.snapshot.json')
+      const snap = existsSync(snapshotPath) ? JSON.parse(readFileSync(snapshotPath, 'utf-8')) : null
+      const kbOf = (profile) => {
+        if (!snap?.profiles?.[profile] || !snap.tools) return null
+        let n = 0
+        for (const name of snap.profiles[profile]) {
+          const t = snap.tools?.[name]?.[profile]
+          if (!t) return null
+          n += (t.description ?? '').length + JSON.stringify(t.inputSchema ?? {}).length
+        }
+        return n / 1024
+      }
+      const fullKb = kbOf('full')
+      const fdKb = kbOf('front-door')
+
+      const serverJson = docText('packages/mcp-server/server.json')
+      if (serverJson !== null) {
+        let parsed = null
+        try {
+          parsed = JSON.parse(serverJson)
+        } catch (e) {
+          fail(`packages/mcp-server/server.json 不是合法 JSON：${e.message}`)
+        }
+        const desc = parsed?.packages?.[0]?.environmentVariables?.[0]?.description ?? ''
+        if (!desc) {
+          fail('server.json 里找不到 ESPLUS_MCP_PROFILE 的环境变量描述（结构变了请同步本守卫）')
+        } else {
+          if (!new RegExp(`\\(default, ${fullNames.length} tools\\)`).test(desc)) {
+            fail(`server.json 的 profile 描述未声明 full = ${fullNames.length} tools`)
+          }
+          if (!new RegExp(`\\(${fdNames.length} tools`).test(desc)) {
+            fail(`server.json 的 profile 描述未声明 front-door = ${fdNames.length} tools`)
+          }
+          for (const [label, claimed, actual] of [
+            ['full', Number((desc.match(/from ~(\d+(?:\.\d+)?) KB/) ?? [])[1]), fullKb],
+            ['front-door', Number((desc.match(/to ~(\d+(?:\.\d+)?) KB/) ?? [])[1]), fdKb],
+          ]) {
+            if (!Number.isFinite(claimed)) {
+              fail(`server.json 的 profile 描述里没有 ${label} 的 ~N KB 体积声明`)
+            } else if (actual !== null && Math.abs(claimed - actual) / actual > 0.15) {
+              fail(
+                `server.json 写 ${label} tools/list ≈ ${claimed} KB，实测 ${actual.toFixed(1)} KB（差 >15%）—— ` +
+                  '发布面在教宿主一个不存在的档位收益'
+              )
+            }
+          }
+        }
+      }
+
+      const helpText = docText('packages/mcp-server/src/cli-flags.ts')
+      if (helpText !== null) {
+        if (!new RegExp(`all ${fullNames.length} tools; ${fdNames.length} under front-door`).test(helpText)) {
+          fail(`cli-flags 的 --help 未声明「all ${fullNames.length} tools; ${fdNames.length} under front-door」`)
+        }
+      }
+
+      // `list_form_types` 的条目数 = shared FORM_TYPES 的长度（16）。文档写 14 会让
+      // 宿主以为没有 Autocomplete / Upload 之类，宁可不用也不问。
+      const formTypesSrc = readFileSync(join(ROOT, 'packages', 'shared', 'src', 'constants.ts'), 'utf-8')
+      const formTypesBlock = formTypesSrc.match(/export const FORM_TYPES = \[([\s\S]*?)\] as const/)?.[1] ?? ''
+      const formTypeCount = (formTypesBlock.match(/^\s*\{\s*type:/gm) ?? []).length
+      if (!formTypeCount) {
+        fail('未能从 packages/shared/src/constants.ts 解析出 FORM_TYPES 条目数（结构变了请同步本守卫）')
+      } else {
+        for (const [file, re, want] of [
+          [
+            'es-plus-docs/src/docs/mcp-server.en.md',
+            new RegExp(`List the ${formTypeCount} shared \`formtype\` values`),
+            `List the ${formTypeCount} shared formtype values`,
+          ],
+          [
+            'es-plus-docs/src/docs/mcp-server.md',
+            new RegExp(`（${formTypeCount} 种，见 \`list_form_types\`）`),
+            `${formTypeCount} 种 formtype`,
+          ],
+        ]) {
+          const text = docText(file)
+          if (text !== null && !re.test(text)) fail(`${file} 未声明「${want}」（与 FORM_TYPES 长度不一致）`)
+        }
+      }
+    }
+
     // 同一事实的两处数字（开头的「暴露 N 个 tools」与 7.1 的节标题）必须同源，
     // 否则改了正文没改标题，读者仍会看到「8 个 Tools」。
     for (const [file, re] of [
