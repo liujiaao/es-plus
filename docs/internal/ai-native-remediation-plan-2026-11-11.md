@@ -1121,7 +1121,7 @@ C2（筛选 + `configTableOut`）+3 → 194。**到 194 就过线**，其余批�
 
 ## 10. 落地记录（执行时补写）
 
-### 10.1 本次（2026-11-11，A/B/C/D 批）
+### 10.1 本次（2026-11-11，A/B/C/D/E 批）
 
 | 项 | 状态 | 落点 | 验收 |
 |---|---|---|---|
@@ -1141,10 +1141,20 @@ C2（筛选 + `configTableOut`）+3 → 194。**到 194 就过线**，其余批�
 | L2 `FormList` 降级 | ✅（仅文档） | 能力台账/矩阵里本无 `FormList` 条目，声明式子表单从来不是能力面成员；`columns` 递归只服务多级表头。`structured-config.schema.ts` 的 `children` describe 写明「数组子表单在声明式契约之外 —— 用 `render` 或宿主自有 UI」，删掉「children 可再声明 children」的误导 | `check:doc-drift` / `check:surface-budget`（describe 未增肥） |
 | L3 `ImportConfig` / `parseCsv` | ✅ | `conventions.ts` 的 CRUD Actions 与 schema `actions` describe：`import` **只渲染按钮并发事件**，es-plus 不解析文件（编码/大小/后端校验都是宿主的事）；源码中不存在 `parseCsv`/`ImportConfig`，不要编造这类配置键 | `check:doc-drift` / `check:eval-prompt` |
 | L4 `engine:'auto'` | ✅ | `validateAndRepair` 新增 `engineSelectionHints()`：`tableOptions.engine === 'auto'` 时给一条非阻断 suggestion（猜错引擎会静默退化），四个返回分支都带上；`conventions.ts` Common Gotchas 补「engine 没有 auto」并顺延编号 | `validate-and-repair.spec.ts`（新增用例）+ 既有 49 例；`check:doc-drift` |
+| D5 + R1 完成度两腿分列 | ✅ | `scorers.mjs` 的 `summarize95` 增 `zeroEdit / convergenceOnly / meanTurns`（pass = 两条腿之和）；`last-accuracy.json` 的 `definition95` 同步；徽章 label 改为 `zero-edit X% · heldout 95%-definition · 模型`（message 仍只放门禁合数）；`artifact.mjs` 校验两腿之和 = pass、`meanTurns ≥ 0`；`rescore.mjs` 同字段复算 | 徽章契约测试 + `check:artifact-self` / `check:rescore` |
+| D6 + R2 分母口径写进字段名 | ✅ | `byCapability → completeness`（`denominatorKind:'all'`）、`byCapabilityOnPinned → gated`（`'nl-stated'`）；报表表头改成 `all(completeness) / pinned(gated)`；`artifact.mjs` 对新名要求 `denominatorKind` 正确、对旧名继续放行（已提交的旧产物不因改名变红）；`rescore` 双名兼容 | `check:artifact-self`（新旧两代产物各一份）/ `check:rescore` |
+| D7 出处写进产物 | ✅ | 信封必须带非空 `config`；`crud-page` 产物必须含 `__esPlusSource`（宿主落盘只有那一个文件，出处不能只活在信封里）；`page-source.ts` 头注写明设计原则 | `check:artifact-envelope`：296/296 有信封、`config` 全覆盖 |
+| D8 可证明的投影 | ✅ | `page-source.spec.ts` 新增「投影不变量」：30 份金标配置逐字段断言投影键 ∈ `SurfaceFieldSchema` 词汇、词汇内键值逐键不变（label/formtype 缺省容忍），抽样门槛 >100 个字段 | vitest 26 例（+2） |
+| D10 + R7 场景覆盖加 mode 轴 | ✅ | `check-scene-coverage` 对带模式轴的场景逐模式成行（`crud@schema` / `crud@sfc` / `dialog@composable` / `dialog@component`），各自给「格 / 例」；修掉 `cellOf(c)` → `cellOf(c.raw)` 的取模轴 bug | `check:scene-coverage`：crud 179/48 例、dialog 9/12 例，四场景无空格 |
+| R3 Tier-0 探针基线 | ✅（D9 已覆盖） | 见 10.1 的 D9 行；探针与 eval 编译腿共用 `scripts/lib/compile-check.mjs` 以外的两条腿，互不替代 | `check:generated-typecheck` |
+| R4 类型腿覆盖率 | ✅ | `summarizeTypecheck` 增 `sampled / coverage = checked/sampled / notMeasured`；产物与报表并列 rate 打印，R8 台账读同一字段 | `check:typecheck-leg` |
+| R5 + R6 出处两条指标 | ✅ | 新增 `scripts/eval/provenance.mjs`（纯函数）+ `scripts/check-provenance.mjs`（esbuild 打源码，命中 build 即红）+ `provenance.test.mjs`（27 条判据非空证明）；并把 `emit.ts` 内联的组合逆映射抽成 `scene/surfaces-to-config.ts`（emit 与度量共用同一份实现） | `check:provenance`：R5 246 条 × 3 出口 = 738/738；R6 可比 201 条 201/201；`check:provenance-metrics` 27/27 |
+| R8 未测到显式记账 | ✅ | `last-accuracy.json` 增 `notMeasured = {compile,typecheck,fragments,prd}`（只有 no-answer/truncated 计入；模型答错仍是成绩）；报表任一 >0 时顶部标黄，全 0 打印「四条腿都完整」 | 产物字段 + 报表输出；`check:artifact-self` 不拒未知字段 |
+| R9 发布数字三元组 | ✅ | `check:site-claims` 新增第 9 段：对外文档里准确率语境的百分比，附近 120 字符内必须出现 `corpusHash`/`commit`；目标（`≥95%`）、近似值（`~40%`）、无准确率语境（降幅/控件数）、changelog 明确排除；引用 `completeness` 必须同句给分母口径；8 条样本自检（含 2 条应红） | `check:site-claims`：27 份对外文档 0 处未标读数，自检 8/8 |
 
-### 10.2 执行中发现的真实缺陷（D9 首跑即抓到，已修）
+### 10.2 执行中发现的真实缺陷（已修）
 
-1. **SFC 模式的 `formLayoutProps` 没有类型注解** —— `layout.type: "tabs"` 在裸字面量里被放宽成
+1. **SFC 模式的 `formLayoutProps` 没有类型注解**（D9 首跑即抓到）—— `layout.type: "tabs"` 在裸字面量里被放宽成
    `string`，赋给 `:layout-form-props`（`LayoutFormProps`）时 vue3/antdv 均报 TS2322。
    修法：TS 模式下发射 `const formLayoutProps: LayoutFormProps = …`，并把 `LayoutFormProps`
    加进那条 `import type`（按 `hasSfcFormLayout` 条件包含）。
@@ -1152,6 +1162,17 @@ C2（筛选 + `configTableOut`）+3 → 194。**到 194 就过线**，其余批�
    运行时则是静默 `undefined`（布局配置全部失效，零报错）。修法：`exposedNames` 条件追加。
 
 两条都不是语料/模型问题，是「只在付费跑批里偶然可见」的生成器缺陷 —— 正是 D9 要消灭的那类。
+
+3. **三面全 false 的字段在 `configToSurfaces` 里静默消失**（R6 首跑抓到，4 条语料）——
+   `expandConfig` 行展开用的字段常常 `inQuery/inTable/inForm` 全关（它由展开配置消费，不是
+   三个面）。旧投影把它从所有面里滤掉、`lossy` 一条不报，宿主「回读 → 改 → 再生成」后
+   该字段凭空消失。修法：`configToSurfaces` 对这类字段报 `not-expressible` 并点名
+   `fields[i]`（不改变产物，只是不再撒谎）。
+4. **`surfacesToConfig` 只挑 4 个弹窗键，其余静默丢弃**（R6 首跑抓到，1 条语料）——
+   `configToSurfaces` 投影的是 `DialogBlockOptionsSchema` 的整份键集
+   （`destroyOnClose` / `hiddenFullBtn` / `appendTo` …），而逆映射只回填
+   `title/width/fullscreen/formItems`。抽出逆函数时按「除 `key` 外原样带回」重写，
+   并顺带让 `emit_crud` 的前门路径不再丢这些键。
 
 ### 10.3 与方案字面的偏差（及理由）
 
@@ -1173,8 +1194,17 @@ C2（筛选 + `configTableOut`）+3 → 194。**到 194 就过线**，其余批�
 | D2 定义位置 | 「shared schema + SurfaceFieldSchema（自动获得）+ 两个发射点」 | 抽出四个命名 Zod 定义，`FieldConfigBaseSchema` 与 `ColumnSchema` **共用**；另需同批登记 `SURFACE_FIELD_KEYS` / `SurfaceField` / `DISPLAY_KEYS` 三处手工表 | 方案以为 `SurfaceFieldSchema` 由 `FieldConfigSchema.omit(...)` 派生就自动获得 —— 属实，但 `composeCrudConfig`/`pageSource` 另有两份**手工键表**，漏登记等于 `generate_scene` 静默丢键（与 `mcp-configshape-copy-drift` 同一类坑） |
 | D2 教学口径 | 未提 | en 规则改为「字段级优先」，`columns` 只保留多级表头/非字段列/自定义列序/整列覆盖四种场景；zh few-shot 改成字段级 | 原教学把 `columns` 说成唯一路径，能力落地后不改正则会把模型继续推向「少写一列整列消失」的易错面 |
 | 工具面预算 | 未提 | 四个键的 describe 压到一句话，同时压缩 `formtype/render/isHidden/reactions/op/gate/labelKey/formatter` 八处**被内联 17–34 次**的描述，总量 358.9 → 343.7 KB | 字段形状在 `generate_crud` 里被内联 8 次、全档 17 次；每多 100 字要付 1.7 KB。预算守卫是棘轮（只许下调），「加字段」不能靠上调预算过关。语义 token 全部保留，压缩的只是重复表述 |
+| R1 徽章形状 | 「徽章显示『一次答对 88.7% · 三轮内收敛 95.1%』」 | message 仍只放**门禁合数**；`zero-edit X%` 放进 label | shields endpoint 的 `message` 是数字位（产物校验、站点渲染都按 `^\d+(\.\d+)?%$` 读），把两句话塞进 message 会让徽章变成不可解析的字符串；label 是自由文本，两个数都在读者眼前 |
+| R5 判据 | `provenanceRoundTrip = 成功数 / 产物数`（未定义「成功」） | 「成功」= 回读后**重生成的页面**逐字节等于原产物（`stripPageSourceArtifact` 之后） | 只判 `read.ok` 测不出「配置悄悄多/少一个键」；而连出处块一起比会把 `lossy[]` 的收敛误判成漂移 —— 第一次生成时报了「归一化了 X」，读回的配置已归一，重生成自然不再报。页面字节才是「逆函数」的证据 |
+| R5/R6 落点 | 新指标（未说写在哪） | 落成**确定性守卫** `check:provenance`（+ 27 条 meta-eval），不写进 `last-accuracy.json` | 两条都是模型无关的确定性属性：写进夜间产物意味着它们只能每晚红一次、且被「本夜中继抖动」牵连；放进 consistency 则每个 PR 都在付费跑批之前红。守卫的 `--json` 输出保留机器可读形态 |
+| R5 语料范围 | 全部 golden + `docs/cases/generated/*` + `__tests__/golden/composition/*` | 246 条 = golden 227 + docs 4 + composition 15（`form+dialog` 六例走片段发射器，没有整页出处） | 组合语料里 `form+dialog` 的产物是片段包，不存在「整页 → 回读 → 重生成」这条路；把它算进分母只会制造 6 条结构性失败 |
+| R6 比较口径 | `toConfig(configToSurfaces(cfg).intent) === cfg` | 两侧过 `StructuredCrudConfigSchema.parse` 后比较；`fields[]` 按 `prop` 排序；弹窗表单项的成员布尔不计 | ①省略 == 默认（`target/mode/成员布尔`）必须在两侧都补齐，否则「省略」被判成漂移；②组合层按「首次出现的面」推字段顺序，与原始 `fields[]` 顺序不同，而渲染顺序由各面自己的数组决定；③`SurfaceFieldSchema` 按契约不带 `inQuery/inTable/inForm`，弹窗 formItems 的成员布尔不参与渲染 |
+| R6 分母 | 「surfaces 词汇内的配置」 | 分母 = 可比 201 条；显式排除 `lossy` 44 / `children` 1 / `no-table` 0 | `children`（嵌套容器）不在组合层的 `SurfaceField` 词汇里（L2 已确认是声明式契约之外），`lossy` 是**已点名**的不可表达项 —— 把它们混进分母等于用一个已知不可比的集合制造永久红 |
+| R9 扫描口径 | 「文档里的百分比附近 120 字符内出现 commit 或 corpusHash」 | 只扫准确率语境的百分比；排除目标（`≥95%`）、近似值（`~40%`）、无准确率语境（降幅/控件数）与 changelog | 字面执行会把「模板+胶水降幅 76.5%」和「门禁目标 ≥95%」也要求挂 corpusHash —— 前者由 `one-config-diff.json` 独立校验，后者是常量不是测量。排除规则写进守卫注释，并用 8 条样本自检防止放宽过头 |
 
 ### 10.4 尚未落地（按本文原样执行）
 
-D 批已完成（D2 / L2 / L3 / L4；B14 已由 W4 带走）。剩余 E 批（度量维度）：D5–D8、D10、R1–R9。
-C 批之后才跑付费全量 eval。
+A/B/C/D/E 五批已全部落地（E 批 = D5–D8、D10、R1–R9）。剩下一件不在本方案内、但读数依赖它的动作：
+**付费全量 eval** —— 语料（corpusHash）与 prompt 指纹都已变，`check:eval-freshness` 会在下一次
+真实测量之前保持红。跑之前先 `npm run build:libs`，再走产物链
+`ai:workflows → fragment:dashboard → cases:sync`；跑完 `check:site-claims` 才会把新读数绑上徽章。
