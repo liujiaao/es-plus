@@ -284,7 +284,7 @@ The default `full` profile exposes **19 tools**. With `ESPLUS_MCP_PROFILE=front-
 | `validate_intent` | **Pre-flight judge** — capability report (accepted / degraded / unsupported / missing) plus per-field issues (surface membership, duplicate props, missing formtype, labels absent from the spec) | ✅ |
 | `coverage_report` | **Coverage classification** — per page of a structured inventory: L1 direct emit / L2 direct emit + extension points / L3 host code, derived from the P9 capability ledger | ✅ |
 | `read_page` | **Read-back loop** — losslessly recover the generator input from a previously generated page (`__esPlusSource`) and mechanically project it into `surfaces` the front door accepts; `lossy[]` names every place the artifact differs from that input | ✅ |
-| `list_form_types` | List the 14 shared `formtype` values and their renderers | ✅ |
+| `list_form_types` | List the 16 shared `formtype` values and their renderers | ✅ |
 | `get_component_api` | Component API and type docs | ✅ |
 | `scaffold_page` | Minimal page scaffold | ✅ |
 | `doctor_page` | Static-check the host entry against the es-plus preflight checklist (ok / missing / unverified) | ✅ |
