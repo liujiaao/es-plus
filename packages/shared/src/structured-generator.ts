@@ -2303,6 +2303,13 @@ export function buildTableColumn(field: FieldConfig, i18n?: boolean, defaultSort
   // AN-10：契约为 `ellipsis`（三端都认）。此前发 `showOverflowTooltip` —— 那是 el-table 的
   // 原生 prop，只有 vue3/vue2 默认引擎吃，vxe ×3 / 虚拟引擎 / a-table 全部**静默丢弃**。
   if (field.ellipsis) col.ellipsis = true
+  // D2：字段级列筛选直接投影到派生列（与显式 columns 上的同名字段语义一致）。
+  // 逐键发射，省略即不写 —— 产物与「把同样四个键写进显式列」逐字节一致。
+  if (field.filters) col.filters = field.filters
+  // filterMultiple 的默认值是 true，故显式 false（单选）必须发射 —— 用真值判断会丢掉它。
+  if (field.filterMultiple !== undefined) col.filterMultiple = field.filterMultiple
+  if (field.filterMode) col.filterMode = field.filterMode
+  if (field.autoFilters) col.autoFilters = true
   // Schema mode cannot inline render expressions, so the wrapper emits a
   // `<template #column-<prop>>` scoped slot. es-table (all three renderers)
   // only renders that slot when the column declares scopedSlots.customRender,
@@ -2484,6 +2491,18 @@ export function buildTableColumnSFC(field: FieldConfig, config: StructuredCrudCo
   // 契约键（不再发 el-table 专有的 `showOverflowTooltip`，见 buildTableColumn 注释）。
   if (config.tableOptions?.defaultSort?.prop === field.prop) parts.push(`sortable: true`)
   if (field.ellipsis) parts.push(`ellipsis: true`)
+  // D2：字段级列筛选 —— 与显式列同键同形（纯 JSON）。函数值不进 JSON，显式点名后省略。
+  if (field.filters) {
+    const nonJson = findNonJsonValues(field.filters, 'filters')
+    if (nonJson.length > 0) {
+      warnings?.push(`字段 ${field.prop} 的 filters 含无法 JSON 化的值（${nonJson.join(', ')}）—— 整键已省略以保证编译通过。`)
+    } else {
+      parts.push(`filters: ${inlineJson(field.filters)}`)
+    }
+  }
+  if (field.filterMultiple !== undefined) parts.push(`filterMultiple: ${field.filterMultiple === true}`)
+  if (field.filterMode) parts.push(`filterMode: ${q(field.filterMode)}`)
+  if (field.autoFilters) parts.push(`autoFilters: true`)
   // 字段级权限编码：字符串权限码（非表达式），经 q() 转义后内联 —— 运行时由 es-table 的
   // filteredColumns 按全局 permission(code) 过滤（无权限则该列不渲染）。刻意不过 assertEmittableExpr：
   // 它是权限码不是 JS 源码。与静态 hidCol 同层。

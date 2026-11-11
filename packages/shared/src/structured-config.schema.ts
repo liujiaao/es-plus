@@ -82,7 +82,7 @@ const HiddenConditionSchema = z.object({
       'field 不得包含路径分隔符（/ \\）、空段/"."/".."，也不得使用 __proto__/constructor/prototype',
   }).describe('Model field path to test, e.g. "status" or "user.type"'),
   op: z.enum(HIDDEN_OPS).default('eq').describe(
-    "Comparison operator. eq/ne = equal/not-equal (eq is the default; number↔string is tolerated, e.g. 1 matches '1'); in/nIn = value is/is-not in the given array; empty/notEmpty = ''/null/undefined/[] check; truthy/falsy = JS truthiness (!!v). The hidden field is hidden WHEN this expression holds."
+    "Operator: eq/ne = equal/not-equal (default eq; number↔string tolerated, e.g. 1 matches '1'); in/nIn = in/not-in the given array; empty/notEmpty = ''/null/undefined/[]; truthy/falsy = JS truthiness. The field is hidden WHEN it holds."
   ),
   value: z.unknown().optional().describe(
     'Right-hand side of the comparison. REQUIRED for eq/ne (scalar) and in/nIn (array). IGNORED by empty/notEmpty/truthy/falsy.'
@@ -202,7 +202,7 @@ const ReactionSchema = z
       .optional()
       .describe('Model paths that trigger re-evaluation of this rule. REQUIRED when `fulfill.value` is present.'),
     when: HiddenExprNodeSchema.optional().describe(
-      'Optional gate expression: the rule applies only when it evaluates truthy. Must be a JSONLogic EXPRESSION NODE (e.g. { "==": [{ var: "country" }, "us"] }) — never the { field, op, value } legacy condition form (that form belongs to isHidden), never a bare boolean. Plain JSON data, never a JS function string.'
+      'Optional gate: the rule applies only while it evaluates truthy. A JSONLogic EXPRESSION NODE (e.g. { "==": [{ var: "country" }, "us"] }) — never the { field, op, value } legacy form (that one belongs to isHidden), never a bare boolean. Plain JSON, never a JS function string.'
     ),
     fulfill: ReactionFulfillSchema,
   })
@@ -256,6 +256,40 @@ const FormGroupLayoutSchema = z.object({
     .describe("Title of the fallback bucket under `ungrouped:'default'` (built-in default: 其他 / Other)."),
 })
 
+/**
+ * 列筛选的四个键（W3-2 / D2）。**字段面与列面共用同一份 Zod 定义**。
+ *
+ * 字段级 `filters` 让「这一列可以按…筛选」（197/198）不必再写整份显式 `columns` ——
+ * 后者是覆盖语义，少写一列就整列消失。生成器把字段上的四个键投影到派生列
+ * （`buildTableColumn` / `buildTableColumnSFC`），显式列语义不变。
+ * 解析时列白名单 `columnContractKeys` 仍从 ColumnSchema 推导（键名相同即可）。
+ */
+const ColumnFiltersSchema = z
+  .array(
+    z.object({
+      text: z.string().describe('Option text shown in the filter dropdown.'),
+      value: z
+        .union([z.string(), z.number(), z.boolean()])
+        .describe('Row value matched by this option (loose primitive compare: 1 matches "1").'),
+    })
+  )
+  .optional()
+  .describe(
+    "Filter options (plain JSON, never a function). On a FIELD they project onto the derived column. Local filtering on the default/vxe engines only — vue3 engine:'virtual' has no filter UI."
+  )
+const FilterMultipleSchema = z
+  .boolean()
+  .optional()
+  .describe('Multi-select filter (default true).')
+const FilterModeSchema = z
+  .enum(['equals', 'includes'])
+  .optional()
+  .describe("Filter match: 'equals' (default) or 'includes' (cell text contains).")
+const AutoFiltersSchema = z
+  .boolean()
+  .optional()
+  .describe("Derive `filters` from this field's `dataOptions` (explicit `filters` wins).")
+
 const FieldConfigBaseSchema = z.object({
   prop: z.string().min(1).refine(isSafeProp, {
     message:
@@ -263,10 +297,10 @@ const FieldConfigBaseSchema = z.object({
   }).describe('Field key in the data model (camelCase), e.g. "userName"'),
   label: z.string().min(1).describe('Human-readable column/form label, e.g. "用户名"'),
   labelKey: z.string().optional().describe(
-    "i18n label key for this field's column/form label (used with a global t() function; takes precedence over `label`). When omitted, i18n mode derives one as `field.<prop>`. NOTE: it only takes effect once the HOST entry assembles the plugin with a `t` option (otherwise the runtime falls back to `label`)."
+    "i18n key for this field's label (instead of `label`; derived as `field.<prop>` when omitted). Only takes effect once the HOST assembles the plugin with a `t` option (else falls back to `label`)."
   ),
   formtype: z.enum(formTypeEnum).default('Input').describe(
-    "Pick by the field's MEANING, not by keyword matching: status/type/enum/gender → Select; date/time → DatePicker/TimePicker; image/avatar/attachment/file → Upload; long text/remark/description → Input (attrs.type:'textarea'); boolean on/off → Switch; single-choice small set → Radio; multi-choice → Checkbox; region/category tree → Cascader; department/org/permission tree where ANY level is selectable → TreeSelect; type-to-filter over a known option set → Autocomplete; score → Rate. Default to Input for plain text. OMIT only for a nested-object container (a field carrying `children`) — the container renders no input."
+    "Pick by MEANING, not keywords: status/type/enum/gender → Select; date/time → DatePicker/TimePicker; image/avatar/attachment/file → Upload; long text/remark/description → Input (attrs.type:'textarea'); boolean on/off → Switch; single-choice small set → Radio; multi-choice → Checkbox; region/category tree → Cascader; department/org/permission tree with ANY level selectable → TreeSelect; type-to-filter over a known option set → Autocomplete; score → Rate; plain text → Input. OMIT only for a nested-object container (a field carrying `children`) — it renders no input."
   ),
   inQuery: z.boolean().default(true).describe('Show as a query/filter field above the table'),
   inTable: z.boolean().default(true).describe('Show as a table column'),
@@ -303,11 +337,16 @@ const FieldConfigBaseSchema = z.object({
   align: z.enum(['left', 'center', 'right']).optional(),
   fixed: z.union([z.boolean(), z.literal('left'), z.literal('right')]).optional(),
   ellipsis: z.boolean().optional(),
+  // D2：列筛选也能写在字段上（投影到派生列），不必为「这一列可筛选」写整份显式 columns。
+  filters: ColumnFiltersSchema,
+  filterMultiple: FilterMultipleSchema,
+  filterMode: FilterModeSchema,
+  autoFilters: AutoFiltersSchema,
   formatter: z.string().optional().describe(
-    'Extension point: a JS arrow-function source string for read-only cell formatting, e.g. "(row) => row.amount.toFixed(2)". Use this to express display logic the schema can\'t otherwise capture.'
+    'Extension point: JS arrow-function source for read-only cell formatting, e.g. "(row) => row.amount.toFixed(2)".'
   ),
   render: z.string().optional().describe(
-    "Extension point: a render-function source string for a custom TABLE CELL, e.g. \"(_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.statusLabel)\" — honored on the table face (wired to a scoped slot in the wrapper SFC). A FORM-control render cannot be inlined (form items are serialized as JSON data in both modes), so it is preserved as a marked TODO(es-plus) marker in the generated SFC — NOT silently delivered; prefer the declarative form capabilities (rules/attrs/dataOptions/reactions) when a field needs custom FORM behaviour. Emit this (rather than dropping the requirement) when business logic exceeds the declarative schema."
+    "Extension point: a render-function source string for a custom TABLE CELL, e.g. \"(_, { row }) => h(ElTag, { type: row.status === 1 ? 'success' : 'danger' }, () => row.statusLabel)\" (wired to a scoped slot). A FORM-control render cannot be inlined (form items are serialized as JSON data), so it is preserved as a marked TODO(es-plus) marker in the SFC — NOT silently delivered; prefer the declarative rules/attrs/dataOptions/reactions for FORM behaviour."
   ),
   permissionValue: z
     .string()
@@ -316,10 +355,10 @@ const FieldConfigBaseSchema = z.object({
       "Permission CODE gating this field (RBAC, checked by the host's global permission(code)) — NOT a data-driven condition: use `isHidden` for show/hide by another field's value, `reactions` for options/required/disabled linkage."
     ),
   isHidden: HiddenConditionListSchema.optional().describe(
-    "Conditional visibility for this field, expressed as PLAIN JSON DATA — never a JS function string (functions cannot be inlined into a schema-mode pageSchema). Semantics: the field is HIDDEN when the condition HOLDS (`{ field: 'payType', op: 'eq', value: 'cash' }` = hidden while payType is cash). An ARRAY of conditions is AND (hidden only when all hold) and may mix the two forms. TWO forms, never mixed within one node: (1) legacy condition `{ field, op, value }` whose `op` is one of eq | ne | in | nIn | empty | notEmpty | truthy | falsy (default eq) — preferred for simple comparisons; (2) a JSON expression (JSONLogic-shaped) when a plain condition can't express it — e.g. OR, ordering, or nesting: `{ or: [ { '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] } ] }`. Expression ops (closed set): var == != > >= < <= in nin empty notEmpty truthy falsy and or not if. An expression op inside a legacy `{field, op, value}` node is INVALID (runtime warns and treats the field as visible) — use form (2) for `>`, `!=`, etc. Applies to the query/filter form and to add/edit dialog forms (its `inQuery`/`inForm` placement) — NOT to the table column (`inTable`). Evaluated live against the form model by the three renderers."
+    "Hidden when the condition HOLDS — PLAIN JSON DATA, never a JS function string (functions cannot be inlined into a schema-mode pageSchema). `{ field: 'payType', op: 'eq', value: 'cash' }` = hidden while payType is cash; an ARRAY of conditions is AND. TWO forms, never mixed within one node: (1) legacy `{ field, op, value }` with op ∈ eq|ne|in|nIn|empty|notEmpty|truthy|falsy (default eq) — preferred for simple comparisons; (2) a JSONLogic-shaped expression when a plain condition can't express it (OR, ordering, nesting): `{ or: [ { '==': [{ var: 'status' }, 'pending'] }, { '>': [{ var: 'amount' }, 100] } ] }`; expression ops (closed set): var == != > >= < <= in nin empty notEmpty truthy falsy and or not if. A form-(2) op inside a form-(1) node is INVALID (runtime warns and treats the field as visible). Applies to the query/filter and add/edit dialog forms (its `inQuery`/`inForm` placement) — NOT to the table column (`inTable`). Evaluated live by the three renderers."
   ),
   reactions: z.array(ReactionSchema).optional().describe(
-    "Field-level linkage / computed rules (AI-07) — PLAIN JSON, never JS callbacks. Use when THIS field's options/required/disabled/value depend on ANOTHER field. Each rule `{ dependencies?, when?, fulfill }`: `dependencies` lists the model paths that retrigger it (REQUIRED for fulfill.value); `when` gates the rule; `fulfill` supplies `dataOptions` (literal array), `required`/`disabled` (boolean expressions) and/or `value` (this field's new value, written back). `when`/`required`/`disabled`/`value` are JSONLogic EXPRESSION NODES only (e.g. `{ '==': [{ var: 'country' }, 'us'] }`) — never the `{ field, op, value }` legacy condition form and never a bare boolean. Example: `city` options follow `province` → one rule per province with `when: { '==': [{ var: 'province' }, 'zj'] }` and `fulfill.dataOptions: [{label:'杭州',value:'hz'}]`. Applies to the query/filter form and add/edit dialog forms — NOT to the table column. HARD RULE: branching on a dropdown LABEL ('跨境结算') requires that field's `dataOptions` and comparing the VALUE ('cross') — rows carry codes, not labels; `validate_config` warns (non-blocking)."
+    "Field-level linkage / computed rules (AI-07) — PLAIN JSON, never JS callbacks. Use when THIS field's options/required/disabled/value depend on ANOTHER field. Each rule `{ dependencies?, when?, fulfill }`: `dependencies` = model paths that re-trigger it (REQUIRED when `fulfill.value` is set); `when` gates the rule; `fulfill` supplies `dataOptions` (literal array), `required`/`disabled` (boolean expressions) and/or `value` (this field's new value, written back). `when`/`required`/`disabled`/`value` are JSONLogic EXPRESSION NODES only (e.g. `{ '==': [{ var: 'country' }, 'us'] }`) — never the `{ field, op, value }` legacy form, never a bare boolean. Example: `city` options follow `province` → one rule per province with `when: { '==': [{ var: 'province' }, 'zj'] }` and `fulfill.dataOptions: [{label:'杭州',value:'hz'}]`. Applies to the query/add/edit forms — NOT the table column. HARD RULE: branching on a dropdown LABEL ('跨境结算') requires that field's `dataOptions` and comparing the VALUE ('cross') — rows carry codes, not labels; `validate_config` warns (non-blocking)."
   ),
 })
 
@@ -337,7 +376,7 @@ export const FieldConfigSchema = FieldConfigBaseSchema.extend({
     .min(1)
     .optional()
     .describe(
-      "Nested-object FORM grouping (ONE level only): this field becomes a full-width section heading and its children render under it. Child `prop` is relative to this field (`city` → `address.city`) unless already absolute. The container binds NO data — it is never a table column — so omit `formtype`. Children inherit this field's `group` (their own `group` wins) and cannot declare their own `children`."
+      "Nested-object FORM grouping (ONE level only): this field becomes a full-width section heading; its children render under it. Child `prop` is relative to this field (`city` → `address.city`) unless absolute. The container binds NO data (never a table column) — omit `formtype`; children cannot declare `children` (array sub-forms are OUT of the declarative contract — use `render` or host-owned UI)."
     ),
 })
 
@@ -375,35 +414,11 @@ const ColumnSchema: z.ZodType<any> = z.lazy(() =>
     // element-ui / a-table）与 vxe 引擎都认；虚拟引擎（vue3 engine:'virtual'）无筛选 UI。
     // 必须在这里声明：生成器的列白名单 `columnContractKeys` 正是从本 schema 推导，
     // 漏声明 = 配置被 `sanitizeExplicitColumns` 剥掉且零告警（与 expandConfig 同一条坑）。
-    filters: z
-      .array(
-        z.object({
-          text: z.string().describe('Option text shown in the filter dropdown.'),
-          value: z
-            .union([z.string(), z.number(), z.boolean()])
-            .describe('Row value matched by this option (loose primitive compare: 1 matches "1").'),
-        })
-      )
-      .optional()
-      .describe(
-        "Declarative column filter options (PLAIN JSON — never a JS function). Rendered by the default engines and engine:'vxe'; the virtual engine (vue3 engine:'virtual') has NO filter UI. Filtering is LOCAL (the wrapper filters rows in the browser), so do not combine it with server-side paging/proxy contracts for the same column."
-      ),
-    filterMultiple: z
-      .boolean()
-      .optional()
-      .describe('Allow selecting several filter options at once (default true).'),
-    filterMode: z
-      .enum(['equals', 'includes'])
-      .optional()
-      .describe(
-        "Local comparison for `filters` (default 'equals'): 'equals' = value equality (booleans/numbers compare loosely against strings), 'includes' = the cell text CONTAINS the selected option value (text search)."
-      ),
-    autoFilters: z
-      .boolean()
-      .optional()
-      .describe(
-        "Derive `filters` from this column's `dataOptions` (P2-3). When true and `filters` is omitted, each `dataOptions` entry's label/value becomes a filter option ({text, value}). Explicit `filters` always wins; no-op when dataOptions is empty or the engine is vue3 virtual (no filter UI). Saves duplicating the same option list for the cell mapping and the filter panel."
-      ),
+    // D2 起与字段面共用同一份定义（见 ColumnFiltersSchema）。
+    filters: ColumnFiltersSchema,
+    filterMultiple: FilterMultipleSchema,
+    filterMode: FilterModeSchema,
+    autoFilters: AutoFiltersSchema,
     permissionValue: z.string().optional().describe('Permission code; the column is not rendered without it'),
     dataOptions: z
       .array(
@@ -719,7 +734,7 @@ export const StructuredCrudConfigSchema = z.object({
   ).describe('Page/component name in PascalCase, e.g. "UserManage"'),
   apiUrl: z.string().min(1).describe('API base URL, e.g. "/api/users"'),
   fields: z.array(FieldConfigSchema).min(1).describe('Field definitions'),
-  actions: z.array(z.enum(crudActionEnum)).min(1).describe('Enabled CRUD actions'),
+  actions: z.array(z.enum(crudActionEnum)).min(1).describe('Enabled CRUD actions. `import` renders only a BUTTON that emits an import event — es-plus never parses files (encoding, size, backend validation are host concerns); wire your own upload handler.'),
   tableOptions: z.object({
     border: z.boolean().default(true),
     stripe: z.boolean().default(true),

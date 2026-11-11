@@ -268,6 +268,11 @@ const SURFACE_FIELD_KEYS = [
   'align',
   'fixed',
   'ellipsis',
+  // D2：列筛选可以从字段面投影到派生列。
+  'filters',
+  'filterMultiple',
+  'filterMode',
+  'autoFilters',
   'formatter',
   'render',
   'isHidden',

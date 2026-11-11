@@ -19,7 +19,7 @@ import type { CrudAction } from './contract.js'
  * 字段协调优先级(固定):
  *   - 标识(prop/label/formtype):首次出现为准,冲突发告警(不静默改写)
  *   - 语义(required/rules/dataOptions/apiParams/attrs):form 面优先,其次 query,最后 table
- *   - 展示(width/minWidth/align/fixed/ellipsis/formatter/render):table 面优先
+ *   - 展示(width/minWidth/align/fixed/ellipsis/filters/filterMultiple/filterMode/autoFilters/formatter/render):table 面优先
  *   - querySpan 来自 query 面、formSpan 来自 form 面
  *
  * AN-08：语义键此前只从 query/form 两面拷贝 —— 只在 table 面声明 `required` 的字段会被
@@ -53,6 +53,11 @@ export interface SurfaceField {
   align?: 'left' | 'center' | 'right'
   fixed?: boolean | 'left' | 'right'
   ellipsis?: boolean
+  /** 列筛选（D2）：字段级也能声明，投影到派生列；table 面优先。 */
+  filters?: FieldConfig['filters']
+  filterMultiple?: FieldConfig['filterMultiple']
+  filterMode?: FieldConfig['filterMode']
+  autoFilters?: FieldConfig['autoFilters']
   formatter?: string
   render?: string
   /** 条件显隐（AI-06 运行时底座已在）；纯 JSON 数据、绝非函数串。语义键：form 面优先。 */
@@ -99,7 +104,13 @@ export interface ComposeResult {
 }
 
 const SEMANTIC_KEYS = ['required', 'rules', 'dataOptions', 'apiParams', 'attrs', 'isHidden', 'reactions'] as const
-const DISPLAY_KEYS = ['width', 'minWidth', 'align', 'fixed', 'ellipsis', 'formatter', 'render'] as const
+const DISPLAY_KEYS = [
+  'width', 'minWidth', 'align', 'fixed', 'ellipsis',
+  // D2：列筛选是「这一列的展示/交互属性」，与 width/align 同层；只在 table 面有意义，
+  // 由 table 面覆盖（query/form 面即使写了也不接管）。漏加 = generate_scene 静默丢弃。
+  'filters', 'filterMultiple', 'filterMode', 'autoFilters',
+  'formatter', 'render',
+] as const
 
 function copyDefinedKeys(
   target: Record<string, unknown>,

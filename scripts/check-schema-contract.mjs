@@ -740,20 +740,35 @@ function checkStructuredConfigZod() {
         fail(`${label} 的 ColumnSchema 未声明 expandConfig: z.object(...)（列上声明的展开内容会被 Zod 静默剥掉，展开器恒空）`)
         ok = false
       }
-      // W3-2 列筛选：`filters` / `filterMultiple` / `filterMode` 是纯 JSON 契约键。
-      // 同一原因 —— ColumnSchema 决定生成器的列白名单，漏声明 = 筛选配置被
-      // `sanitizeExplicitColumns` 静默剥掉（表头无漏斗、零告警）。
-      if (!/\bfilters\s*:\s*z\s*\n?\s*\.array\(/.test(colBlock)) {
-        fail(`${label} 的 ColumnSchema 未声明 filters: z.array(...)（列筛选选项会被 Zod 静默剥掉）`)
-        ok = false
-      }
-      if (!/\bfilterMultiple\s*:\s*z\s*\n?\s*\.boolean\(/.test(colBlock)) {
-        fail(`${label} 的 ColumnSchema 未声明 filterMultiple: z.boolean(...)（多选筛选开关会被剥掉）`)
-        ok = false
-      }
-      if (!/\bfilterMode\s*:\s*z\s*\n?\s*\.enum\(/.test(colBlock)) {
-        fail(`${label} 的 ColumnSchema 未声明 filterMode: z.enum([...])（本地比较语义会被剥掉）`)
-        ok = false
+      // W3-2 / D2 列筛选：`filters` / `filterMultiple` / `filterMode` / `autoFilters`
+      // 是纯 JSON 契约键。同一原因 —— ColumnSchema 决定生成器的列白名单，漏声明 =
+      // 筛选配置被 `sanitizeExplicitColumns` 静默剥掉（表头无漏斗、零告警）。
+      // D2 起这两个面共用命名的 schema 常量，故判据认两种写法：内联 `z.array(...)`
+      // 或共享标识符。引用标识符时必须再核对定义本体 —— 否则把键接到一个空
+      // `z.any()` 上也能骗过「键名存在」这一层（改名不等于兑现契约）。
+      for (const [key, named, shape, why] of [
+        ['filters', 'ColumnFiltersSchema', /z\s*\n?\s*\.array\(/, '列筛选选项会被 Zod 静默剥掉'],
+        ['filterMultiple', 'FilterMultipleSchema', /z\s*\n?\s*\.boolean\(/, '多选筛选开关会被剥掉'],
+        ['filterMode', 'FilterModeSchema', /z\s*\n?\s*\.enum\(/, '本地比较语义会被剥掉'],
+        ['autoFilters', 'AutoFiltersSchema', /z\s*\n?\s*\.boolean\(/, 'dataOptions 自动派生筛选会被剥掉'],
+      ]) {
+        const inline = new RegExp(`\\b${key}\\s*:\\s*z\\s*\\n?\\s*\\.`)
+        const ref = new RegExp(`\\b${key}\\s*:\\s*${named}\\b`)
+        const inColumn = inline.test(colBlock) || ref.test(colBlock)
+        if (!inColumn) {
+          fail(`${label} 的 ColumnSchema 未声明 ${key}（${why}）`)
+          ok = false
+          continue
+        }
+        if (ref.test(colBlock)) {
+          const defStart = src.indexOf(`const ${named}`)
+          const defEnd = defStart >= 0 ? /\r?\n(?:const|export|function|\/\*\*)/.exec(src.slice(defStart)) : null
+          const defBlock = defEnd ? src.slice(defStart, defStart + defEnd.index) : ''
+          if (!defBlock || !shape.test(defBlock) || !/\.optional\(\)/.test(defBlock)) {
+            fail(`${label} 的 ColumnSchema 引用了 ${named}，但其定义不是形状匹配的可选 schema（契约未兑现）`)
+            ok = false
+          }
+        }
       }
     }
 

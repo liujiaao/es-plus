@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { generateFromConfig, findDialogsWithoutOpener, findDialogButtonsWithoutDialog } from '../src/structured-generator'
+import { composeCrudConfig } from '../src/compose-crud-config'
 import { StructuredCrudConfigSchema } from '../src/structured-config.schema'
 
 /**
@@ -2594,5 +2595,114 @@ describe('tableOptions.sortParam — 服务端排序契约（schema / sfc 双模
       StructuredCrudConfigSchema.parse({ ...cfg({}), mode: 'sfc' }) as any,
     ).code
     expect(sfc).not.toContain('sortParam')
+  })
+})
+
+// D2：列筛选不再必须写整份显式 `columns`。字段级四个键（filters/filterMultiple/
+// filterMode/autoFilters）由生成器投影到派生列，且与「把同样四个键写进显式列」产出的
+// 列对象逐键相同 —— 这正是 197/198 的失败面（显式 columns 是覆盖，少写一列整列消失）。
+describe('D2 — 字段级列筛选投影到派生列', () => {
+  const d2Config = () => ({
+    name: 'InspectionManage',
+    apiUrl: '/api/inspections',
+    fields: [
+      {
+        prop: 'level',
+        label: '等级',
+        formtype: 'Select',
+        autoFilters: true,
+        filterMultiple: false,
+        dataOptions: [
+          { label: '优秀', value: 'excellent' },
+          { label: '良好', value: 'good' },
+        ],
+      },
+      {
+        prop: 'remark',
+        label: '备注',
+        formtype: 'Input',
+        filters: [{ text: '复检', value: '复检' }],
+        filterMode: 'includes',
+      },
+    ],
+    actions: ['add', 'edit'],
+  })
+
+  it('schema 模式：派生列带上四个键（无需 columns）', () => {
+    const schema = runtimeSchemaOf(generateFromConfig({ ...d2Config(), mode: 'schema' } as any).code)
+    const level = schema.columns.find((c: any) => c.prop === 'level')
+    expect(level.autoFilters).toBe(true)
+    expect(level.filterMultiple).toBe(false)
+    // 列面 code→label 映射由 dataOptions 派生，与筛选共用同一份选项
+    expect(level.dataOptions).toEqual([
+      { label: '优秀', value: 'excellent' },
+      { label: '良好', value: 'good' },
+    ])
+    const remark = schema.columns.find((c: any) => c.prop === 'remark')
+    expect(remark.filters).toEqual([{ text: '复检', value: '复检' }])
+    expect(remark.filterMode).toBe('includes')
+  })
+
+  it('与显式 columns 写同样四个键 → 列对象逐键相同', () => {
+    const derived = runtimeSchemaOf(generateFromConfig({ ...d2Config(), mode: 'schema' } as any).code)
+    const explicit = runtimeSchemaOf(
+      generateFromConfig({
+        ...d2Config(),
+        mode: 'schema',
+        columns: [
+          { prop: 'level', label: '等级', autoFilters: true, filterMultiple: false },
+          { prop: 'remark', label: '备注', filters: [{ text: '复检', value: '复检' }], filterMode: 'includes' },
+        ],
+      } as any).code,
+    )
+    for (const prop of ['level', 'remark']) {
+      expect(derived.columns.find((c: any) => c.prop === prop)).toEqual(
+        explicit.columns.find((c: any) => c.prop === prop),
+      )
+    }
+  })
+
+  it('sfc 模式：同样发射（纯 JSON 字面量，不是函数）', () => {
+    const { code } = generateFromConfig({ ...d2Config(), mode: 'sfc' } as any)
+    expect(code).toContain('filters: [{"text":"复检","value":"复检"}]')
+    expect(code).toContain('filterMode: \'includes\'')
+    expect(code).toContain('autoFilters: true')
+    expect(code).toContain('filterMultiple: false')
+  })
+
+  it('generate_scene 的组合路径与直连配置产出逐字节相同的列（D2 验收）', () => {
+    const { config } = composeCrudConfig({
+      name: 'InspectionManage',
+      apiUrl: '/api/inspections',
+      table: [
+        {
+          prop: 'level',
+          label: '等级',
+          formtype: 'Select',
+          autoFilters: true,
+          filterMultiple: false,
+          dataOptions: [
+            { label: '优秀', value: 'excellent' },
+            { label: '良好', value: 'good' },
+          ],
+        },
+        { prop: 'remark', label: '备注', formtype: 'Input', filters: [{ text: '复检', value: '复检' }], filterMode: 'includes' },
+      ],
+      form: [
+        { prop: 'level', label: '等级', formtype: 'Select' },
+        { prop: 'remark', label: '备注', formtype: 'Input' },
+      ],
+      actions: ['add', 'edit'],
+    })
+    const level = (config.fields ?? []).find((f: any) => f.prop === 'level') as any
+    const remark = (config.fields ?? []).find((f: any) => f.prop === 'remark') as any
+    expect(level.autoFilters).toBe(true)
+    expect(level.filterMultiple).toBe(false)
+    expect(remark.filters).toEqual([{ text: '复检', value: '复检' }])
+    expect(remark.filterMode).toBe('includes')
+
+    const composed = runtimeSchemaOf(generateFromConfig({ ...config, mode: 'schema' } as any).code)
+    const direct = runtimeSchemaOf(generateFromConfig({ ...d2Config(), mode: 'schema' } as any).code)
+    expect(composed.columns).toEqual(direct.columns)
   })
 })

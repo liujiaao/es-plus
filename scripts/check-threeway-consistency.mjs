@@ -225,6 +225,13 @@ const PROBE_FIELD = {
   align: 'center',
   fixed: 'right',
   ellipsis: true,
+  // D2：字段级列筛选四键。`filterMultiple` 刻意取 false —— 生成器用的是
+  // `!== undefined` 门（不是真值门），取 false 才证明「单选」不会在产物里消失；
+  // 与 dialog 那组 false 探针同一动机（AI-30 的真值门教训）。
+  filters: [{ text: 'PROBE-FILTER', value: 'a' }],
+  filterMultiple: false,
+  filterMode: 'includes',
+  autoFilters: true,
   formatter: '(row) => String(row.probe)',
   render: '(_, { row }) => h(ElTag, () => row.probeLabel)',
   permissionValue: 'probe:read',

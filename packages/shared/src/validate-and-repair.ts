@@ -147,6 +147,7 @@ export function codeTableWarnings(config: unknown): string[] {
 export function validateAndRepair(config: unknown): ValidationResult {
   // 软告警与判定正交：配置非法时也可能命中（且更有用），所以先算、每条返回都带上。
   const warnings = codeTableWarnings(config)
+  const targeted = engineSelectionHints(config)
   const unknownKeys = collectUnknownKeys(StructuredCrudConfigSchema, config)
   const unknownErrors = unknownKeys.map(formatUnknownKey)
   const unknownSuggestions = unknownKeys
@@ -155,9 +156,15 @@ export function validateAndRepair(config: unknown): ValidationResult {
 
   const result = StructuredCrudConfigSchema.safeParse(config)
   if (result.success) {
-    if (unknownKeys.length === 0) return { valid: true, errors: [], suggestions: [], unknownKeys, warnings }
+    if (unknownKeys.length === 0) return { valid: true, errors: [], suggestions: targeted, unknownKeys, warnings }
     // Zod 说「通过」，但它把键剥掉了 —— 那正是本项要消灭的假绿。
-    return { valid: false, errors: unknownErrors, suggestions: unknownSuggestions, unknownKeys, warnings }
+    return {
+      valid: false,
+      errors: unknownErrors,
+      suggestions: [...targeted, ...unknownSuggestions],
+      unknownKeys,
+      warnings,
+    }
   }
 
   // zod 4 用 `issues`；旧版（及部分被包装过的 error 对象）用 `errors`。两处都读——
@@ -168,7 +175,11 @@ export function validateAndRepair(config: unknown): ValidationResult {
     return {
       valid: false,
       errors: ['Configuration failed structured-config validation (no issue details available)', ...unknownErrors],
-      suggestions: ['Check the config against the structured CRUD page schema', ...unknownSuggestions],
+      suggestions: [
+        'Check the config against the structured CRUD page schema',
+        ...targeted,
+        ...unknownSuggestions,
+      ],
       unknownKeys,
       warnings,
     }
@@ -177,10 +188,23 @@ export function validateAndRepair(config: unknown): ValidationResult {
   return {
     valid: false,
     errors: [...rendered.errors, ...unknownErrors],
-    suggestions: [...rendered.suggestions, ...unknownSuggestions],
+    suggestions: [...rendered.suggestions, ...targeted, ...unknownSuggestions],
     unknownKeys,
     warnings,
   }
+}
+
+/**
+ * L4：`tableOptions.engine:'auto'` 刻意不支持 —— 「按配置猜引擎」猜错会静默降级
+ * （例如有 `editRender` 却落到 default，编辑完全不生效）。枚举本身已判红；这里补一条
+ * **确定性纠正**，让模型撞一次就知道按需求显式选，而不是反复试『auto』。
+ */
+function engineSelectionHints(config: unknown): string[] {
+  const tableOptions = (config as { tableOptions?: { engine?: unknown } } | null | undefined)?.tableOptions
+  if (tableOptions?.engine !== 'auto') return []
+  return [
+    '/tableOptions/engine: "auto" is not supported (guessing an engine fails silently) — pick explicitly: inline editing → "vxe"; large data on vue3 → "virtual"; otherwise "default"',
+  ]
 }
 
 /** zod issue 的最小形状（只取我们用来生成 errors/suggestions 的字段）。 */
