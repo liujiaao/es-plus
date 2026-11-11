@@ -1,5 +1,4 @@
 import type { ComposeCrudInput, SurfaceField } from '../compose-crud-config.js'
-import { composeCrudConfig } from '../compose-crud-config.js'
 import type { StructuredGenerateResult } from '../structured-generator.js'
 import { generateFromConfig } from '../structured-generator.js'
 import { buildPreflight, formatPreflight } from '../preflight.js'
@@ -16,6 +15,7 @@ import {
 } from '../fragment-generator.js'
 import type { ArtifactKind, SceneId } from './registry.js'
 import { DIALOG_TITLES, dialogTitleFor } from './registry.js'
+import { surfacesToConfig } from './surfaces-to-config.js'
 import { DEFAULT_TARGET } from '../target.js'
 import {
   buildArtifactEnvelope,
@@ -94,27 +94,6 @@ export interface SceneEmitResult {
  */
 export interface SceneArtifactResult extends SceneEmitResult {
   envelope?: ArtifactEnvelope
-}
-
-/**
- * AN-06③：顶层 `rowkey` 必须并入 `tableOptions`。
- *
- * 生成器读的是 `tableOptions.rowkey`；只把它交给独立 dialog 块会让页面删除/编辑按
- * 默认 `id` 拼 URL。冲突时取**顶层**（它是本工具的显式参数）并告警，不静默二选一。
- */
-function withRowkey(
-  tableOptions: Record<string, unknown> | undefined,
-  rowkey: string | undefined,
-): { tableOptions: Record<string, unknown> | undefined; warning?: string } {
-  if (!rowkey) return { tableOptions }
-  const prev = tableOptions?.rowkey
-  return {
-    tableOptions: { ...(tableOptions ?? {}), rowkey },
-    warning:
-      prev !== undefined && prev !== rowkey
-        ? `rowkey 冲突：tableOptions.rowkey="${String(prev)}" vs 顶层 rowkey="${rowkey}" —— 取顶层（弹窗 PUT / 删除 URL 与独立 dialog 块必须用同一个键）。`
-        : undefined,
-  }
 }
 
 /**
@@ -200,62 +179,15 @@ export function emitCrudScene(intent: CrudIntent): SceneArtifactResult {
 
   // ── Table-bearing: compose → generateFromConfig (golden-covered path) ──
   if (hasTable) {
-    const dialogBody = hasForm ? form : table
-    // 重复 key 会被 Object.fromEntries 静默覆盖 —— 显式告警（与无表支 AI-36 同一条原则）。
-    const duplicateDialogKeys: string[] = []
-    const dialogs = hasDialog
-      ? (() => {
-          const seen = new Set<string>()
-          const entries: Array<[string, any]> = []
-          for (const d of dialogEntries) {
-            const key = typeof d === 'string' ? d : String(d.key)
-            if (seen.has(key)) duplicateDialogKeys.push(key)
-            seen.add(key)
-            // 罐头键：字符串 → 默认标题 + 共用弹窗体。
-            if (typeof d === 'string') {
-              entries.push([key, { title: dialogTitleFor(key), formItems: dialogBody }])
-              continue
-            }
-            // 全参对象：自定义 id/标题/宽度/全屏/逐弹窗字段表（AI-21④）。
-            entries.push([
-              key,
-              {
-                title: d.title !== undefined ? d.title : dialogTitleFor(key),
-                ...(d.width !== undefined ? { width: d.width } : {}),
-                ...(d.fullscreen !== undefined ? { fullscreen: d.fullscreen } : {}),
-                formItems: d.formItems !== undefined ? d.formItems : dialogBody,
-              },
-            ])
-          }
-          return Object.fromEntries(entries)
-        })()
-      : undefined
-
-    const rowkeyOpt = withRowkey(intent.tableOptions as Record<string, unknown> | undefined, intent.rowkey)
-    const { config, warnings: composeWarnings } = composeCrudConfig({
-      name: intent.name,
-      apiUrl: intent.apiUrl,
-      target: intent.target,
-      mode: intent.mode,
-      typescript: intent.typescript,
-      i18n: intent.i18n,
-      query,
-      table,
-      form,
-      actions: intent.actions,
-      permissions: intent.permissions,
-      pagination: intent.pagination,
-      tableOptions: rowkeyOpt.tableOptions,
-      formLayout: intent.formLayout,
-      operationColumn: intent.operationColumn,
-      tableBtns: intent.tableBtns,
-      toolbarBtns: intent.toolbarBtns,
-      dialogs: dialogs as any,
-      expandConfig: intent.expandConfig,
-      treeConfig: intent.treeConfig,
-      mergeConfig: intent.mergeConfig,
+    // 组合的逆映射已抽到 `surfaces-to-config.ts`（R6）：emit 与 `check:provenance`
+    // 共用同一份实现，否则「config → surfaces → config」的度量会对着另一份代码打绿。
+    const { config, warnings: composeWarnings, duplicateDialogKeys } = surfacesToConfig({
+      ...intent,
+      surfaces: { ...s, query, table, form, dialog: dialogEntries },
     })
-    if (rowkeyOpt.warning) composeWarnings.unshift(rowkeyOpt.warning)
+    if (!config) {
+      return { text: 'Error: `surfaces` 组合失败（内部错误：hasTable 为真却没有配置）。', isError: true }
+    }
 
     // 前门确定性校验(C2·A3):组合出的 config 先过权威 Zod 判定,非法则回结构化错误、不生成。
     const check = validateAndRepair(config)

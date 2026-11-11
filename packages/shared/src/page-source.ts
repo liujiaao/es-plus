@@ -32,6 +32,15 @@
  * sfc 模式没有 pageSchema：出处以单行注释写在 `<script>` 块内
  * （`// __esPlusSource: {…}`）。注释内容经 `inlineJson` 转义，`</script>` 不会提前
  * 闭合脚本块；JSON 里的换行也已转义，因此一定是一行。
+ *
+ * ## 设计原则（D7）—— 出处是**发射器**的产物，不是页面的属性
+ *
+ * > 凡是「有确定性输入 → 产物」的入口，都必须带出处；凡是不能无损表达的入口
+ * > （组合 / 自定义 `render`），用独立契约 + 显式降级说明，不做有损反推。
+ *
+ * 因此：`generateFromConfig` 的每个 mode（schema / sfc，js / ts）都写出处；
+ * 组合页走独立的 `es-plus.composition-source@1` 键（见文件末尾），不冒充 page-source；
+ * 投影损失由 `lossy[]` 逐条点名，而不是让读者从产物差异里猜。
  */
 
 import { findNonJsonValues } from './codegen-escape.js'
@@ -338,7 +347,20 @@ export function configToSurfaces(config: Record<string, any>): ConfigToSurfacesR
     .filter(Boolean)
   // 表格面没有「容器列」：inTable 未显式关掉的容器会被生成器跳过，投影同样跳过 —— 但要报。
   fields.forEach((f, i) => {
-    if (f && f.inTable !== false && Array.isArray(f.children) && f.children.length) {
+    if (!f) return
+    // R6：三个成员布尔全 false 的字段不进任何面 —— `surfacesToConfig` 组合时它不存在。
+    // 它不是「配置无效」（expandConfig / 自定义消费者仍可能在用它），但回读→重生成一定会丢，
+    // 所以必须点名，而不是让它悄悄消失。
+    if (f.inQuery === false && f.inTable === false && f.inForm === false) {
+      lossy.push({
+        path: `fields[${i}]`,
+        kind: 'not-expressible',
+        detail:
+          '该字段 inQuery/inTable/inForm 全为 false —— surfaces 的三个面都没有它，用它再生成会丢掉该字段。' +
+          'expandConfig 等非面消费者仍需要它时，请把返回的 `config` 直接交给生成器。',
+      })
+    }
+    if (f.inTable !== false && Array.isArray(f.children) && f.children.length) {
       lossy.push({
         path: `fields[${i}]`,
         kind: 'not-expressible',

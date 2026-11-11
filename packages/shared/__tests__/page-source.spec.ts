@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
+import { readFileSync, readdirSync } from 'node:fs'
+import { dirname, join } from 'node:path'
+import { fileURLToPath } from 'node:url'
 import { generateFromConfig, type StructuredCrudConfig } from '../src/structured-generator.js'
+import { SurfaceFieldSchema } from '../src/structured-config.schema.js'
 import {
   buildPageSource,
   configToSurfaces,
@@ -278,6 +282,52 @@ describe('configToSurfaces — 回读 → 前门意图表', () => {
     expect(dialog).toMatchObject({ key: 'edit', title: '编辑', maxHeight: '80vh', destroyOnClose: true, closeOnClickModal: false })
     expect(lossy).toContainEqual(expect.objectContaining({ path: 'dialogs.edit.formLayout', kind: 'not-expressible' }))
   })
+})
+
+describe('configToSurfaces — 投影不变量（D8：“可证明的投影”）', () => {
+  // 不变量①：投影出的每个键都在 `SurfaceFieldSchema` 的词汇表里（否则前门会按未知键拒绝）；
+  // 不变量②：对 surfaces 词汇内的键，投影值**逐键等于**原配置（不是“尽力而为”）。
+  // 用真实金标语料跑，而不是手写几例 —— “shared 加了新字段但 surfaces 没跟上”的漂移
+  // 只有整批语料才抓得到（`mcp-configshape-copy-drift` 的同构风险）。
+  const surfaceKeys = new Set(Object.keys((SurfaceFieldSchema as any).shape))
+  const here = dirname(fileURLToPath(import.meta.url))
+  const casesDir = join(here, '..', '..', '..', '__tests__', 'golden', 'cases')
+  const caseFiles = readdirSync(casesDir)
+    .filter((f) => f.endsWith('.json'))
+    .sort()
+    .slice(0, 30)
+
+  it('30 份金标配置：键集 ⊆ SurfaceFieldSchema，且词汇内键值不变', () => {
+    expect(caseFiles.length).toBe(30)
+    let projectedFields = 0
+    for (const file of caseFiles) {
+      const cfg = JSON.parse(readFileSync(join(casesDir, file), 'utf8')).config
+      const { intent } = configToSurfaces(cfg)
+      const surfaces = (intent as any).surfaces
+      for (const name of ['query', 'table', 'form']) {
+        for (const field of surfaces[name] ?? []) {
+          const original = (cfg.fields ?? []).find((f: any) => f.prop === field.prop)
+          // 容器（children）不投影到 table；其余面必须能找到原字段。
+          expect(original, `${file}: ${name}.${field.prop} 在原配置里不存在`).toBeTruthy()
+          assertProjection(file, name, field, original, surfaceKeys)
+          projectedFields++
+        }
+      }
+    }
+    // 抽样防御：30 份配置若全是单字段，这条测试就名存实亡。
+    expect(projectedFields).toBeGreaterThan(100)
+  })
+
+  function assertProjection(file: string, surface: string, field: any, original: any, keys: Set<string>) {
+    for (const [key, value] of Object.entries(field)) {
+      expect(keys.has(key), `${file}: ${surface}.${field.prop} 投影出词汇外的键 ${key}`).toBe(true)
+      if (key === 'children') continue
+      // label / formtype 允许由投影补默认值（原配置省略时）；其余键必须与原值逐键相等。
+      if (key === 'label' && original.label === undefined) continue
+      if (key === 'formtype' && original.formtype === undefined) continue
+      expect(value, `${file}: ${surface}.${field.prop}.${key} 投影后变了`).toEqual(original[key])
+    }
+  }
 })
 
 describe('readPageSource — TypeScript 产物（回归：首个 `{` 是 import 解构）', () => {

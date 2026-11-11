@@ -182,6 +182,9 @@ export * from './scene/index.js'
 // 场景发射层（P2）：ScenePlan → 既有发射器的确定性落地。只从 barrel 导出，
 // **不**进 `@es-plus/shared/scene` —— 场景元数据的消费者（eval/守卫）不该被拉进生成器。
 export * from './scene/emit.js'
+// R6：`surfaces` 意图 → `StructuredCrudConfig` 的确定性逆函数（`configToSurfaces` 的反向）。
+// emit 与出处度量共用这一份实现。
+export * from './scene/surfaces-to-config.js'
 // 组合契约（P6b）：多节点装配 + `Page.vue` 胶水。与 emit 同理只从 barrel 导出 ——
 // 它会拉进生成器，不能让「只要场景常量」的消费者（eval / 守卫）被动加载。
 export * from './scene/composition.js'
