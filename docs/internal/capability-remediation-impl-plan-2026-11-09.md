@@ -246,7 +246,18 @@ if (import.meta.env.DEV && !warned && data.length > 1000 && !isVxeEngine.value) 
 
 **当前进度**：✅ 第一期完成（2026-11-09）。运行时 + 站点示例见 P1-3a；AI 四份契约、
 生成器双模式发射、三端 schema→prop 转接、prompt 教学、golden 语料与守卫见 P1-3b。
-✅ 第二期（嵌套对象，一层）完成（2026-11-09），见 P1-3c。第三期（数组子表单 `FormList`）未开始。
+✅ 第二期（嵌套对象，一层）完成（2026-11-09），见 P1-3c。第三期（数组子表单 `FormList`）
+**Won't do (v1.x)**，见下方复活条件。
+
+**P1-3 第三期裁定（2026-11-11 · Won't do v1.x）**
+
+数组子表单不是「再加一个 formtype」，而是新的数据模型（增删行、逐行校验、路径展开、
+三端运行时 + 序列化契约）。当前语料没有一行需要它，投入产出不成立；声明式契约改为
+**明确不支持**并给出替代：字段级 `render` 扩展点或宿主自绘。
+
+复活条件（同时满足才重启）：① 出现 ≥3 个真实业务用例；② 三端 `FormList` 运行时组件就绪；
+③ core 契约（`FormItemOption.repeatable/children` 语义）有独立设计评审。
+`structured-config.schema.ts` 的 `children` describe 已写明该边界。
 
 **实施记录（P1-3 第一期 · 2026-11-09）**
 

@@ -1121,7 +1121,7 @@ C2（筛选 + `configTableOut`）+3 → 194。**到 194 就过线**，其余批�
 
 ## 10. 落地记录（执行时补写）
 
-### 10.1 本次（2026-11-11，A 批 + B 批语料/尺子）
+### 10.1 本次（2026-11-11，A/B/C/D 批）
 
 | 项 | 状态 | 落点 | 验收 |
 |---|---|---|---|
@@ -1137,6 +1137,10 @@ C2（筛选 + `configTableOut`）+3 → 194。**到 194 就过线**，其余批�
 | 145/23 actions 边界 | ✅ | 三处教学写死三条：`actions` = NL **恰好**点名的内置动作（不点名不加）；导入/导出属于 `actions` 而非 `tableBtns`；`tableBtns` 只放非内置自定义按钮。核对 `es-crud-page.vue`：`tableBtns` 追加进 es-table `configBtn`，**不抑制** `actions` 派生的工具栏按钮 ⟹ 原样复制一个内置按钮会渲染两次，这半句也写进了教学 | `check:doc-drift` / prompt vitest |
 | 200 Autocomplete | ✅ | 两份 prompt 与 MCP few-shot：「联想输入 / 可搜索选择 / 边输边筛」→ `Autocomplete`（存选中项的 `value`，输入文本只是搜索串），不是 `Select + filterable` | `check:doc-drift` / prompt vitest |
 | 127/132 码表身份（软告警） | ✅ | shared 新增 `codeTableWarnings()`：只扫**条件槽**（比较操作数、`{field,op,value}` 的 value、`if[0]`、`and/or/!`），结果槽（自动填中文状态值）刻意不扫；`ValidationResult.warnings` 非阻断接入 `validate_config` 正文。schema `reactions` describe + 三处教学补硬规则（分支依据是下拉标签 ⟹ 必须声明 `dataOptions` 并比较 value）。shared 4 例（含「条件只写在 value.if[0]」与「中文只在结果槽不告警」两侧边界）+ mcp handler 1 例 | 两个 spec 49 例全绿；127/132 gold 未放宽（`check:scorers` 反例仍判负） |
+| D2 字段级列筛选 | ✅ | `FieldConfig` 增加 `filters/filterMultiple/filterMode/autoFilters`（与 `ColumnSchema` **共用同一份**命名 Zod 定义，杜绝两面漂移）；`buildTableColumn` / `buildTableColumnSFC` 投影到派生列；`SURFACE_FIELD_KEYS` / `SurfaceField` / `DISPLAY_KEYS` 三处手工表同批登记（漏一处 `generate_scene` 静默丢键）；教学面（两侧 prompt、MCP 例子、conventions）改为「筛选优先写在字段上，`columns` 只用于多级表头/非字段列/自定义列序」 | `structured-generator.spec.ts` 4 例：schema 投影 / 与显式 `columns` 列对象逐键相等 / SFC 字面量（含 `filterMultiple:false`）/ **scene 组合路径与直连配置产出逐字节相同的列**（D2 验收原文）。`check:threeway` 探针补这四键（`filterMultiple:false` 专证非真值门）；`check:schema` 判据改认共享标识符并核对定义本体 |
+| L2 `FormList` 降级 | ✅（仅文档） | 能力台账/矩阵里本无 `FormList` 条目，声明式子表单从来不是能力面成员；`columns` 递归只服务多级表头。`structured-config.schema.ts` 的 `children` describe 写明「数组子表单在声明式契约之外 —— 用 `render` 或宿主自有 UI」，删掉「children 可再声明 children」的误导 | `check:doc-drift` / `check:surface-budget`（describe 未增肥） |
+| L3 `ImportConfig` / `parseCsv` | ✅ | `conventions.ts` 的 CRUD Actions 与 schema `actions` describe：`import` **只渲染按钮并发事件**，es-plus 不解析文件（编码/大小/后端校验都是宿主的事）；源码中不存在 `parseCsv`/`ImportConfig`，不要编造这类配置键 | `check:doc-drift` / `check:eval-prompt` |
+| L4 `engine:'auto'` | ✅ | `validateAndRepair` 新增 `engineSelectionHints()`：`tableOptions.engine === 'auto'` 时给一条非阻断 suggestion（猜错引擎会静默退化），四个返回分支都带上；`conventions.ts` Common Gotchas 补「engine 没有 auto」并顺延编号 | `validate-and-repair.spec.ts`（新增用例）+ 既有 49 例；`check:doc-drift` |
 
 ### 10.2 执行中发现的真实缺陷（D9 首跑即抓到，已修）
 
@@ -1165,9 +1169,12 @@ C2（筛选 + `configTableOut`）+3 → 194。**到 194 就过线**，其余批�
 | 123 语料 | 「NL 写全称」（含工行/建行） | 只把股份制半句改成全称；工行/建行两侧都保持简称 | gold 当时已按 2026-10-29 的裁定写成简称（NL 给简称时不可反向展开成全称）；再改回全称会把同一行重新钉成不可过。只需消掉「同一条规则两侧写法不一致」 |
 | 197/198 few-shot 的动作集 | 未指定 | shared 的少数样本把 actions 写成 `add/edit/delete`（NL 同句点名删除），而非语料的 `add/edit` | F8 的候选判据要求 **actions 完全相同**；若写 `add/edit`，示例 NL 与 197 的字符 bigram 相似度 0.41 ≥ 0.35，会被判为同源候选、必须把 197 登记进 `FEWSHOT_DERIVED` —— 那等于把目标行移出 heldout。多一个 NL 点名的删除动作既符合 D4 规则，也避开了洗白 |
 | 127/132 扫描范围 | 只扫 `when` | 扫全部**条件槽**：比较操作数、`{field,op,value}` 的 value、`if[0]`、`and/or/!`；结果槽不扫 | 「条件写在 `fulfill.value.if[0]`」是同样常见的写法（MCP handler 用例正是它），只看 `when` 会漏报；而 `if` 的 then/else 是合法目标值（自动填中文状态），盲目遍历会误伤 |
+| D2 键名 | `filters? / filterMultiple? / filterMode? / filterable?` | `filters? / filterMultiple? / filterMode? / autoFilters?` | 方案字面引用的 `filterable` 在源码里**不存在**；`ColumnSchema` 的实际四键是 `filters/filterMultiple/filterMode/autoFilters`（`autoFilters` 从 `dataOptions` 派生筛选选项）。字段面照抄真实的列契约，才不会多造一个没人消费的键 |
+| D2 定义位置 | 「shared schema + SurfaceFieldSchema（自动获得）+ 两个发射点」 | 抽出四个命名 Zod 定义，`FieldConfigBaseSchema` 与 `ColumnSchema` **共用**；另需同批登记 `SURFACE_FIELD_KEYS` / `SurfaceField` / `DISPLAY_KEYS` 三处手工表 | 方案以为 `SurfaceFieldSchema` 由 `FieldConfigSchema.omit(...)` 派生就自动获得 —— 属实，但 `composeCrudConfig`/`pageSource` 另有两份**手工键表**，漏登记等于 `generate_scene` 静默丢键（与 `mcp-configshape-copy-drift` 同一类坑） |
+| D2 教学口径 | 未提 | en 规则改为「字段级优先」，`columns` 只保留多级表头/非字段列/自定义列序/整列覆盖四种场景；zh few-shot 改成字段级 | 原教学把 `columns` 说成唯一路径，能力落地后不改正则会把模型继续推向「少写一列整列消失」的易错面 |
+| 工具面预算 | 未提 | 四个键的 describe 压到一句话，同时压缩 `formtype/render/isHidden/reactions/op/gate/labelKey/formatter` 八处**被内联 17–34 次**的描述，总量 358.9 → 343.7 KB | 字段形状在 `generate_crud` 里被内联 8 次、全档 17 次；每多 100 字要付 1.7 KB。预算守卫是棘轮（只许下调），「加字段」不能靠上调预算过关。语义 token 全部保留，压缩的只是重复表述 |
 
 ### 10.4 尚未落地（按本文原样执行）
 
-D 批（结构性能力）：D2 字段级 `filters`（下一 minor）、L2 `FormList` 降级、L3
-`ImportConfig`/`parseCsv`、L4 `tableOptions.engine:'auto'`、B14 组合出处（已由 W4 带走）；
-E 批（度量维度）：D5–D8、D10、R1–R9。C 批之后才跑付费全量 eval。
+D 批已完成（D2 / L2 / L3 / L4；B14 已由 W4 带走）。剩余 E 批（度量维度）：D5–D8、D10、R1–R9。
+C 批之后才跑付费全量 eval。
