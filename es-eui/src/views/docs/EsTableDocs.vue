@@ -564,6 +564,31 @@
           <td>TableColumnDataOption[]</td>
         </tr>
         <tr>
+          <td>filters</td>
+          <td>列筛选面板选项 [{ text, value }]；value 必须与行数据里的存储值宽松相等（数字 / 字符串）。纯 JSON，可内联进 schema</td>
+          <td>TableColumnFilterOption[]</td>
+        </tr>
+        <tr>
+          <td>autoFilters</td>
+          <td>从同列 dataOptions 自动派生 filters；显式 filters 永远优先，dataOptions 为空则不合成</td>
+          <td>Boolean</td>
+        </tr>
+        <tr>
+          <td>filterMultiple</td>
+          <td>筛选是否多选（三端显式对齐，不依赖各引擎默认值）</td>
+          <td>Boolean</td>
+        </tr>
+        <tr>
+          <td>filterMode</td>
+          <td>本地筛选匹配模式：'equals' 精确、'includes' 字符串包含</td>
+          <td>'equals' | 'includes'</td>
+        </tr>
+        <tr>
+          <td>filterMethod</td>
+          <td>(value, row) =&gt; boolean，自定义本地筛选谓词；声明后三端都原样使用，不再按 filterMode 合成</td>
+          <td>Function</td>
+        </tr>
+        <tr>
           <td>hidCol</td>
           <td>是否隐藏该列（保留配置不渲染）</td>
           <td>Boolean</td>

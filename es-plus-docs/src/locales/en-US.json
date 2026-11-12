@@ -185,7 +185,7 @@
     "stat1Label": "Vue renderers",
     "stat2Value": "76.5%",
     "stat2Label": "less markup + glue code",
-    "stat3Value": "14",
+    "stat3Value": "16",
     "stat3Label": "form controls",
     "codeTitle": "Example",
     "comparisonTitle": "Why ES-Plus?",

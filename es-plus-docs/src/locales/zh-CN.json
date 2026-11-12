@@ -185,7 +185,7 @@
     "stat1Label": "Vue 渲染器",
     "stat2Value": "76.5%",
     "stat2Label": "模板 + 事件胶水代码减少",
-    "stat3Value": "14",
+    "stat3Value": "16",
     "stat3Label": "表单控件",
     "codeTitle": "示例代码",
     "comparisonTitle": "为什么选择 ES-Plus？",

@@ -242,7 +242,7 @@ export const docsData: Record<string, any> = {
         { name: 'print()', type: '() => Promise<void>', desc: '触发 vxe 内置打印窗口，需先在 options 中设置 printConfig:true；动态 spanMethod 合并场景请改用 vxeInstance().print({ html: patchHtmlRowSpans(...) })' },
       ],
       '打印工具函数': [
-        { name: 'patchHtmlRowSpans(html, spanFn)', type: '(html: string, spanFn: (ri, ci) => { rowspan, colspan }) => string', desc: '修正 vxe getPrintHtml 输出的 tbody rowspan/colspan，解决 spanMethod 动态合并在打印中失效的问题。从 es-plus 按需导入：import { patchHtmlRowSpans } from "es-plus"' },
+        { name: 'patchHtmlRowSpans(html, spanFn)', type: '(html: string, spanFn: (ri, ci) => { rowspan, colspan }) => string', desc: '修正 vxe getPrintHtml 输出的 tbody rowspan/colspan，解决 spanMethod 动态合并在打印中失效的问题。从 @es-plus/vue3 按需导入：import { patchHtmlRowSpans } from "@es-plus/vue3"' },
       ],
     },
   },

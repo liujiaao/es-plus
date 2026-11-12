@@ -111,4 +111,4 @@ type: 'advanced'
 
 | 名称 | 类型 | 说明 |
 | --- | --- | --- |
-| patchHtmlRowSpans(html, spanFn) | (html: string, spanFn: (ri, ci) => { rowspan, colspan }) => string | 修正 vxe getPrintHtml 输出的 tbody rowspan/colspan，解决 spanMethod 动态合并在打印中失效的问题。从 es-plus 按需导入：import { patchHtmlRowSpans } from "es-plus" |
+| patchHtmlRowSpans(html, spanFn) | (html: string, spanFn: (ri, ci) => { rowspan, colspan }) => string | 修正 vxe getPrintHtml 输出的 tbody rowspan/colspan，解决 spanMethod 动态合并在打印中失效的问题。从 @es-plus/vue3 按需导入：import { patchHtmlRowSpans } from "@es-plus/vue3" |

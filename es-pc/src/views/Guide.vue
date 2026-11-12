@@ -162,13 +162,13 @@ const envColumns = [
 const envRequirements = [
   { key: '1', tool: 'Node.js', version: '>= 18.0', desc: 'JavaScript 运行时' },
   { key: '2', tool: 'npm / pnpm', version: '>= 9.0', desc: '包管理器' },
-  { key: '3', tool: 'Vue', version: '3.5+', desc: 'Vue 框架' },
-  { key: '4', tool: 'Ant Design Vue', version: '4.2+', desc: 'UI 组件库' },
+  { key: '3', tool: 'Vue', version: '3.2+', desc: 'Vue 框架' },
+  { key: '4', tool: 'Ant Design Vue', version: '4.0+', desc: 'UI 组件库' },
 ]
 
 const diffColumns = [
   { title: '场景', dataIndex: 'scene', key: 'scene', width: 140 },
-  { title: 'Element Plus 版（es-plus）', dataIndex: 'ep', key: 'ep' },
+  { title: 'Element Plus 版（@es-plus/vue3）', dataIndex: 'ep', key: 'ep' },
   { title: 'Ant Design Vue 版（adapter-antdv）', dataIndex: 'adv', key: 'adv' },
 ]
 
@@ -176,7 +176,7 @@ const diffData = [
   {
     key: '1',
     scene: '包名',
-    ep: 'import { EsForm } from "es-plus"',
+    ep: 'import { EsForm } from "@es-plus/vue3"',
     adv: 'import { EsForm } from "@es-plus/adapter-antdv"',
   },
   {

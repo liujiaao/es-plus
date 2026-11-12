@@ -9,7 +9,7 @@
         <h2>{{ section.title }}</h2>
         <p>{{ rendererize(section.intro) }}</p>
         <a-card v-for="(block, i) in section.codeBlocks" :key="i" class="code-block">
-          <pre v-pre><code>{{ rendererize(block.code) }}</code></pre>
+          <pre><code>{{ rendererize(block.code) }}</code></pre>
         </a-card>
         <p v-if="section.flow">AI 的协作流程：{{ section.flow }}</p>
         <p v-if="section.links">

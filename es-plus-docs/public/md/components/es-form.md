@@ -65,7 +65,7 @@ type: 'component'
 | --- | --- | --- | --- |
 | prop | string | - | 字段名（必填） |
 | label | string | - | 标签文本（必填） |
-| formtype | string | - | 控件类型（14 种）：Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / Radio / Checkbox / Switch / Rate / Upload。旧写法 datePicker / timePicker 仍兼容 |
+| formtype | string | - | 控件类型（16 种）：Input / InputNumber / Select / DatePicker / TimePicker / Slider / ColorPicker / Transfer / Cascader / TreeSelect / Autocomplete / Radio / Checkbox / Switch / Rate / Upload。旧写法 datePicker / timePicker 仍兼容 |
 | span | number | 6 | 栅格占位（24 列布局） |
 | group | string | - | 所属分组 key，配合 layoutFormProps.layout 使用；不写则按 ungrouped 策略处理（默认落进「其他」） |
 | children | FormItemOption[] | - | 嵌套对象（一层）：本字段变成整行标题、不渲染控件也不绑定数据；子字段 prop 相对本字段（province → address.province），栅格按容器内数量自动算，显式 span 优先；子字段继承父字段 group |

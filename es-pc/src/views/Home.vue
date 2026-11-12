@@ -215,7 +215,7 @@ const features = [
 ]
 
 const esPlusComps = [
-  { name: 'EsForm', desc: '动态表单 · 14种控件 · JSON 驱动', route: '/es-form' },
+  { name: 'EsForm', desc: '动态表单 · 16 种控件 · JSON 驱动', route: '/es-form' },
   { name: 'EsTable', desc: '动态表格 · 分页排序 · 自定义渲染', route: '/es-table' },
   { name: 'EsDialog', desc: '动态弹窗 · 命令式API · 表单/表格弹窗', route: '/es-dialog' },
   { name: 'EsCrudPage', desc: 'CRUD编排 · 多弹窗 · 权限控制', route: '/es-crud-page' },

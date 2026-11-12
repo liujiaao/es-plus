@@ -21,7 +21,7 @@
 <script setup lang="jsx">
 import { ref, reactive } from 'vue'
 import { ElButton, ElTag, ElMessage, ElMessageBox } from 'element-plus'
-import { EsForm, EsTable } from 'es-plus'
+import { EsForm, EsTable } from '@es-plus/vue3'
 
 const tableRef = ref()
 const tableData = ref([])
