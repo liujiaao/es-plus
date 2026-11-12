@@ -215,23 +215,23 @@ export default defineConfig({
 |---|---|
 | Vue | `^2.6.14 \|\| ^2.7.0` |
 | Element UI | `^2.15.0` |
-| `@vue/composition-api` | **不需要安装**（自 `@es-plus/vue2@1.1.1` 起已内联进 dist） |
+| `@vue/composition-api` | `^1.7.0`（peer dependency，必须安装；**不要**在 `main.js` 里手动 `Vue.use`） |
 
 ### 包管理器安装
 
 ```bash
 # Vue 2.7+（推荐）
-npm install @es-plus/vue2 element-ui vue@^2.7
+npm install @es-plus/vue2 element-ui vue@^2.7 @vue/composition-api@^1.7.0
 
-# Vue 2.6 —— 安装命令完全一致；polyfill 已被打包进 dist
-npm install @es-plus/vue2 element-ui vue@^2.6
+# Vue 2.6 —— 同样需要装 polyfill 的 peer（npm 7+ 会自动装）
+npm install @es-plus/vue2 element-ui vue@^2.6 @vue/composition-api@^1.7.0
 ```
 
 ::: tip 1.1.x 自动适配
-- **1.1.0+**：`vue-compat` 在模块加载时读取 `Vue.version`，自动选择 Composition API 来源（Vue 2.7 走原生，Vue 2.6 走 polyfill），并由 `install()` 在 Vue 2.6 时自动调用 `Vue.use(VueCompositionAPI)`
-- **1.1.1+**：`@vue/composition-api` 内联进 dist，Vue 2.7 用户不再需要在 `package.json` 中声明这个依赖
+- **1.1.0+**：`vue-compat` 在模块加载时读取 `Vue.version`，自动选择 Composition API 来源（Vue 2.7 走原生，Vue 2.6 走 polyfill）
+- `@vue/composition-api` **是 peer dependency，没有内联进 dist**：内联会产生两份模块实例，Vue 2.6 下注册表不共享，`setup()` 里会抛 `No vue dependency found`。它必须出现在依赖树里，但**不需要**手动 `Vue.use`
 
-**用户 `main.js` 不需要写 `Vue.use(VueCompositionAPI)`**——不论 Vue 2.6 还是 2.7。
+**用户 `main.js` 不需要写 `Vue.use(VueCompositionAPI)`**——Vue 2.6 下 polyfill 在 `import '@es-plus/vue2'` 的模块求值阶段就已安装，早于任何组件创建。
 :::
 
 ### 注册插件
@@ -246,7 +246,7 @@ import '@es-plus/vue2/dist/style.css'
 
 Vue.use(ElementUI)
 Vue.use(EsPlus)
-// 不需要 Vue.use(VueCompositionAPI) —— 由 EsPlus.install() 在 Vue 2.6 时自动注入
+// 不需要 Vue.use(VueCompositionAPI) —— polyfill 在 import 时已自动安装（Vue 2.6）
 ```
 
 ::: warning 从 1.1.0 之前升级

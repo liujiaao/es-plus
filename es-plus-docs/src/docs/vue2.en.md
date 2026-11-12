@@ -16,21 +16,19 @@ If you're starting fresh, use [`@es-plus/vue3`](/guide/getting-started) — it g
 |---|---|
 | Vue | `^2.6.14 \|\| ^2.7.0` (1.1.0+ supports both) |
 | Element UI | `^2.15.0` |
-| `@vue/composition-api` | **No need to install** (inlined into dist since 1.1.1) |
+| `@vue/composition-api` | `^1.7.0` (peer dependency — required in the dependency tree, but do **not** call `Vue.use` yourself) |
 
 ```bash
 # Vue 2.7+ (recommended)
-npm install @es-plus/vue2 element-ui vue@^2.7
+npm install @es-plus/vue2 element-ui vue@^2.7 @vue/composition-api@^1.7.0
 
-# Vue 2.6 — same install command; the polyfill is bundled into our dist
-npm install @es-plus/vue2 element-ui vue@^2.6
+# Vue 2.6 — same peer is required (npm 7+ installs peers automatically)
+npm install @es-plus/vue2 element-ui vue@^2.6 @vue/composition-api@^1.7.0
 ```
 
 ::: tip Auto-compat since 1.1.x
-- **1.1.0**: at module load `vue-compat` reads `Vue.version` and routes Composition API calls to either Vue 2.7's native exports or the `@vue/composition-api` polyfill. On Vue 2.6, `install()` calls `Vue.use(VueCompositionAPI)` for you automatically.
-- **1.1.1**: `@vue/composition-api` is now **inlined into the dist**. Vue 2.7 users no longer need it in `package.json`, and bundlers won't raise `UNRESOLVED_IMPORT`.
-
-**You should NOT call `Vue.use(VueCompositionAPI)` in your `main.js`** — regardless of Vue version. If you do on Vue 2.7, the native `setup()` and the polyfill's `data()` wrapper both run, producing "setup binding ... already declared" warnings; `install()` will log a console warning telling you to remove it.
+- **1.1.0**: at module load `vue-compat` reads `Vue.version` and routes Composition API calls to either Vue 2.7's native exports or the `@vue/composition-api` polyfill. On Vue 2.6 the polyfill is installed during module evaluation — before any top-level `ref()` in the package and before your `Vue.use(EsPlus)`.
+- `@vue/composition-api` is **not inlined into the dist**: inlining would create a second module instance with its own registry, so on Vue 2.6 one copy would never be registered and `setup()` would throw `No vue dependency found`. It must be present as a peer, but you never call `Vue.use` on it.
 :::
 
 ## Register
@@ -44,7 +42,7 @@ import '@es-plus/vue2/dist/style.css'
 
 Vue.use(ElementUI)
 Vue.use(ESPlus)
-// No Vue.use(VueCompositionAPI) needed — managed automatically by ESPlus.install()
+// No Vue.use(VueCompositionAPI) needed — the polyfill is installed when this module is imported
 ```
 
 ::: warning Upgrading from before 1.1.0
@@ -87,7 +85,7 @@ const columns = [
 | Render target | Element Plus | Element UI |
 | Component import | `import { EsForm } from '@es-plus/vue3'` | `import { EsForm } from '@es-plus/vue2'` |
 | Style | `@es-plus/vue3/dist/style.css` | `@es-plus/vue2/dist/style.css` |
-| Vue version | `vue@^3.4` | `vue@^2.7` |
+| Vue version | `vue@^3.2` | `vue@^2.7` |
 | Slots | `<template #header>` | `<template slot="header">` |
 | `v-model` on data-source | `v-model:data-source` | `:data-source` (one-way — the component never emits `update:dataSource`) |
 | `useDialog` | Composition API | Available via `Vue.use(ESPlus)` injection |

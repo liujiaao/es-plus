@@ -12,14 +12,18 @@
 |---|---|
 | Vue | `^2.6.14 \|\| ^2.7.0`（自 1.1.0 起原生兼容两条线） |
 | Element UI | `^2.15.0` |
-| `@vue/composition-api` | **不需要安装**（自 1.1.1 起已内联进 dist） |
+| `@vue/composition-api` | `^1.7.0`（peer dependency，必须安装；**不要**在 `main.js` 里手动 `Vue.use`） |
 
 ::: tip 1.1.x 后的兼容设计
-**自 `@es-plus/vue2@1.1.0` 起**，包内 `vue-compat` 在模块加载时读取 `Vue.version` 并自动选择 Composition API 来源：Vue 2.7+ 走原生，Vue 2.6 走 polyfill；并由 `install()` 自动 `Vue.use(VueCompositionAPI)`（Vue 2.6 时）。
+**自 `@es-plus/vue2@1.1.0` 起**，包内 `vue-compat` 在模块加载时读取 `Vue.version` 并自动选择 Composition API 来源：Vue 2.7+ 走原生，Vue 2.6 走 `@vue/composition-api`。
 
-**自 1.1.1 起**，`@vue/composition-api` 被内联进 dist —— Vue 2.7 用户**不再需要**在 `package.json` 里声明这个依赖，bundler 也不会报 `UNRESOLVED_IMPORT`。
+`@vue/composition-api` 是 **peer dependency**，没有被内联进 dist。内联会在产物里再造一份独立的 polyfill 实例，与消费者 `node_modules` 里的那份注册表不共享；Vue 2.6 下 `Vue.use` 只能注册其中一份，另一份在 `setup()` 里会抛 `No vue dependency found`。npm 7+ / pnpm / yarn 会自动安装 peer；旧版 npm 需显式安装：
 
-**用户 `main.js` 不需要写 `Vue.use(VueCompositionAPI)`**——不论 Vue 2.6 还是 2.7。
+```bash
+npm install @vue/composition-api@^1.7.0
+```
+
+**用户 `main.js` 不需要写 `Vue.use(VueCompositionAPI)`**：Vue 2.6 下 polyfill 在 `@es-plus/vue2` 的**模块求值阶段**就已安装（早于包内任何顶层 `ref()`，也早于你的 `Vue.use(EsPlus)`）；Vue 2.7+ 不会用到它。
 :::
 
 ### Vue 2.7+（推荐）
@@ -55,7 +59,7 @@ import EsPlus from '@es-plus/vue2'
 import '@es-plus/vue2/dist/style.css'
 
 Vue.use(ElementUI)
-Vue.use(EsPlus)  // ← install() 内部检测到 Vue 2.6 会自动 use 内联的 polyfill
+Vue.use(EsPlus)  // ← 无需手动 Vue.use(VueCompositionAPI)：polyfill 在 import 时已自动安装
 ```
 
 ::: warning 从 1.1.0 之前升级
