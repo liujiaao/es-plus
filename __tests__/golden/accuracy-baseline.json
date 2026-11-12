@@ -74,12 +74,25 @@
     "    （187/203；零编辑 176 + 收敛 11）、coreRate 51.23%、片段 scoped 95.65%（69 例）。",
     "    byDimension 按 completeness（all，203 heldout）逐维填入 —— 这是棘轮比较用的那一列；",
     "    与 gated（nl-stated）是两列不同的分母，勿混用。deepseek 读数按既有约定只作回归地板/探针，",
-    "    不改变对外徽章口径；换 Claude 中继跑出的数字若高于/低于某维，先看是否真退步再动本文件。"
+    "    不改变对外徽章口径；换 Claude 中继跑出的数字若高于/低于某维，先看是否真退步再动本文件。",
+    "",
+    "  · 2026-11-12（同批：导出/导入边界 + en 结构回退，离线复算同一份 dump）：",
+    "    ① 语料：13 条用例的 NL 明确授予了「导出/导入」，gold 的 `actions` 却漏写 —— 与教学面",
+    "       （prompt「actions 是能力清单，按钮面不取代它」）自相矛盾，模型写对反而判负。已按",
+    "       逐例核对补进 actions（03/137/138/141/143/146/189/190/193/194/20/23/24），并把教学面",
+    "       三条示例（zh few-shot / en vxe 例 / MCP examples）同批改成含 export。另补 3 条用例的",
+    "       NL（04/05/13 的 gold 动作原本无措辞依据），`check:gold-self` 新增动作面证据判据守住。",
+    "       ⟹ definition95 92.12% → 92.61%（188/203），actions 94.58% → 95.07%。",
+    "    ② 尺子：新增 `+en-structural-fallback-v1`（en 腿字段数与 formtype 序列逐位相等时按位次",
+    "       归一 prop 命名）。同一份 dump 复算：en propSet 42.6% → 87.1%（heldout）、en definition95",
+    "       74.72%。zh 读数不受影响。",
+    "    ③ en 门禁：新增 `en` 段，只做**不下降**棘轮（无绝对值线，理由见 ratchet.mjs 头注）；",
+    "       基线缺 `en` 段只 warn 不红（旧基线兼容）。"
   ],
   "version": 3,
   "updatedAt": "2026-11-12",
-  "source": "manual: corpus-derived applicableCounts + derived minApplicable; CRUD rates + rulerVersion from 2026-11-12 full eval (deepseek-flash, commit 06139db, corpusHash 106d02ea); fragment floor re-derived from the same 69-case full run",
-  "rulerVersion": "label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1+reaction-encoding-parity-v1+fragment-bool-literal-v1+dialog-formitems-derive-v1+editor-props-view-v1+en-text-agnostic-v1+label-typographic-v1+reaction-value-empty-equiv-v1",
+  "source": "manual: corpus-derived applicableCounts + derived minApplicable; CRUD rates + rulerVersion from 2026-11-12 full eval (deepseek-flash, commit 06139db, corpusHash 106d02ea), rescored offline after the same-day corpus fix (export/import actions) and en structural fallback; en section = no-decrease ratchet only (no absolute target); fragment floor re-derived from the same 69-case full run",
+  "rulerVersion": "label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1+reaction-encoding-parity-v1+fragment-bool-literal-v1+dialog-formitems-derive-v1+editor-props-view-v1+en-text-agnostic-v1+label-typographic-v1+reaction-value-empty-equiv-v1+en-structural-fallback-v1",
   "heldoutCases": 203,
   "applicableCounts": {
     "propSet": 227,
@@ -141,7 +154,7 @@
     "defaultSort": 1,
     "extPoints": 23
   },
-  "definition95": 0.9212,
+  "definition95": 0.9261,
   "coreRate": 0.5123,
   "fragmentScopedMin": 0.9565,
   "fragmentScopedSource": "2026-11-12 full eval (deepseek-flash, commit 06139db, corpusHash 106d02ea; 69/69 measured, 0 not-measured): core 97.1% · scoped 95.65% (floor = observed value, per the 2026-10-19 precedent) · compiles 100% (67/67 products). Supersedes the 2026-10-19 probe value 0.7778 (63 cases, old prompts). Only lowered by human PR with a written reason.",
@@ -149,7 +162,7 @@
     "propSet": 0.9803,
     "formtype": 0.8374,
     "membership": 0.665,
-    "actions": 0.9458,
+    "actions": 0.9507,
     "tableBtns": 0.9231,
     "dialogs": 0.8667,
     "operationColumn": 0.8889,
@@ -174,5 +187,10 @@
     "vxeConfig": 0.3333,
     "defaultSort": 1,
     "extPoints": 1
+  },
+  "en": {
+    "_comment": "L1 ③：en 腿只做**不下降**棘轮，无绝对值线（en 的字段命名有自由度，绝对值会把「命名彩票」当能力缺口）。分母 = en 的 heldout 行（178），口径与本文件 definition95 相同（scoped zero-edit ∨ ≤K 收敛）。读数来自 2026-11-12 同一份 dump 的离线复算（含 +en-structural-fallback-v1）。",
+    "definition95": 0.7472,
+    "propSet": 0.8708
   }
 }

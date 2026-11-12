@@ -1167,6 +1167,7 @@ async function main() {
     convHeldout,
     convStats,
     def95,
+    enStats,
     compileStats,
     compileRate,
     byCapability,
@@ -1714,6 +1715,16 @@ async function main() {
   if (byLanguage.en !== null) {
     console.log(`  by language (heldout exactIntentCore): zh ${(byLanguage.zh * 100).toFixed(1)}% (gated) / en ${(byLanguage.en * 100).toFixed(1)}% (observed)`)
   }
+  // L1 ③：en 腿的「不下降」读数（无绝对值线）。与基线 `en` 段同口径（heldout + 95% 定义），
+  // 退步会在上面 regression guards 里红。
+  if (enStats.definition95.rate !== null) {
+    console.log(
+      `  en leg (observed, no-decrease ratchet only): definition95 ${legPct(enStats.definition95.rate)}` +
+        ` (${enStats.definition95.pass}/${enStats.definition95.total})` +
+        ` · propSet ${legPct(enStats.propSet.rate)}` +
+        ` (${enStats.propSet.pass}/${enStats.propSet.applicable})`
+    )
+  }
 
   // 行级重放只在这条腿**真有**没测到的行时才打印 —— 正常批次不添噪声（null ⟹ 无需重放）。
   for (const [leg, label] of [
@@ -1847,9 +1858,18 @@ async function main() {
     checkCorpusSize({ heldoutCases: heldout.length }),
     checkConvergenceSample(convStats.total),
     // 跨尺子版本拒绝比较（Ruler v3）：基线的 rate 与本次的 rate 必须是同一把尺子量的。
-    compareToBaseline({ definition95: def95.rate, coreRate, byDimension: dimRates }, baseline, {
-      rulerVersion: RULER_VERSION,
-    }),
+    compareToBaseline(
+      {
+        definition95: def95.rate,
+        coreRate,
+        byDimension: dimRates,
+        // L1 ③：en 腿只做**不下降**棘轮（无绝对值线）。en 的命名自由度不是能力缺口，
+        // 但「上一次能到的数这次到不了」是实打实的退步。
+        en: { definition95: enStats.definition95.rate, propSet: enStats.propSet.rate },
+      },
+      baseline,
+      { rulerVersion: RULER_VERSION }
+    ),
     guardAntiDelete(corpusCounts, baseline)
   )
   for (const w of guards.warnings) console.log(`  [guard] note: ${w}`)

@@ -96,9 +96,13 @@ import { createHash } from 'node:crypto'
  * 串是**复合**的：`<字段身份>` + 各段的 `+…` 后缀。
  * 每个「同一份 pred 得不同分」的改动单独占一段，因为少写一段就等于让两把不同的尺子
  * 共用一个版本号，跨版本比较的护栏（`compareToBaseline`）随之形同虚设。
+ *
+ * `+en-structural-fallback-v1`（L1 ①，2026-11-12）：en 腿在两字段数相同且 formtype 序列
+ *   逐位相等时，按位次把 pred 的 prop 命名改写成 gold 的（`align.mjs structuralAlign`）。
+ *   只影响 en 行，但 en 的 `propSet`/`definition95` 会变 ⟹ 仍必须单独占一段。
  */
 export const RULER_VERSION =
-  'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1+reaction-encoding-parity-v1+fragment-bool-literal-v1+dialog-formitems-derive-v1+editor-props-view-v1+en-text-agnostic-v1+label-typographic-v1+reaction-value-empty-equiv-v1'
+  'label-identity-v1+deco-projection-v1+unmeasured-expand-title-v1+cond-dsl-canonical-v1+edit-config-defaults-v1+reaction-options-v1+edit-render-options-v1+columns-derived-v1+tree-config-defaults-v1+dialog-key-align-v1+condition-value-identity-v1+reaction-encoding-parity-v1+fragment-bool-literal-v1+dialog-formitems-derive-v1+editor-props-view-v1+en-text-agnostic-v1+label-typographic-v1+reaction-value-empty-equiv-v1+en-structural-fallback-v1'
 
 /** 递归按键排序的稳定序列化（用于 hash 与逐行 diff）。数组顺序保留。 */
 export function stableStringify(value) {

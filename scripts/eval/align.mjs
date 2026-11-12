@@ -157,7 +157,15 @@ export function normalizePredForCompare(gold, pred, opts = {}) {
   if (align.mode === 'prop') return { pred, align } // prop 身份：命名空间本就相同形态，无需改写
   const reverse = align.reverse
   if (!reverse.size) return { pred, align }
+  return { pred: applyReverseMap(pred, reverse), align }
+}
 
+/**
+ * 把 pred 的字段命名空间按 `reverse`（predProp → goldProp）改写。白名单见
+ * `normalizePredForCompare` 头注。抽出来是为了让「en 结构回退」复用**同一份**改写，
+ * 而不是再写一套（两套改写 = 两条口径，迟早一边漏改）。
+ */
+function applyReverseMap(pred, reverse) {
   const out = JSON.parse(JSON.stringify(pred ?? {}))
 
   for (const f of out.fields ?? []) {
@@ -192,8 +200,40 @@ export function normalizePredForCompare(gold, pred, opts = {}) {
   if (out.tableOptions?.defaultSort?.prop && reverse.has(out.tableOptions.defaultSort.prop)) {
     out.tableOptions.defaultSort.prop = reverse.get(out.tableOptions.defaultSort.prop)
   }
+  return out
+}
 
-  return { pred: out, align }
+/**
+ * en 腿的结构回退（L1 ①；尺子段 `en-structural-fallback-v1`）。
+ *
+ * ## 为什么
+ *
+ * en 腿的字段身份只能是 `prop`（gold 标签是中文、pred 是英文）。但于是 `createdAt`
+ * vs `createTime` 这种**纯命名差异**会整维判负：一次实测 `propSet` 88/198（44%），
+ * 而同一批行的 formtype/membership 命中率远高于此 —— 差距主要是「命名彩票」，不是
+ * 英文理解能力（记忆：`en-leg-label-bias`）。
+ *
+ * ## 判据（保守，两个条件同时成立才启用）
+ *
+ *   ① 两侧字段数相同；
+ *   ② 按位比较 `formtype` 序列**逐位相等**（顺序即 NL 的描述顺序）。
+ *
+ * 满足时按**位次**把 pred 的 prop 改写成 gold 的 prop，再走既有 scorer。位次假设错了
+ * 的代价是「本该红的行继续红」（membership/dataOptions 等按字段值比对仍会失配），
+ * 不会白送分；反过来不启用时维持旧口径。只对 en 腿开启（zh 走 label 身份，不需要）。
+ *
+ * @returns {{pred: object, applied: boolean, reason?: string}}
+ */
+export function structuralAlign(gold, pred) {
+  const g = Array.isArray(gold?.fields) ? gold.fields : []
+  const p = Array.isArray(pred?.fields) ? pred.fields : []
+  if (!g.length || g.length !== p.length) return { pred, applied: false, reason: '字段数不同' }
+  for (let i = 0; i < g.length; i++) {
+    if (!g[i]?.prop || !p[i]?.prop) return { pred, applied: false, reason: '缺 prop' }
+    if (g[i].formtype !== p[i].formtype) return { pred, applied: false, reason: 'formtype 序列不同' }
+  }
+  const reverse = new Map(p.map((pf, i) => [pf.prop, g[i].prop]))
+  return { pred: applyReverseMap(pred, reverse), applied: true }
 }
 
 /**
@@ -243,12 +283,13 @@ function renameReaction(r, reverse) {
  * 一边走 prop，让「复算与产物对不上」重新长出来。）
  *
  *   zh ⟹ label（门禁语言；NL 写的是中文标签，「命名彩票」不算理解失败）
- *   en ⟹ prop + textAgnostic（gold 标签是中文、pred 是英文 ⟹ 字面不可比；字段身份退回
- *        prop，可译文案按结构身份归一到 gold 的写法，见 scorers.mjs
- *        `projectTranslatableText`。en 只观测不门禁）
+ *   en ⟹ prop + textAgnostic + structuralFallback（gold 标签是中文、pred 是英文 ⟹ 字面
+ *        不可比；字段身份退回 prop，可译文案按结构身份归一到 gold 的写法，见 scorers.mjs
+ *        `projectTranslatableText`；当字段数与 formtype 序列逐位相等时再按位次归一 prop
+ *        命名（L1 ①，见 `structuralAlign`）。en 只做**不下降**棘轮，不设绝对值门禁）
  */
 export const scoreOptsForLang = (lang) =>
-  lang === 'en' ? { identity: 'prop', textAgnostic: true } : {}
+  lang === 'en' ? { identity: 'prop', textAgnostic: true, structuralFallback: true } : {}
 
 /**
  * `propNameMatch`（观测量，不进门禁）：gold 字段里，被对齐到的 pred 字段**prop 写法也相同**的占比。

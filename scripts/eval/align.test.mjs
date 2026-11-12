@@ -6,7 +6,7 @@
  * 放宽尺子最怕两件事 —— ①放宽到「什么都能过」（假绿）；②该放的地方没放（白改）。
  * 所以每条断言都成对：改名必须过、改错必须红。
  */
-import { alignFields, normalizePredForCompare, normalizeLabel, propNameMatch } from './align.mjs'
+import { alignFields, normalizePredForCompare, normalizeLabel, propNameMatch, scoreOptsForLang, structuralAlign } from './align.mjs'
 import { scoreAll, describeDimMiss } from './scorers.mjs'
 
 let failures = 0
@@ -239,7 +239,36 @@ console.log('align: prop 身份（en 腿）')
   renamed.fields = GOLD.fields.map((f) => ({ ...f, prop: 'x' + f.prop }))
   const s2 = scoreAll(GOLD, renamed, undefined, { identity: 'prop' })
   check(s2.byCapability.propSet.pass === false, 'prop 身份下改名应判负（en 腿口径不变）')
-  check(propNameMatch(GOLD, p) === 1, 'propNameMatch: 全同应为 1')
+}
+
+// 6b) en 腿结构回退（L1 ①）：位次 + formtype 序列一致时按位次归一命名
+console.log('align: en 结构回退')
+{
+  const renamed = clone(GOLD)
+  renamed.fields = GOLD.fields.map((f) => ({ ...f, prop: 'x' + f.prop }))
+  // 只改顶层 prop 的旧形态：字段数/控件序列一致 ⟹ 回退后 propSet 应过
+  const s = scoreAll(GOLD, renamed, undefined, scoreOptsForLang('en'))
+  check(s.structuralFallback === true, '字段数 + formtype 序列一致时必须启用结构回退')
+  check(s.byCapability.propSet.pass === true, '结构回退启用后 propSet 应按位次判过')
+
+  // 条件不满足时**不启用**：控制类型序列不同（把第一列换成 Select）
+  const wrongTypes = clone(GOLD)
+  wrongTypes.fields = GOLD.fields.map((f, i) => ({ ...f, prop: 'x' + f.prop, ...(i === 0 ? { formtype: 'Select' } : {}) }))
+  const s2 = scoreAll(GOLD, wrongTypes, undefined, scoreOptsForLang('en'))
+  check(s2.structuralFallback === false, 'formtype 序列不同时不得启用结构回退')
+  check(s2.byCapability.propSet.pass === false, '未启用回退时改名仍应判负（保守方向）')
+
+  // 字段数不同同上（多一个字段）
+  const extra = clone(GOLD)
+  extra.fields = [...GOLD.fields, { prop: 'extra', label: '多余', formtype: 'Input' }].map((f) => ({ ...f, prop: 'x' + f.prop }))
+  const s3 = scoreAll(GOLD, extra, undefined, scoreOptsForLang('en'))
+  check(s3.structuralFallback === false, '字段数不同时不得启用结构回退')
+
+  // zh 口径不受影响：同样的改名在 label 身份下本来就靠 label 对齐
+  check(scoreAll(GOLD, renamed).structuralFallback === false, '未开启 structuralFallback 时不得启用（zh 腿）')
+  // 纯函数层：条件满足时返回 applied 且不再有旧 prop
+  const raw = structuralAlign(GOLD, renamed)
+  check(raw.applied === true && raw.pred.fields.every((f, i) => f.prop === GOLD.fields[i].prop), 'structuralAlign 必须按位次写回 gold 的 prop')
 }
 
 if (failures) {

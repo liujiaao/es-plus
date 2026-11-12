@@ -208,6 +208,34 @@ export function compareToBaseline(current, baseline, { tol = RATCHET_TOL, rulerV
     }
     if (cur < base - tol) failures.push(`维度 ${dim} 退步：本次 ${pct(cur)} < 基线 ${pct(base)}`)
   }
+
+  // L1 ③：en 腿的**不下降**棘轮。刻意不设绝对值线 —— en 的字段命名有自由度
+  // （`createdAt` vs `createTime`），把绝对值当门禁等于用一把「命名彩票」的尺子压模型；
+  // 但「上次能到的数这次到不了」是实打实的退步，必须红。`propSet` 单列是因为它正是
+  // en 最容易退、也最能说明「英文理解 vs 命名」的那一维（记忆：`en-leg-label-bias`）。
+  const enBase = baseline.en && typeof baseline.en === 'object' ? baseline.en : null
+  if (!enBase) {
+    warnings.push(
+      '基线未填 en —— en 腿的不下降棘轮不生效（按 L1 ③ 应以一次全量跑批的 en 读数填入，不设绝对值线）'
+    )
+  } else {
+    for (const [key, label] of [
+      ['definition95', 'en definition95'],
+      ['propSet', 'en propSet'],
+    ]) {
+      const base = enBase[key]
+      if (typeof base !== 'number') {
+        warnings.push(`基线未填 ${label}（null）—— 该项不参与 en 不下降棘轮`)
+        continue
+      }
+      const cur = current.en?.[key]
+      if (typeof cur !== 'number' || Number.isNaN(cur)) {
+        failures.push(`${label} 在基线里是 ${pct(base)}，本次却没有数字（en 腿未测到）`)
+        continue
+      }
+      if (cur < base - tol) failures.push(`${label} 退步：本次 ${pct(cur)} < 基线 ${pct(base)}（容差 ${tol}）`)
+    }
+  }
   return { ok: failures.length === 0, failures, warnings }
 }
 

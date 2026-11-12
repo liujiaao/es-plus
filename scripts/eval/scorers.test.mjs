@@ -1347,6 +1347,23 @@ console.log('meta-eval: AN-01 真空维度 / dataOptions / core 同源')
     expectHit('editConfig', g, clone(base), 'gold 省略 trigger（默认 click）')
   }
 
+  // vxeConfig：判据是「只比 gold 声明了的键 + 两侧先过 projectVxeOption（true 的展开形态）」，
+  // 打印器必须同源。本条补上它 —— 此前该维度判负时 `describeDimMiss` 返回 null，日志里只剩
+  // 一个维度名（与 columns / treeConfig 修前同病）。
+  {
+    const g = { ...clone(base), tableOptions: { ...base.tableOptions, toolbarConfig: true } }
+    expectHit('vxeConfig', g, clone(g), 'gold-vs-gold')
+    // true 与运行时展开形态等价：这是「模型选了另一种合法写法」，必须判正且投影相同。
+    const expanded = { ...clone(base), tableOptions: { ...base.tableOptions, toolbarConfig: { export: true, refresh: true, custom: true } } }
+    expectHit('vxeConfig', g, expanded, 'toolbarConfig:true vs 展开形态（等价写法）')
+    // 显式写了不同的值 = 行为差异，判负且两侧视图必须不同。
+    const wrong = { ...clone(base), tableOptions: { ...base.tableOptions, toolbarConfig: { export: false, refresh: true, custom: true } } }
+    expectMiss('vxeConfig', g, wrong, 'toolbarConfig.export 被关掉')
+    // gold 没声明的 vxe 键，pred 多写不罚（与 reactions / isHidden 同规）。
+    const extra = { ...clone(g), tableOptions: { ...g.tableOptions, printConfig: { title: '报表' } } }
+    expectHit('vxeConfig', g, extra, 'pred 多写 gold 未声明的 printConfig（不罚）')
+  }
+
   // columns：62 条 miss 在日志里**完全无声**（没有投影，也没有 prop 级差异输出）。
   {
     const g = {

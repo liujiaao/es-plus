@@ -271,6 +271,22 @@ const out = {
         withinK: m.convStats.withinK,
       }
     : null,
+  // L1 ③：en 腿读数（只做**不下降**棘轮，无绝对值线）。与产物/`eval-llm.mjs`
+  // 同一份 `computeCrudMetrics`，离线复算出来的 en 数字才能与当次跑批对上。
+  en: {
+    definition95: m.enStats.definition95.rate === null ? null : {
+      rate: r4(m.enStats.definition95.rate),
+      pass: m.enStats.definition95.pass,
+      total: m.enStats.definition95.total,
+      zeroEdit: m.enStats.definition95.zeroEdit,
+      convergenceOnly: m.enStats.definition95.convergenceOnly,
+    },
+    propSet: m.enStats.propSet.rate === null ? null : {
+      rate: r4(m.enStats.propSet.rate),
+      pass: m.enStats.propSet.pass,
+      total: m.enStats.propSet.applicable,
+    },
+  },
   // D6/R2：两个逐维口径带上分母说明（诊断 vs 判据）。
   completeness: { denominatorKind: 'all', ...m.byCapability },
   gated: { denominatorKind: 'nl-stated', ...m.byCapabilityOnPinned },

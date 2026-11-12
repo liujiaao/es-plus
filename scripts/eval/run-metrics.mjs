@@ -88,6 +88,22 @@ export function computeCrudMetrics(rows, { convergeK = CONVERGE_K } = {}) {
   const def95Rows = heldout.length ? heldout : zhRows
   const def95 = summarize95(def95Rows, convergeK)
 
+  // en 腿（L1 ③）：同样的 95% 定义与 propSet，**只做不下降棘轮**（`ratchet.mjs`），
+  // 不设绝对值线 —— en 的字段命名有自由度，绝对值会把「命名彩票」当能力缺口去压模型。
+  // 分母 = en 的 heldout 行（与 zh 同口径：few-shot 派生行不参与泛化结论）。
+  const enHeldout = enRows.filter((r) => !r.fewshotDerived)
+  const enDef95 = summarize95(enHeldout, convergeK)
+  const enPropSetApplicable = enHeldout.filter((r) => r.byCapability?.propSet?.applicable).length
+  const enPropSetPass = enHeldout.filter((r) => r.byCapability?.propSet?.pass).length
+  const enStats = {
+    definition95: enDef95,
+    propSet: {
+      applicable: enPropSetApplicable,
+      pass: enPropSetPass,
+      rate: enPropSetApplicable ? Number((enPropSetPass / enPropSetApplicable).toFixed(4)) : null,
+    },
+  }
+
   // Tier A 编译门（AN-13）：分母 = **真有产物的行**（`error` 为空）。
   //
   // 分母**含 en 腿**（A5）：编译门问的是「发射器能不能把合法配置变成能编译的产物」，
@@ -176,6 +192,7 @@ export function computeCrudMetrics(rows, { convergeK = CONVERGE_K } = {}) {
     convHeldout,
     convStats,
     def95,
+    enStats,
     compileStats,
     compileRate: compileStats.rate,
     byCapability,

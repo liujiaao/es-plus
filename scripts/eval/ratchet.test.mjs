@@ -132,6 +132,45 @@ function checkFails(result, substr, label) {
   check(boot.ok, '棘轮：无基线应跳过而非误红')
   check(boot.warnings.length > 0, '棘轮：无基线应给出 warn（不许静默）')
 
+  // ─── L1 ③：en 腿的不下降棘轮（无绝对值线）───
+  const enBase = { ...base, en: { definition95: 0.4, propSet: 0.6 } }
+  const enSame = compareToBaseline(
+    { definition95: 0.95, coreRate: 0.5, byDimension: { membership: 0.9, reactions: 1 }, en: { definition95: 0.4, propSet: 0.6 } },
+    enBase
+  )
+  check(enSame.ok, 'en 棘轮：与基线持平应判过')
+  const enUp = compareToBaseline(
+    { definition95: 0.95, coreRate: 0.5, byDimension: { membership: 0.9, reactions: 1 }, en: { definition95: 0.9, propSet: 0.95 } },
+    enBase
+  )
+  check(enUp.ok, 'en 棘轮：上行应判过（棘轮只拦下行）')
+  checkFails(
+    compareToBaseline(
+      { definition95: 0.95, coreRate: 0.5, byDimension: { membership: 0.9, reactions: 1 }, en: { definition95: 0.39, propSet: 0.6 } },
+      enBase
+    ),
+    'en definition95 退步',
+    'en 棘轮：definition95 下行必须红'
+  )
+  checkFails(
+    compareToBaseline(
+      { definition95: 0.95, coreRate: 0.5, byDimension: { membership: 0.9, reactions: 1 }, en: { definition95: 0.4, propSet: 0.59 } },
+      enBase
+    ),
+    'en propSet 退步',
+    'en 棘轮：propSet 下行必须红'
+  )
+  // en 腿整段没测到（缺数字）不得静默通过 —— 那是「没比」不是「没退」
+  checkFails(
+    compareToBaseline({ definition95: 0.95, coreRate: 0.5, byDimension: { membership: 0.9, reactions: 1 } }, enBase),
+    'en definition95 在基线里是 40.0%，本次却没有数字',
+    'en 棘轮：en 未测到必须红'
+  )
+  // 基线没有 en 段：只 warn，不红（老基线兼容；首次填数需人工 PR）
+  const noEn = compareToBaseline({ definition95: 0.95, coreRate: 0.5, byDimension: { membership: 0.9, reactions: 1 } }, base)
+  check(noEn.ok, 'en 棘轮：基线无 en 段不得判红（兼容旧基线）')
+  check(noEn.warnings.some((w) => w.includes('基线未填 en')), `en 棘轮：基线无 en 段必须提示，实际 = ${JSON.stringify(noEn.warnings)}`)
+
   // 「基线存在但比率为 null / 逐维为空」也必须可见：这类基线下 cmp 全部直接 return、
   // 逐维循环一次不进 —— 结论是绿，但一个数都没比过。此前没有任何提示（"all OK" 是错觉）。
   const inert = compareToBaseline(

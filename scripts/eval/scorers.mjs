@@ -23,7 +23,7 @@
  * 见 `scripts/eval/align.mjs`。`prop` 降为观测量（`propNameMatch`）。en 腿用
  * `scoreAll(..., { identity: 'prop' })` —— 标签是「中文 gold vs 英文 pred」，不可比。
  */
-import { normalizeLabel, normalizePredForCompare, propNameMatch } from './align.mjs'
+import { normalizeLabel, normalizePredForCompare, propNameMatch, structuralAlign } from './align.mjs'
 
 /** 稳定序列化（键排序）——用于结构深等值比较。undefined 键在两侧都会被 JSON 丢弃，一致。 */
 function canon(v) {
@@ -1239,6 +1239,20 @@ export function describeDimMiss(dim, gold, pred, opts = {}) {
       got: canonicalView(pred.tableOptions?.defaultSort),
     }
   }
+  if (dim === 'vxeConfig') {
+    // 与 vxeConfigEqual 同源：只比 gold 声明了的键，且两侧都先过 projectVxeOption
+    // （`toolbarConfig:true` 与 `{export,refresh,custom}` 等价）。判正的行两边视图必同。
+    const g = gold.tableOptions ?? {}
+    const p = pred.tableOptions ?? {}
+    const want = {}
+    const got = {}
+    for (const k of VXE_JSON_KEYS) {
+      if (g[k] === undefined) continue
+      want[k] = projectVxeOption(k, g[k])
+      got[k] = p[k] === undefined ? '（无）' : projectVxeOption(k, p[k])
+    }
+    return { want: canonicalView(want), got: canonicalView(got) }
+  }
   return null
 }
 
@@ -1739,9 +1753,13 @@ export function scoreAll(gold, pred, mask, opts = {}) {
   // 单一改造点 —— 所有维度（含 fieldMap/sharedFields/深等值）都经这一份 pred。
   // `opts.identity === 'prop'` 供 en 腿（标签不可比）与历史复算使用。
   const { pred: alignedPred, align } = normalizePredForCompare(gold, pred, opts)
+  // en 腿的第一道结构归一（L1 ①）：字段数与 formtype 序列逐位相等时，按位次把 prop
+  // 命名改写成 gold 的（见 align.mjs `structuralAlign`）。必须放在 textAgnostic 之前 ——
+  // 文案投影是按 prop 找 gold 字段的，命名不同就一格都投不上。
+  const structural = opts.structuralFallback ? structuralAlign(gold, alignedPred) : { pred: alignedPred, applied: false }
   // en 腿的第二道身份归一：可译文案按结构身份改写成 gold 的写法（见头注）。
   // 与 normalizePredForCompare 同一处收口 —— 所有维度都经这一份 pred。
-  const scoredPred = opts.textAgnostic ? projectTranslatableText(gold, alignedPred) : alignedPred
+  const scoredPred = opts.textAgnostic ? projectTranslatableText(gold, structural.pred) : structural.pred
 
   const byCapability = {}
   for (const s of CAPABILITY_SCORERS) {
@@ -1806,6 +1824,9 @@ export function scoreAll(gold, pred, mask, opts = {}) {
     // 与「懂不懂 NL」解耦 —— label 身份放宽后，命名能力靠这个数才看得见。
     propNameMatch: propNameMatch(gold, pred, opts),
     alignMode: align.mode,
+    // en 腿结构回退是否启用（L1 ①）：观测用，回答「这一行的 propSet 是命名对上的，
+    // 还是位次对上的」。不参与任何判定（判定已经在 scoredPred 里体现）。
+    structuralFallback: structural.applied,
     alignUnmatchedGold: align.unmatchedGold,
     alignUnmatchedPred: align.unmatchedPred,
     alignAmbiguous: align.ambiguous,
