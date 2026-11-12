@@ -847,6 +847,40 @@ for (const page of EUI_NESTED) {
   checkNested(`${page.file} 的「${page.section}」`, page.typeName, 'core', cells)
 }
 
+// ── TableColumn 的筛选键：三端都必须成表 ───────────────────────
+// 上面 checkNested 的反向检查默认关闭（FormItemOption.components 这类「有类型但没人
+// 消费」的键刻意不写）。但 W3-2 的 5 个筛选键是**真实可配项**：源码表里有、文档表里
+// 没有，读者就只能靠猜。2026-11 审计发现 PC / EUI 两站整体漏掉这 5 行。
+const FILTER_COLUMN_KEYS = ['filters', 'autoFilters', 'filterMultiple', 'filterMode', 'filterMethod']
+
+function requireFilterKeys(where, keys) {
+  if (!keys || !keys.length) {
+    fail(`${where} 没有解析到 TableColumn 的键 —— 无法核对筛选键是否成表`)
+    return
+  }
+  const set = new Set(normalizeDocKeys(keys))
+  const missing = FILTER_COLUMN_KEYS.filter((k) => !set.has(k))
+  if (missing.length) {
+    fail(`${where} 的 TableColumn 表缺少筛选键：${missing.join(', ')}（源码类型里有，读者查不到）`)
+  }
+}
+
+{
+  const pcTable = read('es-pc/src/views/EsTable.vue')
+  if (pcTable) requireFilterKeys('es-pc/src/views/EsTable.vue 的 tableColumns', docVarValues(pcTable, 'tableColumns', 'prop'))
+}
+if (vue3Doc) {
+  requireFilterKeys(VUE3_DOC_FILE, dataTypeValues(vue3Doc, 'TableColumn'))
+}
+{
+  const euiTable = read('es-eui/src/views/docs/EsTableDocs.vue')
+  if (euiTable) {
+    const block = headings(euiTable).find((b) => b.title === 'Column 配置')
+    if (block) requireFilterKeys('es-eui/src/views/docs/EsTableDocs.vue 的「Column 配置」', firstColumnCells(block.body))
+    else fail('es-eui/src/views/docs/EsTableDocs.vue 缺少「Column 配置」小节')
+  }
+}
+
 // ─────────────────── CRUD 配置类型（schema / dialogs / 按钮）───────────────────
 //
 // CRUD 的嵌套配置（schema 的每一项、dialogs 的每一项、按钮项）此前只有 Vue 3 站成表，

@@ -184,7 +184,7 @@ function checkRendererCount() {
 }
 
 // ── 4. 站点文档里的控件数量 ──────────────────────────────
-function validFormTypes() {
+function validFormTypeList() {
   const src = read('packages/core/src/constants.ts')
   if (!src) return null
   const m = src.match(/VALID_FORM_TYPES\s*=\s*\[([\s\S]*?)\]\s*as const/)
@@ -192,12 +192,18 @@ function validFormTypes() {
     fail('未能在 core/constants.ts 定位 VALID_FORM_TYPES')
     return null
   }
-  return (m[1].match(/'[^']+'/g) || []).length
+  return (m[1].match(/'[^']+'/g) || []).map((s) => s.slice(1, -1))
+}
+
+function validFormTypes() {
+  const list = validFormTypeList()
+  return list ? list.length : null
 }
 
 function checkFormTypeClaims() {
-  const n = validFormTypes()
-  if (n === null) return
+  const list = validFormTypeList()
+  if (list === null) return
+  const n = list.length
   const dir = join(ROOT, 'es-plus-docs/src/docs')
   if (!existsSync(dir)) return
   let checked = 0
@@ -216,6 +222,70 @@ function checkFormTypeClaims() {
       }
     }
   }
+
+  // 首页统计卡（locales 的 stat3）——此前完全在守卫之外，长期停在 14
+  for (const [file, label] of [
+    ['es-plus-docs/src/locales/zh-CN.json', '表单控件'],
+    ['es-plus-docs/src/locales/en-US.json', 'form controls'],
+  ]) {
+    const json = readJson(file)
+    const value = json?.home?.stat3Value
+    const actualLabel = json?.home?.stat3Label
+    if (value === undefined) {
+      fail(`${file} 缺少 home.stat3Value，无法核对「${label}」数量`)
+    } else {
+      checked++
+      if (String(value) !== String(n)) {
+        fail(`${file} 的 stat3Value 写 ${value}，实际 VALID_FORM_TYPES 有 ${n} 种`)
+      }
+      if (actualLabel !== label) {
+        fail(`${file} 的 stat3Label 是「${actualLabel}」，守卫按「${label}」核对 —— 改标签时同步这里`)
+      }
+    }
+  }
+
+  // 组件 API 参数表：`控件类型（N 种）：A / B / ...` 里的 N 与枚举都要对
+  const cmp = read('es-plus-docs/src/views/component-doc.data.ts')
+  if (cmp) {
+    const m = cmp.match(/控件类型（(\d+)\s*种）：([^'。]+)/)
+    if (m) {
+      checked++
+      const listed = m[2]
+        .split('/')
+        .map((s) => s.trim())
+        .filter(Boolean)
+      if (Number(m[1]) !== n) {
+        fail(`component-doc.data.ts 的 formtype 说明写 ${m[1]} 种，实际 VALID_FORM_TYPES 有 ${n} 种`)
+      }
+      if (listed.length !== n) {
+        fail(
+          `component-doc.data.ts 的 formtype 枚举只列了 ${listed.length} 项（应为 ${n} 项）：` +
+            `缺 ${list.filter((t) => !listed.includes(t)).join('、') || '（数量对但含未知项）'}`,
+        )
+      }
+      const unknown = listed.filter((t) => !list.includes(t))
+      if (unknown.length) {
+        fail(`component-doc.data.ts 的 formtype 枚举出现 VALID_FORM_TYPES 之外的项：${unknown.join('、')}`)
+      }
+    }
+  }
+
+  // 站点正文里散落的「N 种控件」（es-pc 首页曾写 14 种）
+  for (const file of [
+    'es-pc/src/views/Home.vue',
+    'es-eui/src/views/home/index.vue',
+    'es-eui/src/views/guide/introduction.vue',
+  ]) {
+    const src = read(file)
+    if (!src) continue
+    for (const m of src.matchAll(/(\d+)\s*\+?\s*种\s*控件/g)) {
+      checked++
+      if (Number(m[1]) !== n) {
+        fail(`${file} 写「${m[0]}」，实际 VALID_FORM_TYPES 有 ${n} 种`)
+      }
+    }
+  }
+
   if (!failed) console.log(`✅ 站点文档的控件数量声明与源码一致（${checked} 处，已跳过 changelog 历史条目）`)
 }
 
@@ -1032,6 +1102,84 @@ function checkVersionFootnotes() {
   if (!failed) console.log('✅ 文档版本脚注与各包 package.json 一致')
 }
 
+// ── 9. 面向读者的包名 ↔ 实际发布包名 ───────────────────────
+// 站点自己的 vite alias 把 `es-plus` 指到 packages/vue3，于是示例里写
+// `import { EsForm } from 'es-plus'` 在站内能跑通；但读者把同一行粘到自己项目里，
+// 拿到的是 npm 上另一个包（或直接装不上）。CLI 同理：bin 叫 es-plus，包名是
+// @es-plus/cli，`npx es-plus` 会去 registry 找同名包而不是本包。
+// 判据只认**面向读者的位置**（品牌示例源、站点文档/md、API desc、三站正文、
+// 包 README），站点内部实现文件的 alias import 不在扫描面内。
+const PUBLIC_NAME_ROOTS = [
+  'docs/brand/one-config',
+  'es-plus-docs/src/docs',
+  'es-plus-docs/public/md',
+  'es-pc/src',
+  'es-eui/src',
+]
+const PUBLIC_NAME_EXTS = /\.(vue|ts|tsx|js|md|json)$/
+
+function collectPublicNameFiles(rel, out) {
+  const abs = join(ROOT, rel)
+  if (!existsSync(abs)) return
+  for (const entry of readdirSync(abs, { withFileTypes: true })) {
+    const child = `${rel}/${entry.name}`
+    if (entry.isDirectory()) collectPublicNameFiles(child, out)
+    else if (PUBLIC_NAME_EXTS.test(entry.name)) out.push(child)
+  }
+}
+
+const PUBLIC_NAME_PATTERNS = [
+  {
+    re: /(?:from|import)\s*\(?\s*['"]es-plus['"]/,
+    why: '把 es-plus 当包名导入；渲染器实际包名是 @es-plus/vue3 / @es-plus/vue2 / @es-plus/adapter-antdv',
+  },
+  {
+    re: /\brequire\(\s*['"]es-plus['"]\s*\)/,
+    why: 'require("es-plus") 同属包名错误',
+  },
+  {
+    re: /\b(?:npm\s+(?:i|install)|yarn\s+add|pnpm\s+add)\s+(?:-D\s+|--save-dev\s+)?es-plus(?![-/\w])/,
+    why: '安装命令里的 es-plus 不是已发布包名',
+  },
+  {
+    re: /\bnpx\s+(?:-y\s+)?es-plus(?![-/\w])/,
+    why: 'CLI 包名是 @es-plus/cli（bin 名才是 es-plus），npx 要写包名',
+  },
+]
+
+function checkPublicPackageNames() {
+  const files = []
+  for (const root of PUBLIC_NAME_ROOTS) collectPublicNameFiles(root, files)
+  // API desc / 代码片段所在的 *.data.ts（只取 data 文件，避开站点自身 alias import）
+  const viewsDir = join(ROOT, 'es-plus-docs/src/views')
+  if (existsSync(viewsDir)) {
+    for (const name of readdirSync(viewsDir)) {
+      if (/\.data\.ts$/.test(name)) files.push(`es-plus-docs/src/views/${name}`)
+    }
+  }
+  for (const pkg of readdirSync(join(ROOT, 'packages'), { withFileTypes: true })) {
+    if (!pkg.isDirectory()) continue
+    const readme = `packages/${pkg.name}/README.md`
+    if (existsSync(join(ROOT, readme))) files.push(readme)
+  }
+
+  let checked = 0
+  for (const file of [...new Set(files)]) {
+    const src = read(file)
+    if (!src) continue
+    checked += 1
+    const lines = src.split('\n')
+    for (let i = 0; i < lines.length; i += 1) {
+      for (const { re, why } of PUBLIC_NAME_PATTERNS) {
+        if (re.test(lines[i])) {
+          fail(`${file}:${i + 1} ${why}：${lines[i].trim().slice(0, 120)}`)
+        }
+      }
+    }
+  }
+  if (!failed) console.log(`✅ ${checked} 个面向读者的文件未出现错误的 es-plus 包名/命令`)
+}
+
 checkOneConfigClaims()
 checkRendererCount()
 checkFormTypeClaims()
@@ -1044,6 +1192,7 @@ checkPhilosophyDocClaims()
 checkAccuracyClaims()
 checkCliDocFigure()
 checkVersionFootnotes()
+checkPublicPackageNames()
 checkAccuracyNumberIdentity()
 
 if (failed) {
