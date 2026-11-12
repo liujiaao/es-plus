@@ -23,6 +23,18 @@ export const FOOTER_LICENSE = `${FOOTER_REPO}/blob/master/LICENSE`
 export const FOOTER_NPM = 'https://www.npmjs.com/package/@es-plus/vue3'
 
 /**
+ * 各站对应的 npm 包。
+ *
+ * 页脚此前三站都指向 `@es-plus/vue3`：在 antdv / Element UI 站上，读者点「npm 包」
+ * 落到的是另一个渲染端 —— 页脚是版本与安装方式的入口，指错等于把读者送去装错包。
+ */
+export const FOOTER_NPM_BY_SITE = {
+  'es-plus-docs': 'https://www.npmjs.com/package/@es-plus/vue3',
+  'es-pc': 'https://www.npmjs.com/package/@es-plus/adapter-antdv',
+  'es-eui': 'https://www.npmjs.com/package/@es-plus/vue2',
+}
+
+/**
  * 站内链接键 → 各站实际路径。
  * 键是语义（quickstart / components / cases），值必须与各站 router 真实存在。
  */
@@ -100,7 +112,7 @@ export function buildFooterColumns({ siteKey, locale = 'zh', rendererZh = '', re
       links: [
         item('GitHub 仓库', 'GitHub', FOOTER_REPO, { external: true }),
         item('讨论区', 'Discussions', FOOTER_DISCUSSIONS, { external: true }),
-        item('npm 包', 'npm package', FOOTER_NPM, { external: true }),
+        item('npm 包', 'npm package', FOOTER_NPM_BY_SITE[siteKey] || FOOTER_NPM, { external: true }),
         item('AI 工具链', 'AI toolchain', route('ai')),
         item('报告问题', 'Report an issue', FOOTER_ISSUES, { external: true }),
       ],
