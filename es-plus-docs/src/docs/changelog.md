@@ -6,9 +6,9 @@
 
 | 包 | 版本 | 说明 |
 |---|---:|---|
-| `@es-plus/core` | 1.5.0 | 框架无关核心（类型 / 布局 / 校验） |
+| `@es-plus/core` | 1.5.1 | 框架无关核心（类型 / 布局 / 校验） |
 | `@es-plus/vue3` | 1.9.0 | Vue 3 + Element Plus 渲染端 |
-| `@es-plus/vue2` | 1.6.0 | Vue 2 + Element UI 渲染端 |
+| `@es-plus/vue2` | 1.6.1 | Vue 2 + Element UI 渲染端 |
 | `@es-plus/adapter-antdv` | 1.5.0 | Vue 3 + Ant Design Vue 适配器 |
 | `@es-plus/shared` | 2.0.0 | 配置 schema / 生成器 / 修复环 |
 | `@es-plus/cli` | 2.0.0 | 命令行工具 |
@@ -59,29 +59,6 @@
 
 ### Minor Changes
 
-- 新增一批框架无关的公开模块（内置文案、表单容器、详情模式、列筛选、CSV 导出）
-
-  - **内置文案 `locale`**：`resolveBuiltinText` / `resolveLocaleName` / `getDefaultToolbarBtns` /
-    `getDefaultRowBtns` / `ZH_CN_MESSAGES` / `EN_US_MESSAGES`，以及 `getLocaleVersion` /
-    `subscribeLocaleChange`。三端按钮文案自此同源，并支持运行期热切换。
-  - **表单分组容器**：`groupFormItems` / `UNGROUPED_FORM_GROUP_KEY` —— Tabs / Steps / Collapse
-    的分桶、未分组字段追加顺序与空组剔除全在本模块，三端只画容器。
-  - **嵌套对象字段**：`flattenFormItems` / `resolveNestedProp` / `isNestedFormHead` /
-    `isNestedFormChild` / `pruneEmptyNestedContainers` 与 `NESTED_FORM_HEAD` /
-    `NESTED_FORM_PARENT` 标记。字段用 `children` 表达一层嵌套，三端不再各写一份摊平逻辑。
-  - **表单详情模式**：`resolveFormDetailText` / `formatDetailDate`（`mode="detail"` 的展示解析单源）。
-  - **列筛选**：`normalizeFilterMode` / `matchesColumnFilter` / `columnFilterKey` /
-    `hasColumnFilters` / `withAutoFilters` / `buildColumnFilterMethod`。
-  - **表格内部键与 vxe-only 键**：`BASE_TABLE_INTERNAL_KEYS`、`VXE_ONLY_TABLE_KEYS` /
-    `findVxeOnlyKeysOutsideVxe` / `warnVxeOnlyKeysOutsideVxe`。
-  - **默认引擎 CSV 导出兜底**：`buildCsv` / `downloadCsv` / `ensureCsvExtension` /
-    `exportTableCsv` / `isCsvExportableColumn`。
-  - **新增公开类型**：`DialogModalOptions` / `DialogDrawerOptions` / `DialogCallOptions`、
-    `ColumnFilterMode` / `TableColumnFilterOption`、`FormGroupOption` / `FormGroupLayout` 等
-    （`PUBLIC_CONTRACT_TYPES` 39 → 42，三端由 `check:exports` 强制同名同数）。
-
-  <sub>影响：@es-plus/core</sub>
-
 - 三端渲染器新能力：抽屉弹窗、表单详情/分组/嵌套、列筛选、内置文案单源
 
   三个渲染器同批落地（同一份配置，三端行为对齐）：
@@ -103,7 +80,7 @@
     `DialogDrawerOptions` / `DialogCallOptions` / `ColumnFilterMode` / `TableColumnFilterOption`。
   - 依赖 `@es-plus/core` 的下限同步抬到 `^1.5.0`（上述能力由 core 新增模块提供）。
 
-  <sub>影响：@es-plus/vue3 / @es-plus/vue2 / @es-plus/adapter-antdv</sub>
+  <sub>影响：@es-plus/vue3 / @es-plus/adapter-antdv</sub>
 
 - AI 契约补齐：嵌套对象、表单分组、列筛选、vxe 配置型键与 surfaces→config 逆函数
 
@@ -158,24 +135,32 @@
 
 ### Patch Changes
 
-- `@es-plus/core` 的 ESM 产物在普通 Node 里 import 会 `ERR_MODULE_NOT_FOUND`
+- `exports` 补上 `"./package.json"`
 
-  `build/` 里 33 处相对说明符是 `from './shared'`（无扩展名）。打包器会自己补，
-  所以三个文档站从来遇不到；但 `node --input-type=module -e "import('@es-plus/core')"`
-  直接失败。1.3.0 与 1.4.0 都带着这个形态。
-
-  改动：
-
-  - `packages/core/src` 的 61 处相对说明符补全为 `./x.js`（TS 仍映射回 `.ts` 源文件，
-    CJS 那趟 `require('./x.js')` 同样成立）
-  - `tsconfig.build.json` 的 ESM 那趟改用 `module/moduleResolution: nodenext`，漏写
-    扩展名从此是**编译错误**，不会再靠人记
-  - `check:distribution` 新增两条判据：ESM 产物里不得有无扩展名的相对说明符；无 bin
-    的库包必须能被动态 import 一次
-
-  CJS 入口（`build/cjs`）与子路径导出行为不变。
+  只暴露了 9 个子路径，`require('@es-plus/core/package.json')` / `import … with { type: 'json' }`
+  会以 `ERR_PACKAGE_PATH_NOT_EXPORTED` 失败。读取包版本号与元数据是工具链（bundler 插件、
+  版本探针、发版脚本）的常规用法，加上这一条即可，其余子路径与产物文件不变。
 
   <sub>影响：@es-plus/core</sub>
+
+- 修复 Vue 2.6 下 `import '@es-plus/vue2'` 即抛错（1.6.0 回归）
+
+  1.6.0 把内置文案收敛到 core 的 `resolveBuiltinText` 后，`locale.ts` 在模块顶层执行
+  `ref(getLocaleVersion())`。ES 模块的依赖先于使用方求值，所以这行发生在用户
+  `Vue.use(EsPlus)` 之前；而 `@vue/composition-api` 的安装当时仍只在 `install()` 里，
+  Vue 2.6 宿主因此在 import 阶段就命中：
+
+  ```
+  [vue-composition-api] must call Vue.use(VueCompositionAPI) before using any function.
+  ```
+
+  现在 `vue-compat` 在导出 `ref` 等 API 之前，按 `Vue.version` 判断并在模块求值阶段安装
+  polyfill（Vue 2.7+ 走原生分支，不受影响），同时以 `__composition_api_installed__`
+  标记避免 `install()` 二次安装。新增 `vue26-import-order.spec.ts` 回归覆盖安装时机。
+
+  受影响范围：仅 Vue 2.6.x 宿主；Vue 2.7+ 行为不变。用户侧无需改代码。
+
+  <sub>影响：@es-plus/vue2</sub>
 
 - 统一到单份 zod 4，并修好随之暴露的「passthrough 形状闸门全空转」
 
