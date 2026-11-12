@@ -36,6 +36,30 @@ const minor = Number(minorStr)
 /** Vue 2.7+ 原生支持 Composition API，无需 polyfill */
 export const isVue27Plus: boolean = major === 2 && minor >= 7
 
+const compositionApiPlugin: unknown =
+  (CompositionApiPolyfill as unknown as { default?: unknown }).default ??
+  CompositionApiPolyfill
+
+/**
+ * Vue 2.6 必须在**模块求值阶段**安装 polyfill，不能等 `install()`。
+ *
+ * ES 模块的依赖先于使用方求值：用户 `main.js` 里的 `import EsPlus from '@es-plus/vue2'`
+ * 会先执行包体，再执行 `Vue.use(EsPlus)`。包内任何模块顶层的 Composition API 调用
+ * （如 `locale.ts` 的 `ref(getLocaleVersion())`）都发生在 `install()` 之前；1.6.0
+ * 因此在 Vue 2.6 上 import 即抛
+ * `[vue-composition-api] must call Vue.use(VueCompositionAPI) before using any function.`
+ * 这里在导出 `ref` 等 API 之前先安装一次，让模块求值顺序不再成为隐性前提。
+ */
+if (!isVue27Plus) {
+  const VueCtor = Vue as unknown as {
+    use?: (plugin: unknown) => void
+    __composition_api_installed__?: boolean
+  }
+  if (!VueCtor.__composition_api_installed__ && typeof VueCtor.use === 'function') {
+    VueCtor.use(compositionApiPlugin)
+  }
+}
+
 // 选择实际使用的 API 源：
 //   Vue 2.7+ → 原生（VueNative.ref 等）
 //   Vue 2.6  → polyfill（CompositionApiPolyfill.ref 等）
@@ -123,9 +147,7 @@ export {
 }
 
 /** 暴露 polyfill plugin（default export）给 install() 在 Vue 2.6 下按需安装 */
-export const VueCompositionAPIPlugin: unknown =
-  (CompositionApiPolyfill as unknown as { default?: unknown }).default ??
-  CompositionApiPolyfill
+export const VueCompositionAPIPlugin: unknown = compositionApiPlugin
 
 // Vue 构造器必须从 'vue' 直接导入：
 // @vue/composition-api 的 default export 是 plugin（{ install }），
