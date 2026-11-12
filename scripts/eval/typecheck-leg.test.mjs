@@ -26,6 +26,7 @@ import {
   runTypecheck,
   summarizeTypecheck,
   fmtTypecheckDiagnostic,
+  buildTypecheckCases,
 } from './typecheck-leg.mjs'
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
@@ -114,6 +115,37 @@ function check(cond, msg) {
   check(picked[0].id === 'v3-0' && picked[9].id === 'v3-9', '抽样必须保持输入顺序（可复现）')
   check(sampleTypecheckCases(items, { perTarget: 10 }).map((x) => x.id).join() === picked.map((x) => x.id).join(), '同样的输入必须得到同样的样本')
   check(sampleTypecheckCases([], { perTarget: 10 }).length === 0, '空输入应返回空样本')
+}
+
+// ── 4b) 纯函数：TS 投影必须用**用例 target**，不能用模型自报的 target ──
+// 反例（本轮修掉的真实缺陷）：antdv 用例被模型写成 vue3 ⟹ 产物按 vue3 import、
+// 却放进 antdv 工程检查，报一条与模型产出无关的 TS2322。类型腿量的是「这份配置的
+// 产物类型是否成立」，目标端由用例决定，不能让 `target` 维度被重复计分。
+{
+  const seen = []
+  const out = buildTypecheckCases(
+    [{ id: 'mismatch', target: 'antdv', config: { target: 'vue3', fields: [] } }],
+    {
+      generate: (cfg) => {
+        seen.push(cfg)
+        return { code: 'export const x = 1', wrapperCode: '<template><div /></template>' }
+      },
+    }
+  )
+  check(seen.length === 1, `生成器应被调用一次，实得 ${seen.length}`)
+  check(seen[0]?.target === 'antdv', `生成器必须收到用例 target（antdv），实得 ${JSON.stringify(seen[0]?.target)}`)
+  check(seen[0]?.typescript === true, 'TS 投影必须带 typescript:true')
+  check(out[0]?.target === 'antdv' && !out[0].error, `用例行应保留用例 target 且有产物：${JSON.stringify(out[0]?.error)}`)
+
+  // 用例没写 target 时才回落到 config.target（旧口径保持不变）。
+  const seen2 = []
+  buildTypecheckCases([{ id: 'fallback', config: { target: 'vue2' } }], {
+    generate: (cfg) => {
+      seen2.push(cfg)
+      return { code: '', wrapperCode: '' }
+    },
+  })
+  check(seen2[0]?.target === 'vue2', `用例省略 target 应回落到 config.target，实得 ${seen2[0]?.target}`)
 }
 
 // ── 5) 真跑：验收条件必须咬得住 ──────────────────────

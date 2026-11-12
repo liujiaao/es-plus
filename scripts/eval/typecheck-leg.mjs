@@ -75,13 +75,23 @@ export {
 /**
  * 把 config 列表变成可检查的 case（生成 TS 投影产物）。
  * 生成器抛错的条目保留为 `{ error }`（与 Tier A 的分母纪律一致：没有产物 ⟹ 不计入类型分母）。
+ *
+ * ## 为什么必须用**用例 target** 覆盖 config.target
+ *
+ * 临时工程按 `case.target` 装依赖（`@es-plus/vue3|vue2|antdv`）与 GlobalComponents 类型。
+ * 此前这里生成 `{ ...config, typescript: true }`，用的是**模型自报的** `config.target`：
+ * 模型把 antdv 用例写成 vue3 时，产物 import 的是 `@es-plus/vue3`、却被放进 antdv 工程里
+ * 按 antdv 的 `CrudPageSchema` 检查 ⟹ 报一条与模型产出无关的 TS2322（078 批次实测命中
+ * 「99-sku 系列」一条）。这既把 `target` 维度**重复计分**（它已有独立维度），又让类型腿
+ * 的数字随 target 命名错误漂移。类型腿要量的是「这份配置发射出的产物类型是否成立」，
+ * 目标端由用例决定。
  */
 export function buildTypecheckCases(configs, { generate = generateFromConfig } = {}) {
   return (Array.isArray(configs) ? configs : []).map(({ id, target, config }) => {
     // 省略 target 即 vue3（scenes.mjs 的口径）；不能让 undefined 流到 runTypecheck。
     const t = target || config?.target || 'vue3'
     try {
-      const product = generate({ ...config, typescript: true })
+      const product = generate({ ...config, target: t, typescript: true })
       const files = productFiles(product)
       if (files.length === 0) {
         return { id, target: t, error: '生成器没有返回产物' }
