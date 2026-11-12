@@ -320,6 +320,7 @@ const FieldConfigBaseSchema = z.object({
     .optional()
     .describe(
       "Validation rules for this field. Use `pattern`/`min`/`max`/`type` for format constraints and `trigger` for when validation runs; `message` is REQUIRED. " +
+        "CONFIG-side (artifact: `formItemOptions.rules`). " +
         "A rule carrying `type` is dispatched ONLY to that type validator (async-validator `getValidationMethod`) — a `pattern` on the SAME rule is silently ignored, so when the user states BOTH a regex and a type, emit them as TWO separate rules. " +
         "For a plain text length cap (e.g. '最多 20 字') prefer `attrs.maxlength`; a `min`/`max` rule validates values with a message but does not block typing. " +
         "Emit these rather than dropping a format/range requirement the user stated."

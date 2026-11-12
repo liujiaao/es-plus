@@ -94,6 +94,7 @@ export const GUARD_GROUPS = Object.freeze([
       'check:schema-validator',
       'check:option-shape',
       'check:unknown-keys',
+      'check:teaching-keys',
     ],
   },
   {
