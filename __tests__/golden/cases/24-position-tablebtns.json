@@ -30,7 +30,8 @@
     "actions": [
       "add",
       "delete",
-      "view"
+      "view",
+      "export"
     ],
     "tableBtns": [
       {

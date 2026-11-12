@@ -93,7 +93,7 @@ export const NL_TO_CONFIG_EXAMPLES: NlToConfigExample[] = [
         },
         { prop: "createdAt", label: "下单时间", formtype: "DatePicker", inForm: false },
       ],
-      actions: ["add", "delete", "view"],
+      actions: ["add", "delete", "view", "export"],
       tableBtns: [
         { name: "新增订单", type: "primary", position: "left", dialogKey: "add" },
         { name: "批量导出", position: "right", actionType: "export" },

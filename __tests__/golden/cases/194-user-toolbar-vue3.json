@@ -17,7 +17,7 @@
       "toolbarConfig": { "export": true, "refresh": true, "custom": true },
       "columnConfig": { "resizable": true }
     },
-    "actions": ["add", "edit"]
+    "actions": ["add", "edit", "export"]
   },
   "notes": "AI-31 Batch 2A: toolbarConfig + columnConfig（NL 点名导出/刷新/自定义列、列宽拖拽）经 AI Zod 存活并发射。toolbarConfig 取显式对象；`true` 与 {export,refresh,custom} 在尺子里等价（运行时展开见 core build-grid-config）。"
 }

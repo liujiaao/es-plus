@@ -92,7 +92,7 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
         },
         { prop: 'createdAt', label: '下单时间', formtype: 'DatePicker' },
       ],
-      actions: ['add', 'delete', 'view'],
+      actions: ['add', 'delete', 'view', 'export'],
       tableBtns: [
         { name: '批量导出', position: 'left', actionType: 'export' },
         { name: '新增订单', type: 'primary', position: 'right', dialogKey: 'add' },
@@ -935,7 +935,7 @@ export const NL_TO_CONFIG_FEWSHOT: NlToConfigFewShot[] = [
         toolbarConfig: { export: true, refresh: true },
         printConfig: true,
       },
-      actions: ['add', 'delete'],
+      actions: ['add', 'delete', 'export'],
     },
   },
   {

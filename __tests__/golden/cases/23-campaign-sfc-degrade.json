@@ -39,7 +39,9 @@
     "actions": [
       "add",
       "edit",
-      "delete"
+      "delete",
+      "import",
+      "export"
     ],
     "tableBtns": [
       {

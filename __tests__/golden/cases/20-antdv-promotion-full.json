@@ -52,7 +52,8 @@
       "add",
       "edit",
       "delete",
-      "view"
+      "view",
+      "export"
     ],
     "tableBtns": [
       {

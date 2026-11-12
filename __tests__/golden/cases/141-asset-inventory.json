@@ -31,7 +31,7 @@
       },
       { "prop": "checkAt", "label": "盘点日期", "formtype": "DatePicker", "inQuery": false, "inForm": false }
     ],
-    "actions": ["add", "delete"],
+    "actions": ["add", "delete", "export"],
     "permissions": { "add": "asset:add", "delete": "asset:remove" },
     "formLayout": { "labelWidth": "100px" },
     "tableBtns": [

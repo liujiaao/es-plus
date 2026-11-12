@@ -24,7 +24,7 @@
       },
       { "prop": "publishAt", "label": "发布日期", "formtype": "DatePicker", "inQuery": false, "inForm": false }
     ],
-    "actions": ["add", "edit", "delete"],
+    "actions": ["add", "edit", "delete", "export"],
     "permissions": { "add": "recruit:add", "edit": "recruit:edit", "delete": "recruit:remove" },
     "tableBtns": [
       { "name": "新建职位", "type": "primary", "position": "left", "dialogKey": "add" },

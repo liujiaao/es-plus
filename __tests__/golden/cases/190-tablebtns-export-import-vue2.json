@@ -23,7 +23,7 @@
         ]
       }
     ],
-    "actions": ["export"],
+    "actions": ["export", "import"],
     "tableBtns": [
       { "name": "导出订单", "position": "left", "actionType": "export" },
       { "name": "导入订单", "position": "left", "actionType": "import" }

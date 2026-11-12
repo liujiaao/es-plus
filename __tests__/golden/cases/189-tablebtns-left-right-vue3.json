@@ -12,7 +12,7 @@
       { "prop": "materialName", "label": "物料名称", "formtype": "Input" },
       { "prop": "stock", "label": "库存数量", "formtype": "InputNumber", "inQuery": false }
     ],
-    "actions": ["add", "edit", "delete"],
+    "actions": ["add", "edit", "delete", "export"],
     "tableBtns": [
       { "name": "批量导出", "position": "left", "actionType": "export" },
       { "name": "新增物料", "type": "primary", "position": "right", "dialogKey": "add" }

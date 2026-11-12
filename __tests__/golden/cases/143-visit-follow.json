@@ -39,7 +39,7 @@
         ]
       }
     ],
-    "actions": ["add", "edit", "delete"],
+    "actions": ["add", "edit", "delete", "export"],
     "permissions": { "add": "visit:add", "edit": "visit:edit", "delete": "visit:remove" },
     "formLayout": { "labelWidth": "90px" },
     "tableBtns": [

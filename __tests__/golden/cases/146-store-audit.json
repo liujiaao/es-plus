@@ -26,7 +26,7 @@
       },
       { "prop": "auditAt", "label": "核查日期", "formtype": "DatePicker", "inQuery": false, "inForm": false }
     ],
-    "actions": ["add", "edit", "delete"],
+    "actions": ["add", "edit", "delete", "export"],
     "permissions": { "add": "audit:add", "edit": "audit:edit", "delete": "audit:remove" },
     "tableBtns": [
       { "name": "新增核查", "type": "primary", "position": "left", "dialogKey": "add" },

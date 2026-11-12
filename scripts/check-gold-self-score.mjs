@@ -17,6 +17,8 @@
  *
  * - CRUD：`scoreAll(gold, gold, mask)` 的 `exactIntentCore` / `exactIntentFull` /
  *   `exactIntentScoped` 均为 true，且每个 applicable 维度 pass；
+ * - CRUD 动作面（L5）：`actions` 的每一项、`tableBtns` 的每一个按钮都能在 NL
+ *   （含纠正轮）里找到措辞依据 —— 见下方 `ACTION_CUES` 与 `actionEvidenceProblems`；
  * - 片段：`scoreFragment(scene, gold, gold, mask)` 的 `exactIntentCore` / `Full` /
  *   `Scoped` / `Stated` 均为 true，且每个 applicable 维度 pass。
  *
@@ -33,11 +35,39 @@ import { scoreFragment } from './eval/fragment-scorers.mjs'
 import { isCrudCase, sceneOf } from './eval/scenes.mjs'
 import { CASES_DIR } from './eval/artifact.mjs'
 import { fragmentInput, FRAGMENT_GENERATORS } from './lib/fragment-cases.mjs'
+import { actionEvidenceProblems } from './lib/action-evidence.mjs'
 
 const failures = []
 const fail = (msg) => {
   failures.push(msg)
   console.error(`✗ ${msg}`)
+}
+
+// ── L5：动作面的 NL 证据 ─────────────────────────────────────────────────────
+//
+// 判据与措辞表落在 `scripts/lib/action-evidence.mjs`（一次性审计脚本
+// `scripts/eval/audit-actions.mjs` 共用同一份，避免「守卫以为标对了、审计按另一套
+// 谓词写」）。这里只保留自检夹具与逐例调用。
+
+// 自检夹具：认正例、否反例（守卫失配时必须当场红，而不是静默全绿）。
+{
+  const ok = { nl: '用户管理：表格展示用户名；支持新增、编辑、删除。', config: { actions: ['add', 'edit', 'delete'], tableBtns: [{ name: '批量导出', actionType: 'export' }] } }
+  const okText = { ...ok, nl: '用户管理：表格展示用户名；支持增删改查；工具栏有「批量导出」按钮。' }
+  const byAction = { nl: '表格上方放一个导出按钮。', config: { actions: ['export'], tableBtns: [{ name: '导出明细', actionType: 'export' }] } }
+  for (const [tag, raw] of [['正例-直述', okText], ['正例-按钮动作词', byAction]]) {
+    const got = actionEvidenceProblems(raw)
+    if (got.length) fail(`动作面自检「${tag}」：合法用例被判红 → ${got.join(' | ')}`)
+  }
+  const bad = [
+    ['死动作', { nl: '表格展示用户名，只读。', config: { actions: ['add'], tableBtns: [] } }, 'actions 的 add'],
+    ['死按钮', { nl: '支持新增、编辑。', config: { actions: ['add', 'edit'], tableBtns: [{ name: '批量导出', actionType: 'export' }] } }, '批量导出'],
+    ['纠正轮不算反例', { nl: '支持新增。', refinements: [{ correction: '再加一个导出按钮。' }], config: { actions: ['add', 'export'], tableBtns: [] } }, null],
+  ]
+  for (const [tag, raw, want] of bad) {
+    const got = actionEvidenceProblems(raw).join(' | ')
+    if (want && !got.includes(want)) fail(`动作面自检「${tag}」：期望含「${want}」，实得 ${got || '(空)'}`)
+    if (!want && got) fail(`动作面自检「${tag}」：纠正轮里的措辞应被认作依据，实得 ${got}`)
+  }
 }
 
 const files = readdirSync(CASES_DIR)
@@ -78,6 +108,8 @@ for (const file of files) {
   }
 
   crudCount++
+  // L5：动作面证据（与打分无关，防的是「NL 从没说过、gold 却要求」的语料缺陷）。
+  for (const p of actionEvidenceProblems(raw, { file })) fail(p)
   let gold
   try {
     gold = StructuredCrudConfigSchema.parse(raw.config)

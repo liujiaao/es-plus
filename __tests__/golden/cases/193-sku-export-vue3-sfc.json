@@ -17,7 +17,7 @@
       "engine": "vxe",
       "exportConfig": { "type": "csv", "filename": "sku-report" }
     },
-    "actions": ["add", "edit"]
+    "actions": ["add", "edit", "export"]
   },
   "notes": "AI-31 Batch 2A: tableOptions.exportConfig（type/filename 均为 NL 明说）经 AI Zod 存活并发射；vxe 引擎原生导出，`download` 回调属函数、不进 JSON。"
 }
