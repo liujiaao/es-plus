@@ -363,7 +363,7 @@ ES-Plus 的解法是 **拆出 `@es-plus/core` + 三个渲染器**：
 
 > **架构澄清（重要）**：ES-Plus 的 MCP Server **自身不调用 LLM**。它是"工具提供者"——暴露 schema、约定、few-shot 示例给**宿主 LLM（Claude Code / Cursor 等）**，由宿主做真正的语义推理（自然语言 → 结构化 config），ES-Plus 负责把推理结果**确定性编译**成多端可运行的代码。所谓"AI 原生"，准确说是"**AI 推理 + 协议约束 + 确定性编译 + CI 可编译保证**"，而不是"组件库自己会写代码"。
 
-1. **MCP server** 暴露 19 个 tools、9 类 resources 与 3 个 prompts（设 `ESPLUS_MCP_PROFILE=front-door` 时收缩到 13 个：隐藏兼容入口、3 个单面片段与 2 个高级/legacy 工具，宿主每轮的 `tools/list` 从 ~339 KB 降到 ~21 KB），AI 通过协议读取
+1. **MCP server** 暴露 19 个 tools、9 类 resources 与 3 个 prompts（设 `ESPLUS_MCP_PROFILE=front-door` 时收缩到 13 个：隐藏兼容入口、3 个单面片段与 2 个高级/legacy 工具，宿主每轮的 `tools/list` 从 ~345 KB 降到 ~23 KB），AI 通过协议读取
 2. **配置由 zod schema 强约束**，AI 生成的内容直接校验，错了立即重试
 3. **CI 矩阵**：vue3 × vue2 × schema mode × sfc mode，每次 push 都跑 `vite build`，证明 AI 生成的代码**真的能编**
 
@@ -699,7 +699,7 @@ matrix:
 1. `npm pack @es-plus/{shared, vue3|vue2, cli}` → 生成 tarball
 2. 拷贝 fresh fixture（[__tests__/e2e/fixtures/vue3-fresh](../__tests__/e2e/fixtures/vue3-fresh) / [vue2-fresh](../__tests__/e2e/fixtures/vue2-fresh)）到沙箱
 3. `npm install` 把刚 pack 的 tarball 装上
-4. `npx es-plus create App --target X --mode Y` 让 CLI 生成代码
+4. `npx @es-plus/cli create App --target X --mode Y` 让 CLI 生成代码
 5. `npm run build` 跑 `vite build` —— 任何编译错误 = CI 失败 = PR 被阻塞
 
 **第一次跑这个 CI 时，vue2 sfc 模式直接挂了** —— 暴露了一个 import 提取的 bug。修完之后到今天保持全绿。

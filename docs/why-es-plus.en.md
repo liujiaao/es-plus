@@ -359,7 +359,7 @@ Most component libraries' "AI friendliness" is just talk — "our API names are 
 
 > **Architecture note (important)**: ES-Plus's MCP Server **does not call an LLM itself**. It is a **tool provider** — it exposes schemas, conventions, and few-shot examples to the **host LLM (Claude Code / Cursor, etc.)**, which does the actual semantic reasoning (natural language → structured config); ES-Plus then **deterministically compiles** that result into runnable code across all three renderers. "AI-native," precisely speaking, means "**AI reasoning + protocol constraints + deterministic compilation + CI compile guarantee**" — not "the component library writes code itself."
 
-1. **The MCP server** exposes 19 tools, 9 resource families and 3 prompts (setting `ESPLUS_MCP_PROFILE=front-door` contracts that to 13 — hiding the compat entry, the three single-fragment tools and the two advanced/legacy tools, taking the host's per-turn `tools/list` from ~339 KB down to ~21 KB); the AI reads them over the protocol
+1. **The MCP server** exposes 19 tools, 9 resource families and 3 prompts (setting `ESPLUS_MCP_PROFILE=front-door` contracts that to 13 — hiding the compat entry, the three single-fragment tools and the two advanced/legacy tools, taking the host's per-turn `tools/list` from ~345 KB down to ~23 KB); the AI reads them over the protocol
 2. **Configs are constrained by zod schemas**; AI-generated output is validated immediately and the AI retries on failure
 3. **The CI matrix** runs vue3 × vue2 × schema mode × sfc mode on every push, executing `vite build` to prove AI-generated code **actually compiles**
 
@@ -695,7 +695,7 @@ Every push and PR runs **6 combinations** (3 renderers × 2 modes), each with th
 1. `npm pack @es-plus/{shared, vue3|vue2, cli}` → generate tarballs
 2. Copy a fresh fixture ([__tests__/e2e/fixtures/vue3-fresh](../__tests__/e2e/fixtures/vue3-fresh) / [vue2-fresh](../__tests__/e2e/fixtures/vue2-fresh)) into a sandbox
 3. `npm install` to pick up the freshly packed tarballs
-4. `npx es-plus create App --target X --mode Y` to let the CLI generate code
+4. `npx @es-plus/cli create App --target X --mode Y` to let the CLI generate code
 5. `npm run build` runs `vite build` — any compile error = CI failure = the PR is blocked
 
 **The first time we ran this CI, vue2 sfc mode failed immediately** — surfacing a bug in the import-extraction logic. We fixed it and it's been green ever since.

@@ -1,4 +1,37 @@
-# Migrating to v1.4.0 — `es-plus-ui` → `@es-plus/vue3`
+# Migration Guide
+
+This guide covers toolchain breaking changes and package renames.
+
+## v2.0.0 (current) — the legacy natural-language page engine is retired
+
+v2.0.0 is a **synchronized major** for `@es-plus/shared`, `@es-plus/cli`, and `@es-plus/mcp-server`. The three renderer packages (`@es-plus/vue3` / `@es-plus/vue2` / `@es-plus/adapter-antdv`) keep their public component APIs — if you only consume a renderer, a normal upgrade is enough.
+
+### 1. `generateCrudPage()` is gone
+
+`@es-plus/shared` no longer exports `generateCrudPage()`, `GenerateResult`, or `PRESET_EXAMPLES`. That engine parsed natural language into a full-page SFC with local regex/keyword tables; its output was byte-identical to `generate_scene` (`scene: 'crud'`) but could never improve with the host model's reasoning.
+
+| Before | After |
+| --- | --- |
+| `generateCrudPage(desc)` | `generate_scene({ scene: 'crud', intent: desc })` |
+| MCP `generate_crud_page` | `generate_scene` (`scene: 'crud'`) or `generate_crud` |
+| Need a `CrudPageSchema` shape | `generate_crud_schema` |
+
+`generateScaffold()` / `generateAppEntry()` are still exported (now implemented in `scaffold-generator.ts`) with unchanged signatures.
+
+### 2. CLI offline natural-language generation
+
+`es-plus create` in **sfc mode has no local regex fallback anymore**. `--mode sfc` still works with `--ai` / `--from-config`; for purely offline description-to-page, use `--mode schema` or `--from-config <file>`.
+
+### 3. MCP tool roster changed (same totals)
+
+`generate_crud_page` was removed and `read_page` was added, so the totals stay full **19** / front-door **13** — but the roster differs:
+
+- `read_page` losslessly recovers the config from the `__esPlusSource` marker embedded in the previous artifact (expanded `formItems`, flattened visibility, missing `permissions` in schema mode are all recorded in the provenance rather than guessed). It closes the "read back → add a column → regenerate" loop.
+- Pages without the marker (generated before 2.0.0, or hand-written) fail with an explicit error instead of attempting a lossy reverse-engineering.
+
+---
+
+## v1.4.0 — `es-plus-ui` → `@es-plus/vue3`
 
 Starting with v1.4.0, the npm package **`es-plus-ui` has been renamed to `@es-plus/vue3`** to align with the new sibling package `@es-plus/vue2` (Vue 2 + Element UI) and the framework-agnostic `@es-plus/core`.
 
@@ -6,7 +39,7 @@ Starting with v1.4.0, the npm package **`es-plus-ui` has been renamed to `@es-pl
 
 ---
 
-## What changed
+### What changed
 
 | Before (≤ v1.3.5) | After (v1.4.0) |
 | --- | --- |

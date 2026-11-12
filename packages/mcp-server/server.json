@@ -19,7 +19,7 @@
       "environmentVariables": [
         {
           "name": "ESPLUS_MCP_PROFILE",
-          "description": "Tool surface to expose: `full` (default, 19 tools) or `front-door` (13 tools — the generate_scene scene router (crud/table/form/dialog), generate_composition, and the deterministic support tools). The front-door profile hides the entries generate_scene reproduces byte-for-byte — generate_crud, generate_form / generate_table / generate_dialog, the legacy generate_crud_schema and the advanced generate_crud_from_config — cutting per-turn tools/list from ~341 KB to ~22 KB.",
+          "description": "Tool surface to expose: `full` (default, 19 tools) or `front-door` (13 tools — the generate_scene scene router (crud/table/form/dialog), generate_composition, and the deterministic support tools). The front-door profile hides the entries generate_scene reproduces byte-for-byte — generate_crud, generate_form / generate_table / generate_dialog, the legacy generate_crud_schema and the advanced generate_crud_from_config — cutting per-turn tools/list from ~345 KB to ~23 KB.",
           "format": "string",
           "isRequired": false,
           "default": "full",

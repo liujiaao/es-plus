@@ -186,7 +186,7 @@ surfaces
 - 隐藏标准不是「旧不旧」，而是 **`generate_scene` 能否逐字节复现**：四个 scene 复用同一组
   发射器，`check:scene-parity` 证明产物相同。被隐藏的 6 个工具的名称因此**不进入** front-door
   的任何描述/提示词/资源（`check:tool-surface` 反向断言），宿主不会拿到 tool not found。
-  收益是宿主每轮 `tools/list` 从 ~339 KB 降到 ~21 KB（`check:surface-budget` 守卫，预算 40 KB）。
+  收益是宿主每轮 `tools/list` 从 ~345 KB 降到 ~23 KB（`check:surface-budget` 守卫，预算 40 KB）。
 - 默认 `full` 是**刻意**的：§9.4 的废弃流程要求开关「默认关闭」，且存量宿主与本站文档仍在
   调 `generate_crud_from_config`；改默认会让它们在同一个小版本里静默失败。待 AN-25 收敛完成
   后再翻转默认值。

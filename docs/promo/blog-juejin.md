@@ -334,7 +334,7 @@ matrix:
 1. `npm pack @es-plus/{shared, vue3|vue2, cli}` → 生成 tarball
 2. 拷贝 fresh fixture 到沙箱
 3. `npm install` 装上 tarball
-4. `npx es-plus create App` 让 CLI 生成代码
+4. `npx @es-plus/cli create App` 让 CLI 生成代码
 5. **`npm run build`（vite build）** → 任何编译错误 = CI 失败 = PR 被阻塞
 
 **第一次跑这个 CI 直接挂了一个 vue2 sfc bug** —— 暴露了一个 import 提取问题。修完后到今天保持全绿。

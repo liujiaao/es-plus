@@ -6,7 +6,7 @@
 //      — this catches `files` field mistakes that a `file:` link would hide.
 //   2. Copy the matching fixture project to a sandbox directory under tmp/
 //   3. `npm install` the fixture deps + the packed tarballs
-//   4. Run `npx es-plus create App --description "<prompt>" --target X --mode Y
+//   4. Run `npx @es-plus/cli create App --description "<prompt>" --target X --mode Y
 //          --output src/App.vue`
 //   5. `npm run build` (vite) — non-zero exit fails the test
 //

@@ -444,7 +444,7 @@ claude mcp add es-plus -- npx -y @es-plus/mcp-server
 
 AI 自动调用 MCP Server 生成完整可运行的 .vue 文件。
 
-工具面遵循「一个前门 + 确定性支撑」：**`generate_scene` 是唯一前门**（先声明要建什么：crud / table / form / dialog，再填该场景的意图表，路由与编译是确定性代码）。`generate_composition` 把多个独立片段装成一张能跑的页面。`generate_crud` 是 `scene='crud'` 的**兼容入口**（产物逐字节相同），`generate_crud_from_config` 标注 **ADVANCED**（已持有类型化配置时用），`generate_crud_schema` 标注 **LEGACY FALLBACK**（no-LLM 正则兜底）。`ESPLUS_MCP_PROFILE=front-door` 把 18 个工具收缩到 12 个 —— 隐藏标准不是「旧不旧」，而是 `generate_scene` 能否**逐字节复现**（四个 scene 复用同一组发射器），宿主每轮的 `tools/list` 因此从 ~339 KB 降到 ~21 KB。完整工具清单、选择决策树与分层依据见 [`packages/mcp-server/AI-NATIVE-ARCHITECTURE.md`](./packages/mcp-server/AI-NATIVE-ARCHITECTURE.md)。
+工具面遵循「一个前门 + 确定性支撑」：**`generate_scene` 是唯一前门**（先声明要建什么：crud / table / form / dialog，再填该场景的意图表，路由与编译是确定性代码）。`generate_composition` 把多个独立片段装成一张能跑的页面。`generate_crud` 是 `scene='crud'` 的**兼容入口**（产物逐字节相同），`generate_crud_from_config` 标注 **ADVANCED**（已持有类型化配置时用），`generate_crud_schema` 标注 **LEGACY FALLBACK**（no-LLM 正则兜底）。`ESPLUS_MCP_PROFILE=front-door` 把 19 个工具收缩到 13 个 —— 隐藏标准不是「旧不旧」，而是 `generate_scene` 能否**逐字节复现**（四个 scene 复用同一组发射器），宿主每轮的 `tools/list` 因此从 ~345 KB 降到 ~23 KB。完整工具清单、选择决策树与分层依据见 [`packages/mcp-server/AI-NATIVE-ARCHITECTURE.md`](./packages/mcp-server/AI-NATIVE-ARCHITECTURE.md)。
 
 想先看效果再看原理：AI 案例导览 [`docs/ai/ai-showcase.md`](./docs/ai/ai-showcase.md) 逐个说明站点上每个 AI 页面证明了什么、证据在哪，以及 `claim`（`measure` / `compile` / `execute`）该怎么读 —— 跑过的才叫 `execute`。
 

@@ -281,7 +281,7 @@ mcp-server-es-plus --help        # 用法说明
 | `generate_crud_from_config` | **ADVANCED**：已持有类型化配置时的直通生成 | ⛔ |
 | `generate_crud_schema` | **LEGACY FALLBACK**：正则 → CrudPageSchema + 包装 SFC | ⛔ |
 
-> profile 是**工具面**的开关，不是能力差异：被隐藏的兼容入口与三个单面片段，产物都能由 `generate_scene` 的对应 `scene` 逐字节复现（同一组发射器，`check-scene-parity` 断言）；高级/legacy 三个则只在 `full` 档可见。隐藏它们是为了让宿主在前门与旧入口之间没有选择歧义，同时把每轮必读的 `tools/list` 从约 171 KB 压到约 21 KB。提示词、resources 与工具描述会按同一份 profile 同步调整。
+> profile 是**工具面**的开关，不是能力差异：被隐藏的兼容入口与三个单面片段，产物都能由 `generate_scene` 的对应 `scene` 逐字节复现（同一组发射器，`check-scene-parity` 断言）；高级/legacy 三个则只在 `full` 档可见。隐藏它们是为了让宿主在前门与旧入口之间没有选择歧义，同时把每轮必读的 `tools/list` 从约 345 KB 压到约 23 KB。提示词、resources 与工具描述会按同一份 profile 同步调整。
 
 ### generate_scene（前门 / 场景路由器 / SCENE ROUTER）
 

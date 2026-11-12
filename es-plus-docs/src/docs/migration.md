@@ -2,8 +2,38 @@
 
 本文涵盖两类迁移：
 
-1. **v1.4.0 包名重命名** — 从 `es-plus-ui` 迁移到 `@es-plus/vue3`
-2. **从原生 Element Plus 迁移** — 把现有 `el-form` / `el-table` 重写为 `es-form` / `es-table`
+1. **v2.0.0 工具链 major** — legacy 自然语言整页引擎退役，MCP / CLI 入口改指前门
+2. **v1.4.0 包名重命名** — 从 `es-plus-ui` 迁移到 `@es-plus/vue3`
+3. **从原生 Element Plus 迁移** — 把现有 `el-form` / `el-table` 重写为 `es-form` / `es-table`
+
+---
+
+## v2.0.0（当前）— legacy 自然语言整页引擎退役
+
+v2.0.0 是 `@es-plus/shared` / `@es-plus/cli` / `@es-plus/mcp-server` 三个包的**同步 major**。三个渲染器包（`@es-plus/vue3` / `@es-plus/vue2` / `@es-plus/adapter-antdv`）的公开组件 API 不变 —— 如果你的项目只消费渲染器，按常规升级即可。
+
+### 1. `generateCrudPage()` 已删除
+
+`@es-plus/shared` 不再导出 `generateCrudPage()`、`GenerateResult`、`PRESET_EXAMPLES`。这个引擎把自然语言经本地正则/关键词表解析成整页 SFC，产物与 `generate_scene`（`scene: 'crud'`）逐字节相同，却无法随宿主模型的推理能力一起进步。
+
+| 你原来调用 | 迁移到 |
+|---|---|
+| `generateCrudPage(desc)` | `generate_scene({ scene: 'crud', intent: desc })` |
+| MCP 的 `generate_crud_page` | `generate_scene`（`scene: 'crud'`）或 `generate_crud` |
+| 需要 `CrudPageSchema` 形态 | `generate_crud_schema` |
+
+`generateScaffold()` / `generateAppEntry()` 仍然导出（实现移到 `scaffold-generator.ts`），调用方式不变。
+
+### 2. CLI 的离线自然语言生成
+
+`es-plus create` 的 **sfc 模式不再有本地正则兜底**。`--mode sfc` 仍可与 `--ai` / `--from-config` 一起用；纯离线描述生成请改用 `--mode schema` 或 `--from-config <file>`。
+
+### 3. MCP 工具组成变化（总数不变）
+
+`generate_crud_page` 被删除的同时新增了 `read_page`，因此工具**总数**仍是 full **19** / front-door **13**，但组成不同：
+
+- `read_page` 从上一轮产物的 `__esPlusSource` 出处里把配置**无损读回**（`formItems` 展开、可见性压平、schema 模式没有 `permissions` 这些差异都由出处记录，不靠反推），支撑「回读 → 改一列 → 再生成」的闭环。
+- 没有出处标记的页面（2.0.0 之前生成或手写）会明确报错，不做有损反推。
 
 ---
 

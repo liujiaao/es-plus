@@ -291,7 +291,7 @@ The default `full` profile exposes **19 tools**. With `ESPLUS_MCP_PROFILE=front-
 | `generate_crud_from_config` | **ADVANCED** — generate from a STRUCTURED, typed config you already hold (persisted, diffed, or refined). Same deterministic generator as the front door. | ⛔ |
 | `generate_crud_schema` | **LEGACY FALLBACK** (no-LLM) — `CrudPageSchema` JSON + wrapper SFC from the same regex parser. | ⛔ |
 
-The profile only changes which tools are *listed*: the hidden compat entry and fragment tools are reproducible byte-for-byte through `generate_scene`'s matching scene (same emitters, asserted by `check-scene-parity`); the advanced/legacy three stay available in `full`. This cuts the host's per-turn `tools/list` payload from ~171 KB to ~21 KB. Prompts, resources and tool descriptions are adapted from the same profile, so the host is never told to call a tool that isn't registered.
+The profile only changes which tools are *listed*: the hidden compat entry and fragment tools are reproducible byte-for-byte through `generate_scene`'s matching scene (same emitters, asserted by `check-scene-parity`); the advanced/legacy three stay available in `full`. This cuts the host's per-turn `tools/list` payload from ~345 KB to ~23 KB. Prompts, resources and tool descriptions are adapted from the same profile, so the host is never told to call a tool that isn't registered.
 
 ## Resources Exposed by the Server
 
