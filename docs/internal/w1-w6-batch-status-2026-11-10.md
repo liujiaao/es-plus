@@ -1,5 +1,10 @@
 # W1–W6 批次状态与 A 批执行记录
 
+> **本文是历史批次记录（2026-11-10 的口径），不是当前状态。** 当前工具数以
+> `packages/mcp-server/tools-list.snapshot.json` 为准（`npm run tools:list:check` 钉住），
+> 当前准确率读数以 `__tests__/golden/accuracy-baseline.json` 为准。文中「12/18/19 工具」
+> 「21.1 / 340.8 KB」等数字都是当日快照，后续批次已变动 —— 引用前先查快照，不要直接抄本文。
+
 日期：2026-11-10
 分支：`master`（本地未 push）
 口径：本文件回答「A/B/C/D 四批各自完成了什么、还差什么」。所有「未完成」项都附源码证据；
@@ -261,7 +266,9 @@ B 批当日完成的是 **W3 工具收缩**（前门 16 → 12 工具、171.1 �
   `generateScaffold` / `generateAppEntry` 先拆到 `scaffold-generator.ts`（`scaffold_page`
   与 CLI `scaffold` 继续依赖，它们不是 crud-engine 的依赖），再删引擎本体与两套快照。
 - **MCP 面**：`generate_crud_page` 注册与工具文件删除（它只剩 schema 分支有独立价值，
-  而前门可逐字节复现）；full 19 → **18**、front-door 13 → **12**，隐藏集 7 → 6。
+  而前门可逐字节复现）；在 W4 的 **full 19 / front-door 13** 基础上再 −1：full → **18**、
+  front-door → **12**，隐藏集 7 → 6。**全文工具计数以本节（W6）为准** —— W4 节的「19 / 13」
+  是那一步的中间态，不是与本节矛盾。
 - **CLI 面**：`create` 的 sfc 离线 NL 路径改为**可执行的报错**（给出 `--ai` /
   `--from-config` / `--mode schema` 三条出路），交互式预设搬到
   `packages/cli/src/commands/preset-examples.ts`（本地 8 条，不再对外导出）。

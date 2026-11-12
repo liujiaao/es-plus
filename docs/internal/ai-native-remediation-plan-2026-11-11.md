@@ -1210,11 +1210,11 @@ A/B/C/D/E 五批已全部落地（E 批 = D5–D8、D10、R1–R9）。**付费�
 
 | 项 | 状态 | 缺口 |
 |---|---|---|
-| L1 · en 腿三项（结构回退 / 英文 few-shot / en 不下降棘轮） | ❌ | 三项都未做；en 仍只观测（本次 heldout exactIntent 23.0%） |
-| L5 · 死按钮 golden（12 例） | ⚠️ | 教学面已按 D4 落规则；但 `scripts/eval/audit-actions.mjs` 与 `check-gold-self` 的「动作词证据」判据未加，语料侧未逐例二分 |
-| B12 · `formItemOptions` 教学扫描守卫 | ⚠️ | 教学文本已改；验收要求的「禁止配置类文档出现裸 `formItemOptions`」扫描未加 |
+| L1 · en 腿三项（结构回退 / 英文 few-shot / en 不下降棘轮） | ✅（② 裁为不新增） | ① `+en-structural-fallback-v1` 已落（en propSet 42.6%→87.1%、definition95 74.72%，zh 不受影响）；③ `ratchet.mjs` 增加 en 只降不升棘轮 + 基线 `en` 段，缺测即红；② 判定**不新增**示例 —— 身份已改为按位次，`ai-nl-to-config-prompt.ts:997` 已明确「prop 是数据绑定、label 逐字取 NL」，再加示例只增 tool-surface 预算且必须等下一次全量才能验证（理由见 §10.5） |
+| L5 · 死按钮 golden（12 例） | ✅ | `scripts/eval/audit-actions.mjs` 已保留为审计工具；`check:gold-self` 增加动作面证据判据（动作词/按钮名必须能在 NL 找到依据）；语料逐例二分后 13 例补 `export/import` 或补 NL，`audit-actions` 复跑 **pred-extra 0 / pred-missing 11**（模型从不凭空造动作）；3 条语料 NL 补全（04/05/13） |
+| B12 · `formItemOptions` 教学扫描守卫 | ✅ | 新增 `check:teaching-keys`（入 consistency 的 generator 组）：教学面（prompt / schema describe / MCP resources）裸 `formItemOptions` 判红，`crud-page-schema` 的运行时示例按「紧邻 formtype」白名单放行；能力矩阵只允许出现在 `artifactPaths`、禁止出现在 `structuredPath`；守卫自带 8 条非空证明。`rules` 的 describe 同步补「配置侧键 = `rules`，产物里才是 `formItemOptions.rules`」 |
 | B16 · 嵌套 `labelKey` 撞键 | ⏸ | 按原文 P3 推迟（破坏性变更，需 CHANGELOG + codemod） |
-| L6 · 内部文档计数锚点 | ⚠️ | W6 节已写清增量；文首「历史批次记录，以 snapshot 为准」尚未加 |
+| L6 · 内部文档计数锚点 | ✅ | 文首加「本文是历史批次记录，工具数以 `tools-list.snapshot.json` 为准」；W6 节改为「在 W4 的 19/13 基础上再 −1」并声明「全文计数以本节为准」 |
 | §5.3 明确不做清单 | ⏸ | 按原文保持不做 |
 
 ### 10.5 2026-11-12 全量跑批记录（deepseek-flash）
@@ -1228,16 +1228,45 @@ A/B/C/D/E 五批已全部落地（E 批 = D5–D8、D10、R1–R9）。**付费�
 - 离线复算：`rescore --expect` 147 项逐字段一致。
 - 基线：`accuracy-baseline.json` 的 `definition95/coreRate/byDimension/rulerVersion` 与
   `fragmentScopedMin`（0.9565）已按本次读数回填（人工 PR 路径，见该文件头注）。
-- **本次暴露的遗留缺陷**（尚未修）：
-  1. **导入/导出边界：教学与语料对打** —— en 规则明确「即使同一操作也出现在 tableBtns，也要写进
-     `actions`」，而 137/141/146/190 的 gold 有导出按钮却把 `export` 留在 `actions` 之外
-     （190 还有 import 同类问题）；193 的 gold 用 `tableOptions.exportConfig` 表达导出、`actions`
-     不带 export。模型按规则作答反而被判负 —— **5/16 门禁失分来自这一条**。修法二选一：
-     按规则补 gold 的 `actions`，或把规则改成「只有 NL 把它当能力/动作时才进 actions」。
-  2. **类型腿 target 混用** —— `tcCandidates` 用 gold 的 `target` 建工程，却用 pred 的
-     `config.target` 发射 import；99 的 pred 选 vue3、gold 是 antdv ⟹ 人为 TS2322。
-     应统一按 case target 重新发射，或把 target 不一致的行显式记为未测到。
-  3. **197/198 列筛选零产出** —— 模型既没写 `columns` 也没写字段级 `filters`；教学已落，
-     但 deepseek 未吸收（换 Claude 口径复测后再判断是教学还是模型能力）。
-  4. **en 腿仍无门禁** —— 112/203 heldout en 行未过，L1 三项均未做。
+- **本次暴露的遗留缺陷 —— 逐项处置**（2026-11-12 复核并落地）：
+  1. **导入/导出边界：教学与语料对打** ✅ 已修 —— en 规则明确「即使同一操作也出现在 tableBtns，
+     也要写进 `actions`」，而 13 条用例的 gold 有导出/导入按钮却把 `export`/`import` 留在
+     `actions` 之外（190 两类都有）。按规则补 gold（03/137/138/141/143/146/189/190/193/194/
+     20/23/24），另把 04/05/13 的 NL 补齐到 gold 已有的动作（原 NL 无措辞依据）；
+     `check:gold-self` 增加动作词证据判据，`audit-actions` 复跑 pred-extra 0。
+     离线复算（同一份 dump + 修后 gold）：definition95 92.12% → **92.61%**（188/203），
+     actions 94.58% → **95.07%**。
+  2. **类型腿 target 混用** ✅ 已修 —— `buildTypecheckCases` 改为**按 case.target 重新发射**
+     （`generate({ ...config, target: t, typescript: true })`），临时工程的依赖与 import 同源；
+     99 的 TS2322 复现后消失，`typecheck-leg.test.mjs` 增加 4b 节钉住「给 case target、不给
+     config target」。
+  3. **197/198 列筛选零产出** ⏳ 留观 —— 模型既没写 `columns` 也没写字段级 `filters`；
+     教学（规则 + few-shot）已在 W3-2 落地，deepseek 未吸收。判为**模型能力项**，不属语料/
+     尺子缺陷；换 Claude 口径复测后再决定是否加强教学。
+  4. **en 腿仍无门禁** ✅ 已修 —— L1 ①③（结构回退 + 不下降棘轮）落地；②「英文 few-shot」
+     裁定**不新增**：字段身份已改为按位次回退，`ai-nl-to-config-prompt.ts:997` 已把
+     「prop 是数据绑定、label 逐字取 NL」讲清，再加一条示例只增 `tools-surface` 预算，
+     且它的收益必须等下一次全量才能观测 —— 与 4 号一起作为下次跑批的观察项。
+  5. **片段腿 2 条 `model-guard` 拒绝** ⏳ 留观（模型侧）—— `frag-form-06-antdv` 把
+     `dependencies` 写在字段层（合法位置是 `fields[].reactions[].dependencies`）；
+     `frag-table-06-vue3` 把 `formatter` 写在显式 `columns[]` 上（显式列只收结构化列属性，
+     格式化仍走 `fields[].formatter`）。两条 gold 都写在正确位置，片段 prompt 的 `renderShape`
+     已到 depth=3（子键可见）⟹ 判定为模型放置错误，非门禁缺陷；下次跑批一并观察。
+  6. **`truthy` vs `notEmpty`** ✅ 已裁定**不等价**（保留两算子）—— JSONLogic 语义下
+     `truthy` 对 `0`/`false`/`''` 为假，而 `notEmpty` 只排除空；133 的 NL 说「非空」，
+     gold 用 `notEmpty` 正确，模型 turn-0 写 `truthy` 是真 miss、第 1 轮改对后收敛。
+     该裁定已写进用例 `notes`，不新增等价规则（放宽无证据支持）。
+  7. **片段地板零余量** ✅ 记录为**有意** —— `fragmentScopedMin = 0.9565` 等于观测值
+     （66/69），任何一条退化（65/69 = 94.2%）即红；这正是棘轮该有的行为（只经人工 PR 下调）。
+  8. **`vxeConfig` 判负无诊断** ✅ 已补 —— `describeDimMiss` 增加 `vxeConfig` 分支（只展示
+     gold 声明过的键 + `projectVxeOption` 投影，与 `vxeConfigEqual` 同源）；`scorers.test.mjs`
+     钉住四条：gold-vs-gold、`toolbarConfig:true` ≡ 展开形态、关掉 export 判负、gold 未声明
+     的键不罚。此前该维 miss 在日志里只剩一个维度名。
+
+- **仍未闭合的一项（度量身份）**：本次修复改了语料（13 条 gold + 3 条 NL）与教学面
+  （few-shot / schema describe）⟹ `check:eval-freshness` 转红是**正确状态**：已发布产物
+  `last-accuracy.json` 的 `corpusHash` 是 `106d02ea`，当前语料是 `0d9bc0d4`，prompt 指纹
+  四腿也全变。基线与 §10.5 的 92.61% 是**同一份 dump 的离线复算**（`pred-gold-patched.jsonl`），
+  不是一次新的完整测量。下一次全量跑批（任何模型）完成前，不得把 92.61% 当作「已发布读数」；
+  freshness 守卫应保持红，**不**手工回填产物身份字段。
 
