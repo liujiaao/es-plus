@@ -340,6 +340,28 @@ function main() {
   const unknownCat = used.filter((c) => !categories.includes(c))
   if (unknownCat.length) fail(`FIXED_PAGES 用了未定义的分类：${unknownCat.join(', ')}`)
 
+  // ── H. 组件/高级页的摘要必须覆盖 api 的**全部分组** ──
+  // `api` 不是 `{ props: [...] }`，而是 `{ props, TableColumn, TableOptions, ... }`。
+  // 只索引 `api.props` 时，`apiParams` / `filters` / `expandConfig` 这些真实字段名
+  // 在组件页上写着、搜索却零结果 —— 而索引层与数据层之间没有任何守卫。
+  if (/api\?\s*\.\s*props\b/.test(src.index)) {
+    fail('search-index.ts 仍在只读 api.props —— api 是分组表，必须遍历全部分组')
+  }
+  if (!/Object\.(entries|values)\(\s*doc\.api\b/.test(src.index)) {
+    fail('search-index.ts 没遍历 doc.api 的全部分组（Object.entries/values(doc.api)）')
+  }
+  // 组件页参数表里非 props 的分组必须真实存在；否则这条守卫会变成空断言
+  const hasPropsGroup = /^ {6}'?props'?:\s*\[/m.test(src.componentDoc)
+  const hasNestedGroup = /^ {6}'?(TableColumn|TableOptions|DialogOptions|FormItemOption|ColumnOption)'?:\s*\[/m.test(
+    src.componentDoc,
+  )
+  if (!hasPropsGroup || !hasNestedGroup) {
+    fail(
+      'component-doc.data.ts 里没解析到 props + 至少一个嵌套分组（TableColumn / TableOptions / …）—— ' +
+        '解析规则可能已失效，「全部分组进索引」就成了空断言',
+    )
+  }
+
   if (failed) {
     console.error('\n搜索索引与路由/注册表/字典不一致。')
     return 1

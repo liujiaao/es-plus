@@ -153,7 +153,12 @@ type DocLike = {
   description?: string
   features?: { name: string; desc: string }[]
   examples?: { key: string; title: string; description?: string }[]
-  api?: { props?: { name: string; desc?: string }[] }
+  /**
+   * 参数表按**分组**组织（`props` / `TableColumn` / `TableOptions` / `DialogOptions` …），
+   * 不是只有 `props`。只索引 `api.props` 会让 `tableOptions.apiParams`、
+   * `columns.filters` 这类真实字段名搜不到 —— 组件页明明写着，搜索却零结果。
+   */
+  api?: Record<string, { name: string; desc?: string; type?: string; default?: unknown }[]>
 }
 
 /**
@@ -178,9 +183,8 @@ export function buildAiCaseEntries(cases: Record<string, AiCaseLike>): SearchEnt
       title: c.title,
       path: `/ai-gallery/${c.id}`,
       category: 'ai',
-      content: [c.meta?.nl ?? c.meta?.description ?? '', (c.tokens ?? []).join(' ')]
-        .join(' ')
-        .slice(0, 600),
+      // 不截断：tokens 往往排在 nl 之后，截断会把可搜的 schema 字段名丢掉。
+      content: [c.meta?.nl ?? c.meta?.description ?? '', (c.tokens ?? []).join(' ')].join(' '),
       level: 1,
     })
   }
@@ -201,14 +205,22 @@ export function buildExampleEntries(
   for (const [name, doc] of Object.entries(docs)) {
     if (!doc || typeof doc.title !== 'string') continue
 
-    // 页面级摘要：描述 + 特性名 + 主要 prop 名，开发者搜 formItemList / apiParams 能落到页
+    // 页面级摘要：描述 + 特性名 + **全部分组**的参数名，开发者搜
+    // formItemList / apiParams / filters / expandConfig 都能落到页
     const featureText = (doc.features ?? []).map((f) => `${f.name} ${f.desc}`).join(' ')
-    const propText = (doc.api?.props ?? []).map((p) => `${p.name} ${p.desc ?? ''}`).join(' ')
+    const apiText = Object.entries(doc.api ?? {})
+      .map(
+        ([group, rows]) =>
+          `${group} ${(rows ?? []).map((p) => `${p.name} ${p.desc ?? ''}`).join(' ')}`,
+      )
+      .join(' ')
     entries.push({
       title: doc.title,
       path: `${base}/${name}`,
       category,
-      content: [doc.description ?? '', featureText, propText].join(' ').slice(0, 600),
+      // 不再截断：参数表尾部正是 TreeSelect / expandConfig / filters 这些
+      // 最需要被搜到的键，600 字符会把它们整段丢掉。
+      content: [doc.description ?? '', featureText, apiText].join(' '),
       level: 1,
     })
 
