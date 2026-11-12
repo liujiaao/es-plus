@@ -1204,7 +1204,40 @@ C2（筛选 + `configTableOut`）+3 → 194。**到 194 就过线**，其余批�
 
 ### 10.4 尚未落地（按本文原样执行）
 
-A/B/C/D/E 五批已全部落地（E 批 = D5–D8、D10、R1–R9）。剩下一件不在本方案内、但读数依赖它的动作：
-**付费全量 eval** —— 语料（corpusHash）与 prompt 指纹都已变，`check:eval-freshness` 会在下一次
-真实测量之前保持红。跑之前先 `npm run build:libs`，再走产物链
-`ai:workflows → fragment:dashboard → cases:sync`；跑完 `check:site-claims` 才会把新读数绑上徽章。
+A/B/C/D/E 五批已全部落地（E 批 = D5–D8、D10、R1–R9）。**付费全量 eval 已于 2026-11-12 本地跑完**
+（deepseek-flash，读数与遗留问题见 §10.5），`check:eval-freshness` 与 `check:site-claims` 均已转绿。
+仍**未落地**的只剩本文明确推迟或留下残余的项：
+
+| 项 | 状态 | 缺口 |
+|---|---|---|
+| L1 · en 腿三项（结构回退 / 英文 few-shot / en 不下降棘轮） | ❌ | 三项都未做；en 仍只观测（本次 heldout exactIntent 23.0%） |
+| L5 · 死按钮 golden（12 例） | ⚠️ | 教学面已按 D4 落规则；但 `scripts/eval/audit-actions.mjs` 与 `check-gold-self` 的「动作词证据」判据未加，语料侧未逐例二分 |
+| B12 · `formItemOptions` 教学扫描守卫 | ⚠️ | 教学文本已改；验收要求的「禁止配置类文档出现裸 `formItemOptions`」扫描未加 |
+| B16 · 嵌套 `labelKey` 撞键 | ⏸ | 按原文 P3 推迟（破坏性变更，需 CHANGELOG + codemod） |
+| L6 · 内部文档计数锚点 | ⚠️ | W6 节已写清增量；文首「历史批次记录，以 snapshot 为准」尚未加 |
+| §5.3 明确不做清单 | ⏸ | 按原文保持不做 |
+
+### 10.5 2026-11-12 全量跑批记录（deepseek-flash）
+
+- 身份：`commit 06139db` · `corpusHash 106d02eab1c293c2`（296 文件 / 227 CRUD / 203 heldout）·
+  `model = servedModel = deepseek-flash` · `measurement: complete`（`notMeasured` 四条腿全 0）。
+- 读数：**definition95 92.12%（187/203）** = 零编辑 176 + 收敛 11（meanTurns 0.37，收敛@K 30/30）；
+  core 51.23%（zh 51.23% / en 23.03%）；片段 scoped 95.65%（69 例，core 97.1%、编译 100%）；
+  PRD 门禁 PASS（membership 94.27%）；类型腿 226/227；前门 429/429 routed、0 编译失败。
+- 中继：6 次冷却等待共 1050 s + 3 次即时重试，全部行在恢复后完成测量（未被记为未测到）。
+- 离线复算：`rescore --expect` 147 项逐字段一致。
+- 基线：`accuracy-baseline.json` 的 `definition95/coreRate/byDimension/rulerVersion` 与
+  `fragmentScopedMin`（0.9565）已按本次读数回填（人工 PR 路径，见该文件头注）。
+- **本次暴露的遗留缺陷**（尚未修）：
+  1. **导入/导出边界：教学与语料对打** —— en 规则明确「即使同一操作也出现在 tableBtns，也要写进
+     `actions`」，而 137/141/146/190 的 gold 有导出按钮却把 `export` 留在 `actions` 之外
+     （190 还有 import 同类问题）；193 的 gold 用 `tableOptions.exportConfig` 表达导出、`actions`
+     不带 export。模型按规则作答反而被判负 —— **5/16 门禁失分来自这一条**。修法二选一：
+     按规则补 gold 的 `actions`，或把规则改成「只有 NL 把它当能力/动作时才进 actions」。
+  2. **类型腿 target 混用** —— `tcCandidates` 用 gold 的 `target` 建工程，却用 pred 的
+     `config.target` 发射 import；99 的 pred 选 vue3、gold 是 antdv ⟹ 人为 TS2322。
+     应统一按 case target 重新发射，或把 target 不一致的行显式记为未测到。
+  3. **197/198 列筛选零产出** —— 模型既没写 `columns` 也没写字段级 `filters`；教学已落，
+     但 deepseek 未吸收（换 Claude 口径复测后再判断是教学还是模型能力）。
+  4. **en 腿仍无门禁** —— 112/203 heldout en 行未过，L1 三项均未做。
+
