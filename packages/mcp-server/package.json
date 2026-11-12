@@ -1,6 +1,6 @@
 {
   "name": "@es-plus/mcp-server",
-  "version": "1.5.0",
+  "version": "2.0.0",
   "mcpName": "io.github.liujiaao/es-plus",
   "description": "MCP Server for es-plus (Vue 3 / Vue 2) - AI coding tool integration for CRUD page generation",
   "type": "module",
@@ -57,7 +57,7 @@
     "registry": "https://registry.npmjs.org/"
   },
   "dependencies": {
-    "@es-plus/shared": "^1.5.0",
+    "@es-plus/shared": "^2.0.0",
     "@modelcontextprotocol/sdk": "^1.0.0",
     "ajv": "^8.12.0",
     "zod": "^4.4.3"

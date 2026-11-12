@@ -1,5 +1,81 @@
 # @es-plus/cli
 
+## 2.0.0
+
+### Major Changes
+
+- a31af78: **BREAKING**：退役 legacy 自然语言整页引擎（`generateCrudPage`），三个包同步升 major
+
+  `generateCrudPage` 把自然语言经本地正则/关键词表解析成整页 SFC。它的产物与
+  `generate_scene`（`scene='crud'`）**逐字节相同**，但准确率受关键词覆盖度支配、
+  无法随宿主推理一起进步；保留它等于给同一件事维护两条真相。本次删除引擎本体，
+  并把所有消费方改指前门。
+
+  **删除的公开 API（`@es-plus/shared`）**
+
+  - `generateCrudPage()`、`GenerateResult`：legacy 正则引擎的入口与返回类型。
+  - `PRESET_EXAMPLES`：不再作为共享数据导出（CLI 与站点各自保留本地副本）。
+
+  `generateScaffold()` / `generateAppEntry()` 仍然导出，实现移到
+  `scaffold-generator.ts`（它们不是 crud-engine 的依赖）。
+
+  **MCP 工具面（`@es-plus/mcp-server`）**
+
+  - 删除 `generate_crud_page`：full 19 → **18**、front-door 13 → **12**（隐藏 6 个）。
+    迁移：改用 `generate_scene`（`scene: 'crud'`）或兼容入口 `generate_crud`；
+    需要 `CrudPageSchema` 形态时用 `generate_crud_schema`。
+  - `esplus://examples` 改走前门同一条 `composeCrudConfig → generateFromConfig`
+    链（此前展示的是另一个引擎的产物，这正是「资源文案失实」的根因）。
+
+  **CLI（`@es-plus/cli`）**
+
+  - `create` 的 **sfc 模式离线自然语言生成**不再可用（`--mode sfc` 仍可与
+    `--ai` / `--from-config` 一起用，只是不再有本地正则兜底）。请改用
+    `--ai`、`--from-config <file>` 或 `--mode schema`。
+
+### Minor Changes
+
+- c9a258f: feat(read-back)：生成物携带出处 `__esPlusSource` + `read_page` 回读闭环
+
+  生成一张页面之后，宿主手里只剩产物。下一轮「再加一列」时从源码反推配置必然有损
+  （`formItems` 已按 formtype 展开、可见性被压成「在不在数组里」、schema 模式根本没有
+  `permissions`），反推出来的「配置」看起来像真的，却会把猜测固化成再生成的输入。
+  本次让生成器把**自己的输入原样带进产物**，回读就是解压，不是推理。
+
+  **`@es-plus/shared`**
+
+  - 新增 `es-plus.page-source@1` 契约：`buildPageSource()` / `readPageSource()` /
+    `configToSurfaces()`，以及 `PAGE_SOURCE_CONTRACT` / `PAGE_SOURCE_KEY` /
+    `PAGE_SOURCE_MARK` 常量与 `EsPlusPageSource` / `EsPlusLossyEntry` 类型。
+  - `generateFromConfig` 的产物自带出处：schema 模式的 pageSchema 内嵌
+    `__esPlusSource`；sfc 模式写成 `<script>` 内单行注释 `// __esPlusSource: {…}`
+    （`</script>` 与 U+2028/U+2029 均已转义）。运行时渲染器忽略该键。
+  - `lossy[]` 逐条记录输入与产物的差异：`dropped`（未知键 / 非 JSON 值）、
+    `ignored-in-mode`（该模式不执行，如 schema 模式的 `permissions`）、
+    `not-expressible`（行内函数）、`normalized`（确定性修复改写过的键）。
+
+  **`@es-plus/mcp-server`**
+
+  - 新增 `read_page`：传入 `schema.ts` / `Page.vue` / 裸 pageSchema JSON，返回
+    生成器当时的 `config`、`lossy[]`，以及机械投影的 `surfaces` 意图表（可直接喂
+    `generate_scene`）；投影丢掉的键（显式 `columns`）写进 `surfacesLossy[]`。
+    两种 profile 都注册 —— front-door 没有 `generate_crud_from_config`，
+    「回读 → 改 → 再生成」正是那一档需要的闭环。工具面 full 18 → **19**、
+    front-door 12 → **13**（隐藏集不变）。
+  - 无出处的页面（本版本之前生成 / 手写）明确报错并给提示，不做有损反推。
+
+  **`@es-plus/cli`**
+
+  - 消费同一份 `@es-plus/shared` 导出；CLI 行为不变（linked 版本同步升 minor）。
+
+### Patch Changes
+
+- Updated dependencies [ae61615]
+- Updated dependencies [66ac97d]
+- Updated dependencies [c9a258f]
+- Updated dependencies [a31af78]
+  - @es-plus/shared@2.0.0
+
 ## 1.5.0
 
 ### Minor Changes

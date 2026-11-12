@@ -924,4 +924,4 @@ ES-Plus 是较早把这三件事都做齐的中后台组件库之一。
 
 ---
 
-<small>本文档版本对应（2026-11）：Vue3 1.8.0 / Vue2 1.5.0 / AntDV 1.4.0 / Core 1.4.0 / Shared 1.5.0 / CLI 1.5.0 / MCP-Server 1.5.0。所有引用的源文件链接均指向当前仓库 master 分支。</small>
+<small>本文档版本对应（2026-11）：Vue3 1.9.0 / Vue2 1.6.0 / AntDV 1.5.0 / Core 1.5.0 / Shared 2.0.0 / CLI 2.0.0 / MCP-Server 2.0.0。所有引用的源文件链接均指向当前仓库 master 分支。</small>

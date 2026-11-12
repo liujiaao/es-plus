@@ -927,4 +927,4 @@ ES-Plus is the first admin component library to deliver all three.
 
 ---
 
-<small>This document corresponds to (2026-11): Vue3 1.8.0 / Vue2 1.5.0 / AntDV 1.4.0 / Core 1.4.0 / Shared 1.5.0 / CLI 1.5.0 / MCP-Server 1.5.0. All linked source files point to the current master branch of the repository.</small>
+<small>This document corresponds to (2026-11): Vue3 1.9.0 / Vue2 1.6.0 / AntDV 1.5.0 / Core 1.5.0 / Shared 2.0.0 / CLI 2.0.0 / MCP-Server 2.0.0. All linked source files point to the current master branch of the repository.</small>

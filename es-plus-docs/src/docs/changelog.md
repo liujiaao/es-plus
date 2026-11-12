@@ -6,196 +6,203 @@
 
 | 包 | 版本 | 说明 |
 |---|---:|---|
-| `@es-plus/core` | 1.4.0 | 框架无关核心（类型 / 布局 / 校验） |
-| `@es-plus/vue3` | 1.8.0 | Vue 3 + Element Plus 渲染端 |
-| `@es-plus/vue2` | 1.5.0 | Vue 2 + Element UI 渲染端 |
-| `@es-plus/adapter-antdv` | 1.4.0 | Vue 3 + Ant Design Vue 适配器 |
-| `@es-plus/shared` | 1.5.0 | 配置 schema / 生成器 / 修复环 |
-| `@es-plus/cli` | 1.5.0 | 命令行工具 |
-| `@es-plus/mcp-server` | 1.5.0 | MCP Server（AI 工具面） |
+| `@es-plus/core` | 1.5.0 | 框架无关核心（类型 / 布局 / 校验） |
+| `@es-plus/vue3` | 1.9.0 | Vue 3 + Element Plus 渲染端 |
+| `@es-plus/vue2` | 1.6.0 | Vue 2 + Element UI 渲染端 |
+| `@es-plus/adapter-antdv` | 1.5.0 | Vue 3 + Ant Design Vue 适配器 |
+| `@es-plus/shared` | 2.0.0 | 配置 schema / 生成器 / 修复环 |
+| `@es-plus/cli` | 2.0.0 | 命令行工具 |
+| `@es-plus/mcp-server` | 2.0.0 | MCP Server（AI 工具面） |
+
+## 升级前请先读
+
+- **Major Changes（破坏性）**（@es-plus/shared、@es-plus/cli、@es-plus/mcp-server）：BREAKING**：退役 legacy 自然语言整页引擎（`generateCrudPage`），三个包同步升 major
+
+> 完整迁移代码见下方对应条目。
 
 ## 最近一次发布
 
 > 每个包只取 CHANGELOG 的最新一段；同一个 changeset 打在多个包上时合并为一条。
 
-### Minor Changes
+### Major Changes（破坏性）
 
-- 三端渲染与列合成收口（AI 原生化 AN-06…AN-11）
+- **BREAKING**：退役 legacy 自然语言整页引擎（`generateCrudPage`），三个包同步升 major
 
-  - **前导列合成单一真源**：选择列 / 序号列 / 展开列改由 core 的
-    `synthesizeLeadingColumns` + `buildLeadingColumns` 生成，顺序统一为
-    `selection → index → expand`。此前 8 条列产出路径（三端各自的默认 / 虚拟 / vxe 引擎，
-    外加 antdv 的 `adaptColumns`）里，三份 vxe 适配器各写一份 if，两处默认引擎则完全没有
-    —— 同一配置切换引擎就少一列，现在收敛到一处。
-  - **幂等且不覆盖显式列**：已显式声明同类型列（含 `hidCol`）时不再注入；合成列不参与
-    formatter 注入与 `width → minWidth` 转换。
-  - **`ellipsis` / `defaultSort` 生效**：`ellipsis` 发射为 `column.showOverflowTooltip`
-    （含 vxe 适配），`defaultSort` 三端映射。
-  - **`multiSelect` / `snIndex` 运行时接线**：生成配置即可用，不再是「生成器懂、运行时不懂」。
-  - **无静默丢弃**：字段/列级 `permissions`、`editConfig` 等此前被吞掉的配置现在要么生效、
-    要么显式告警。
-  - **antdv 的差异是消费者差异**：选择列由 `rowSelection`、展开列由 `expandedRowRender`
-    渲染，二者都不进 `adaptedColumns`；只有序号列是真实列，其默认值改取 core 的
-    `LEADING_COLUMN_DEFAULTS.index`，不再各写一份字面量。
-  - 回归：三端 mount 测试与 vxe 引擎测试补齐（含「显式 index 不重复」「与选择列共存仍在
-    首位」「antdv 序号列取 core 默认」），`check:capability-parity` 对账矩阵 ↔ schema ↔
-    运行时消费点。
+  `generateCrudPage` 把自然语言经本地正则/关键词表解析成整页 SFC。它的产物与
+  `generate_scene`（`scene='crud'`）**逐字节相同**，但准确率受关键词覆盖度支配、
+  无法随宿主推理一起进步；保留它等于给同一件事维护两条真相。本次删除引擎本体，
+  并把所有消费方改指前门。
 
-  <sub>影响：@es-plus/core / @es-plus/vue3 / @es-plus/vue2 / @es-plus/adapter-antdv</sub>
+  **删除的公开 API（`@es-plus/shared`）**
 
-- 扁平配置键、默认值层与 fail-closed 权限门（P5 / P5b / P6）
+  - `generateCrudPage()`、`GenerateResult`：legacy 正则引擎的入口与返回类型。
+  - `PRESET_EXAMPLES`：不再作为共享数据导出（CLI 与站点各自保留本地副本）。
 
-  这一批在 `ai-native-runtime` 之后落地，此前没有任何 changeset 覆盖 —— 本轮补记。
-
-  > **行为变更（需要留意）**：`permission` 门由 fail-open 改为 **fail-closed**。
-  > 只有「声明了 `permissionValue` 但宿主没配 `permission()`」这一种错配会从**放行**变成
-  > **拒绝并告警**；既没声明门、或门与判定函数都配齐的项目行为不变。见下方 core 段落。
-
-  **`@es-plus/core`**
-
-  - 新增 `checkPermissionValue`：无 `permissionValue` 放行；声明了门且配了 `permission()`
-    以函数结果为准；声明了门但宿主漏配判定函数 → **拒绝**，并按权限码告警一次
-    （去重）。`filterButtonsByPermission` / `normalizeButtonsHideState` 改为委托它，
-    此前"没配就放行"的回退已删除。
-  - 新增 `normalizeSectionConfig`（写入时归一）：展平 `EsTable` / `EsForm` / `EsDialog`
-    下的 `methods` 嵌套（同名键以 `methods` 内为准）、剥掉 `$httpRequest` 的 `$` 前缀但
-    保留原名、把 `configQueryfieldOutput` 改名为 `configQueryFieldOutput`。
-  - 新增 `resolveComponentConfig`：两条安装路径（`app.use(EsPlus, { EsTable: {...} })` 与
-    `configureEsPlus`）写进「组件能读到的那份配置」的形状原本不同，现在统一为读时视图 ——
-    安装之后再调 `configureEsPlus` 才真的能改到组件。
-  - `TableOptions` 补上 `mergeConfig: { rowsBy: [...] }`（声明式合并单元格）：它早就被
-    antdv 渲染器、schema 与 MCP 提示词消费，却从未在任何一份契约里声明过，用户照着写会撞
-    TS2353。
-  - `core` ↔ `shared` 同名契约常量加全等守卫，两边不再可能各自漂移。
-
-  **三端渲染器（`@es-plus/vue3` / `@es-plus/vue2` / `@es-plus/adapter-antdv`）**
-
-  - 接入扁平配置键与 **defaults 层**：`options` prop 默认值改为 `{}`，内置默认值移进
-    `tableOptions` computed（`{ ...内置默认, ...全局 defaults, ...props.options }`）。
-    此前每个键都算「显式传入」，**全局默认值永远赢不了内置值**；现在实例 > 全局 > 内置。
-    模板与脚本统一读 `tableOptions`（vue3 约 40 处）。
-  - `provide` 从安装时的快照改为读时视图（`createGlobalConfigView` /
-    `createComponentConfigView`），`install` 之后调 `configureEsPlus` 才生效。
-  - 三端 12 处本地 `checkPermission` / `hasPermission` 实现全部替换为 core 的单一真源。
-  - `dataOptions` 形状三端统一：放行 `children` / `tagType`，前门校验通过的配置不再被
-    本库自己的类型判红；新增逐键对账守卫。
-  - `es-crud-page` 的 `formLayout.labelWidth` 落到**字段**（此前误取
-    `layout.labelBtnWidth`，只改了空按钮行，查询字段标签宽度不变）；按钮行专用键保持独立。
-  - `operationColumn.fixed` 不再用 `|| 'right'` 把显式 `fixed: false` 顶成右固定。
-  - antdv 权限位与分页 `layout` 与 vue3 对齐。**权限门写在 `<template v-for>` 的内层元素上**
-    —— Vue 3 里 `v-if` 优先于 `v-for`，两个指令落在同一元素时条件会被提到循环外求值
-    （`_ctx.checkPermission(_ctx.item.permissionValue)`），循环变量是 `undefined`，渲染直接抛错。
-    该写法会让 `EsForm` / `EsDialog` 只要带按钮就崩，且 `typecheck` 报 TS2339（它同时是
-    发布阻断）。回归用例见 `__tests__/button-permission-gate.spec.ts`。
-
-  <sub>影响：@es-plus/core / @es-plus/vue3 / @es-plus/vue2 / @es-plus/adapter-antdv</sub>
-
-- AI 原生化收尾（AN-01…AN-29）：生成器发射正确性、确定性修复环、工具面前门与宣称绑定
-
-  **生成器与共享层（`@es-plus/shared`）**
-
-  - `schema.actions` 恒发射；模型省略时由三端按语义推导兜底。
-  - `tableBtns` 契约统一为 `name | code | actionType` 单源判据；`label` / `action` 作为别名
-    自动归一（规范键胜、别名删除并记录）。
-  - **未知键严格判定**：`validate_config` / CLI 前门把未知键判为 error，并给出
-    `did you mean` 建议（`x-*` 放行）；`generateFromConfig` 过渡为 warning，存量配置不会被
-    一夜拒绝。补齐 `tableOptions.treeConfig`、`tableOptions.expandConfig` 等此前缺失的 schema 键。
-  - **确定性修复环**：新增 `normalizeConfig()` 与 `repairConfig()`，把常见格式错误
-    （`null`、`"true"` / `1` 布尔、按钮别名、`dialogs` 罐头键、`formItems` 简写）在生成前
-    修掉。修复由 schema issue 驱动，**只有 issue 总数严格下降才接受**，不猜用户意图；
-    `validate_config` 仍只判不改。
-  - `pagination.pageSizes` 在 schema 模式也发射（此前只有 SFC 发射，同一配置两种产物不同）。
-  - **运行时前置清单**：新增 `preflight.ts` / `doctor.ts`。生成物带 `preflight` 块
-    （`httpRequest` / `permission` / `i18n` / JSX 插件 / UI 库，并写明「不需要」的依据）；
-    `doctor_page` 对宿主入口做静态体检，结果三态 `ok / missing / unverified`。
-    `generateAppEntry('vue3')` 补装 UI 库，三端入口补 `dist/style.css` 导入。
-  - **`ingest_schema` 支持 `ts-interface` 与 `sql-ddl`**（类型 → formtype，含 `COMMENT` /
-    JSDoc label、`ENUM` / 字面量联合 → `dataOptions`）；解析失败只告警，不抛异常。
-  - 片段与三组件组合的生成、评分配置收口；`useDialog` 场景有运行时见证。
+  `generateScaffold()` / `generateAppEntry()` 仍然导出，实现移到
+  `scaffold-generator.ts`（它们不是 crud-engine 的依赖）。
 
   **MCP 工具面（`@es-plus/mcp-server`）**
 
-  - `generate_crud` 是唯一 **FRONT DOOR**；`generate_crud_from_config` 标 **ADVANCED**；
-    `generate_crud_page` / `generate_crud_schema` 标 **LEGACY FALLBACK**。
-  - 新增 `ESPLUS_MCP_PROFILE=front-door|full`：`front-door` 隐藏 advanced 与 legacy 工具
-    （15 → 12），server instructions 同步说明。**默认 `full`**，现有宿主与文档不受影响。
-  - 新增 `check:tool-surface` 守卫：断言只有一个工具含 FRONT DOOR、profile 解析与隐藏集合
-    精确匹配。
+  - 删除 `generate_crud_page`：full 19 → **18**、front-door 13 → **12**（隐藏 6 个）。
+    迁移：改用 `generate_scene`（`scene: 'crud'`）或兼容入口 `generate_crud`；
+    需要 `CrudPageSchema` 形态时用 `generate_crud_schema`。
+  - `esplus://examples` 改走前门同一条 `composeCrudConfig → generateFromConfig`
+    链（此前展示的是另一个引擎的产物，这正是「资源文案失实」的根因）。
 
   **CLI（`@es-plus/cli`）**
 
-  - `nl-to-config` 先用 `repairConfig` 再校验：无歧义的格式错误不再消耗一次模型重试。
-
-  **文档与宣称（不改变运行时）**
-
-  - README / 站点文档中的 AI 准确率改为「目标 ≥95% + 当前值见徽章」，语料规模与
-    `last-accuracy.json` 同源；`check:site-claims` 读取 artifact 校验，宣称 95% 而实测不足
-    即红，且 artifact 存在未测到的行时拒绝发布声明。
-  - 三站案例以确定性方式登记进 `feature-coverage.json`（`sites`）：映射到单源演示的案例
-    继承能力令牌，未匹配的显式登记为 D 级并附原因，不猜能力。
+  - `create` 的 **sfc 模式离线自然语言生成**不再可用（`--mode sfc` 仍可与
+    `--ai` / `--from-config` 一起用，只是不再有本地正则兜底）。请改用
+    `--ai`、`--from-config <file>` 或 `--mode schema`。
 
   <sub>影响：@es-plus/shared / @es-plus/cli / @es-plus/mcp-server</sub>
 
-- 新增 `es-plus ingest`：从既有 schema 确定性草拟 StructuredCrudConfig
+### Minor Changes
 
-  - **新命令**：`es-plus ingest <file>` 支持 OpenAPI JSON / JSON Schema / 样例 JSON /
-    `.ts` 接口 / `.sql` DDL。`--kind` 缺省时按扩展名（`.sql` / `.ts` / `.yaml`）与 JSON 顶层
-    特征（`openapi`、`swagger`、`$schema`、`type:"object"` + `properties`）推断，`-k` 可覆盖；
-    拼错的 `--kind` 直接报错，不静默回落。
-  - **stdout 只有草稿 JSON**，推断说明、告警、下一步提示一律走 stderr ——
-    `es-plus ingest x.json > config.json` 与 `-o` 产出完全相同字节，管道里不会混进装饰行。
-  - **失败即非零**：文件不存在 / `--kind` 非法 / 抽取不到字段 三种情况均 `exitCode=1`。
-  - **与 MCP 同源**：`buildIngestDraft` 与 `INGEST_KINDS` 下沉到 `@es-plus/shared`
-    （`src/ingest-draft.ts`），`@es-plus/mcp-server` 的 `ingest_schema` 改为转出同一实现，
-    两处占位符与告警文案不再可能分叉（对外行为不变）。
-  - 本版**不解析 YAML**：`.yaml/.yml` 按 OpenAPI 识别并给出「请先转成 JSON」的告警，
-    这比静默当成 sample-json 更接近用户意图。
+- 新增一批框架无关的公开模块（内置文案、表单容器、详情模式、列筛选、CSV 导出）
+
+  - **内置文案 `locale`**：`resolveBuiltinText` / `resolveLocaleName` / `getDefaultToolbarBtns` /
+    `getDefaultRowBtns` / `ZH_CN_MESSAGES` / `EN_US_MESSAGES`，以及 `getLocaleVersion` /
+    `subscribeLocaleChange`。三端按钮文案自此同源，并支持运行期热切换。
+  - **表单分组容器**：`groupFormItems` / `UNGROUPED_FORM_GROUP_KEY` —— Tabs / Steps / Collapse
+    的分桶、未分组字段追加顺序与空组剔除全在本模块，三端只画容器。
+  - **嵌套对象字段**：`flattenFormItems` / `resolveNestedProp` / `isNestedFormHead` /
+    `isNestedFormChild` / `pruneEmptyNestedContainers` 与 `NESTED_FORM_HEAD` /
+    `NESTED_FORM_PARENT` 标记。字段用 `children` 表达一层嵌套，三端不再各写一份摊平逻辑。
+  - **表单详情模式**：`resolveFormDetailText` / `formatDetailDate`（`mode="detail"` 的展示解析单源）。
+  - **列筛选**：`normalizeFilterMode` / `matchesColumnFilter` / `columnFilterKey` /
+    `hasColumnFilters` / `withAutoFilters` / `buildColumnFilterMethod`。
+  - **表格内部键与 vxe-only 键**：`BASE_TABLE_INTERNAL_KEYS`、`VXE_ONLY_TABLE_KEYS` /
+    `findVxeOnlyKeysOutsideVxe` / `warnVxeOnlyKeysOutsideVxe`。
+  - **默认引擎 CSV 导出兜底**：`buildCsv` / `downloadCsv` / `ensureCsvExtension` /
+    `exportTableCsv` / `isCsvExportableColumn`。
+  - **新增公开类型**：`DialogModalOptions` / `DialogDrawerOptions` / `DialogCallOptions`、
+    `ColumnFilterMode` / `TableColumnFilterOption`、`FormGroupOption` / `FormGroupLayout` 等
+    （`PUBLIC_CONTRACT_TYPES` 39 → 42，三端由 `check:exports` 强制同名同数）。
+
+  <sub>影响：@es-plus/core</sub>
+
+- 三端渲染器新能力：抽屉弹窗、表单详情/分组/嵌套、列筛选、内置文案单源
+
+  三个渲染器同批落地（同一份配置，三端行为对齐）：
+
+  - **弹窗**：新增 `type: 'drawer'` 抽屉底座；`useDialog` 的调用入参收窄为按 type 判别的
+    `DialogCallOptions`（抽屉拒绝 `isDraggable` / `fullscreen` / `hiddenFullBtn` /
+    `alignCenter` / `top`，弹窗拒绝 `direction`）。**类型行为变化**：这类误配此前能编译通过、
+    运行时静默无效，现在 `tsc` 直接报错；`DialogOptions` 本身仍是扁平全量，配置槽与缓存合并
+    不受影响。
+  - **表单**：`mode="detail"` 只读详情模式；分组容器 Tabs / Steps / Collapse
+    （`formLayout.layout` 与 `dialogs.<id>.formLayout.layout`）；嵌套对象容器（字段 `children`
+    一层摊平 + 标题行）；新增 `TreeSelect` / `Autocomplete` 两种 formtype。
+  - **表格**：列级 `autoFilters` 从 `dataOptions` 自动派生筛选（`ColumnFilterMode` 三端同规）；
+    默认引擎的 `exportData()` 改为内置 CSV 兜底（此前是静默 no-op）；`import` 按钮发出专用
+    事件；vxe-only 键在非 vxe 引擎上运行时剥离并告警。
+  - **文案与无障碍**：内置按钮文案改走 core 的 `resolveBuiltinText`，支持运行期切换语言；
+    三端补齐廉价可访问名（图标按钮、表单标签、表格操作列）。
+  - **新增公开类型**：`FormGroupOption` / `FormGroupLayout` / `DialogModalOptions` /
+    `DialogDrawerOptions` / `DialogCallOptions` / `ColumnFilterMode` / `TableColumnFilterOption`。
+  - 依赖 `@es-plus/core` 的下限同步抬到 `^1.5.0`（上述能力由 core 新增模块提供）。
+
+  <sub>影响：@es-plus/vue3 / @es-plus/vue2 / @es-plus/adapter-antdv</sub>
+
+- AI 契约补齐：嵌套对象、表单分组、列筛选、vxe 配置型键与 surfaces→config 逆函数
+
+  - **嵌套对象字段**：字段新增 `children`（一层嵌套），四份契约（shared 权威 schema、前门旋钮、
+    `configShape`、片段形状）与生成器发射、评测面同步。
+  - **表单分组容器**：查询表单与弹窗表单的 `formLayout.layout`（`type: 'tabs' | 'steps' |
+'collapse'` + `groups`），字段用 `group` 引用。
+  - **列筛选**：列级 `filters` / `autoFilters` 进入 AI 契约与生成器。
+  - **`tableOptions` 补 11 个 vxe 一等公民 JSON 键**，并接入编译与评测面（新增 `vxeConfig` 维度诊断）。
+  - **新增 `surfacesToConfig()`**：`intent.surfaces` → 完整配置的逆函数，`read_page` 的投影与
+    「回读 → 改 → 再生成」闭环据此不再静默丢字段（丢失项写入 `surfacesLossy[]`）。
+  - `TreeSelect` / `Autocomplete` 两种 formtype 进入教学面与 schema 枚举。
+  - 教学面与配置判据同源：`.describe()` 文案由权威 Zod 派生；新增 `check:teaching-keys` 守卫，
+    禁止把运行时键（`formItemOptions`）教成配置键。
+
+  <sub>影响：@es-plus/shared / @es-plus/mcp-server</sub>
+
+- feat(read-back)：生成物携带出处 `__esPlusSource` + `read_page` 回读闭环
+
+  生成一张页面之后，宿主手里只剩产物。下一轮「再加一列」时从源码反推配置必然有损
+  （`formItems` 已按 formtype 展开、可见性被压成「在不在数组里」、schema 模式根本没有
+  `permissions`），反推出来的「配置」看起来像真的，却会把猜测固化成再生成的输入。
+  本次让生成器把**自己的输入原样带进产物**，回读就是解压，不是推理。
+
+  **`@es-plus/shared`**
+
+  - 新增 `es-plus.page-source@1` 契约：`buildPageSource()` / `readPageSource()` /
+    `configToSurfaces()`，以及 `PAGE_SOURCE_CONTRACT` / `PAGE_SOURCE_KEY` /
+    `PAGE_SOURCE_MARK` 常量与 `EsPlusPageSource` / `EsPlusLossyEntry` 类型。
+  - `generateFromConfig` 的产物自带出处：schema 模式的 pageSchema 内嵌
+    `__esPlusSource`；sfc 模式写成 `<script>` 内单行注释 `// __esPlusSource: {…}`
+    （`</script>` 与 U+2028/U+2029 均已转义）。运行时渲染器忽略该键。
+  - `lossy[]` 逐条记录输入与产物的差异：`dropped`（未知键 / 非 JSON 值）、
+    `ignored-in-mode`（该模式不执行，如 schema 模式的 `permissions`）、
+    `not-expressible`（行内函数）、`normalized`（确定性修复改写过的键）。
+
+  **`@es-plus/mcp-server`**
+
+  - 新增 `read_page`：传入 `schema.ts` / `Page.vue` / 裸 pageSchema JSON，返回
+    生成器当时的 `config`、`lossy[]`，以及机械投影的 `surfaces` 意图表（可直接喂
+    `generate_scene`）；投影丢掉的键（显式 `columns`）写进 `surfacesLossy[]`。
+    两种 profile 都注册 —— front-door 没有 `generate_crud_from_config`，
+    「回读 → 改 → 再生成」正是那一档需要的闭环。工具面 full 18 → **19**、
+    front-door 12 → **13**（隐藏集不变）。
+  - 无出处的页面（本版本之前生成 / 手写）明确报错并给提示，不做有损反推。
+
+  **`@es-plus/cli`**
+
+  - 消费同一份 `@es-plus/shared` 导出；CLI 行为不变（linked 版本同步升 minor）。
 
   <sub>影响：@es-plus/shared / @es-plus/cli / @es-plus/mcp-server</sub>
 
-- 场景前门、能力台账与产物信封（P2 / P5c / P8 / P9 / P10 / P11 / P13）
+### Patch Changes
 
-  这一批在 `ai-native-remediation` 之后落地，此前没有任何 changeset 覆盖 —— 本轮补记。
+- `@es-plus/core` 的 ESM 产物在普通 Node 里 import 会 `ERR_MODULE_NOT_FOUND`
 
-  **场景路由器（`@es-plus/shared` / `@es-plus/mcp-server`）**
+  `build/` 里 33 处相对说明符是 `from './shared'`（无扩展名）。打包器会自己补，
+  所以三个文档站从来遇不到；但 `node --input-type=module -e "import('@es-plus/core')"`
+  直接失败。1.3.0 与 1.4.0 都带着这个形态。
 
-  - `shared/scene/emit.ts` 新增 `ScenePlan` + `emitScene`：CRUD 分支整体搬迁自
-    `generate_crud`，四个场景（crud / table / form / dialog）共用同一发射器；
-    `config-feedback.ts` 承接语义告警与校验错误格式化，旧导出路径保持兼容。
-  - `mcp-server` 新增 `generate_scene`：`{ scene, intent }`，`scene` 枚举来自场景注册表、
-    缺省 `crud`；未知键与非法意图在生成前结构化拒绝。**这是唯一 FRONT DOOR** ——
-    `generate_crud` 降为 COMPAT adapter，产物与旧入口逐字节相同。
-  - 新增 `generate_composition`：把 1–3 个片段装配成可运行的 `Page.vue`，接线由
-    `ARTIFACT_RUNTIME` 派生（行按钮 key 命中弹窗节点 id 就开窗，否则升级为页面事件
-    `row-action`）；`wires` 可显式声明接线，覆盖派生结果。组合契约同步升到
-    `es-plus.composition@3`（多表 / 多弹窗 / 显式接线 / `behavior`）。
-  - 工具面重新计数：full **19** 个、`ESPLUS_MCP_PROFILE=front-door` **16** 个。
+  改动：
 
-  **能力台账（`es-plus.capabilities@1`）**
+  - `packages/core/src` 的 61 处相对说明符补全为 `./x.js`（TS 仍映射回 `.ts` 源文件，
+    CJS 那趟 `require('./x.js')` 同样成立）
+  - `tsconfig.build.json` 的 ESM 那趟改用 `module/moduleResolution: nodenext`，漏写
+    扩展名从此是**编译错误**，不会再靠人记
+  - `check:distribution` 新增两条判据：ESM 产物里不得有无扩展名的相对说明符；无 bin
+    的库包必须能被动态 import 一次
 
-  - 四场景意图词汇（crud 19 / table 8 / form 7 / dialog 10）用 `satisfies` 抓多余键、
-    用 `AssertNever<Exclude<keyof Input, listed>>` 抓接口新增键漏登记（tsc 即红）。
-  - `assessIntent({ scene, intent })` 逐键判 `accepted` / `degraded` / `unsupported` 并给出
-    可验证的替代路径；产物信封透出逐键判定，宿主在生成前后都能回答「我给的键会不会落地」。
-  - 新增工具 `validate_intent`（生成前只判不改）与 `coverage_report`（多页清单分级
-    L1 直出 / L2 直出+扩展点 / L3 需宿主代码）。
+  CJS 入口（`build/cjs`）与子路径导出行为不变。
 
-  **产物信封**
+  <sub>影响：@es-plus/core</sub>
 
-  - `ARTIFACT_CONTRACT_VERSION` 升 `es-plus.artifact@2`：`capability` 刻意为不参与身份，
-    @1 的「指纹覆盖全部字段」承诺已不成立，宿主按版本即可判断「能力判定必在」。
-  - `generate_scene` / `generate_crud` / `generate_composition` 三个入口把信封挂到
-    `structuredContent`；`content.text` 逐字节不变。
+- 统一到单份 zod 4，并修好随之暴露的「passthrough 形状闸门全空转」
 
-  **生成器与适配器**
+  `mcp-server` 声明 `zod: ^3.22.0`、`shared` 声明 `^4.4.3` → npm 在
+  `packages/shared/node_modules/zod` 又装了一份 4.x，同一个进程里两个 zod 实现：
+  体积翻倍只是表象，真正的代价是两边建出的 schema 对象**不能跨副本混用**，而
+  `mcp-server` 因此一直维护着一份 shared `StructuredCrudConfigSchema` 的手写副本。
 
-  - 生成器与约定文案改用扁平配置键；嵌套形状一律 `passthrough`，未知键活到前门闸门
-    再被判 —— 不再在转发层被静默吞掉。
-  - 片段表格与 CRUD 页共用同一套表格词汇（P10）。
-  - 导出/导入按钮不再「能点、零反馈」：两条 legacy 路径补齐可见处理。
-  - `usage` 诊断订正：`duplicate-prop` 不再声称「后者被静默丢弃」（实际是前者）。
-  - `ingest_schema` 修复单行逗号分隔的 TS 成员丢字段；`INGEST_KINDS` 加反向穷尽断言。
-  - `coverage_report` 复用未知键扫描；`generate_table` 不再伪造 `rowkey` 默认值。
+  改动：
+
+  - `mcp-server` 的 `zod` 升到 `^4.4.3`（官方 MCP SDK 1.29 的 peer 本来就是
+    `^3.25 || ^4.0`，`zod-to-json-schema` 的 peer 也是 `^3.25.28 || ^4`）→
+    `package-lock.json` 里只剩一份 zod。手写副本暂时保留（工具文案独立维护、且有
+    守卫逐键对账），升级它不必在同一次改动里做。
+  - **`collectUnknownKeys` 在 zod 4 下曾把 `.passthrough()` 当成「所有键都已知」**：
+    zod 4 把 `.passthrough()` / `.loose()` 编译成 `catchall: z.unknown()`，与显式
+    `.catchall(z.any())` 在 `_def` 上同形，而收集器原来据此放行整层未知键。本仓每一处
+    `.passthrough()` 的用途恰恰相反 —— 让未知键活过 `safeParse`，再由这里点名。去掉该
+    放行后，`_arg-guard` / `generate_scene` / 覆盖报告 / `validate_config` 的未知键判据
+    全部恢复生效（`check:unknown-keys` 新增 A13 直接钉住这一条）。
+  - `scripts/eval/fragment-prompt.mjs` 的形状自省改为 zod 3 / 4 双词汇（`typeName` ↔
+    `type`、`_def.description` ↔ 公开 `description` getter）。此前在 zod 4 下它读不到
+    任何 `.describe()`，片段 prompt 会**静默退化成只有键名、没有教学文案**。
+  - 新增 `check:deps`：断言每个成员包解析到同一份 zod，且声明范围的下界主版本与
+    实际安装一致（两条判据分别证「没有第二份」与「不会因为下次 install 长出第二份」）。
+
+  发版后 `@es-plus/mcp-server` 的依赖树少一份 zod；三端渲染包不依赖 zod，行为不变。
 
   <sub>影响：@es-plus/shared / @es-plus/mcp-server</sub>
 

@@ -1,6 +1,6 @@
 {
   "name": "create-es-plus",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "Scaffold a runnable ES-Plus project in one command: npm create es-plus@latest. Pick a renderer (Vue 3 + Element Plus / Vue 2 + Element UI / Vue 3 + Ant Design Vue) and optionally wire the AI (MCP) toolchain.",
   "type": "module",
   "bin": {
