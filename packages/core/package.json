@@ -7,6 +7,7 @@
   "module": "./build/index.js",
   "types": "./build/index.d.ts",
   "exports": {
+    "./package.json": "./package.json",
     ".": {
       "types": "./build/index.d.ts",
       "import": "./build/index.js",
